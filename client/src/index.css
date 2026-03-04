@@ -1,0 +1,72 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/*
+ * shadcn/ui theme variables — mapped from design tokens
+ * These power all shadcn components (Button, Card, Dialog, etc.)
+ */
+
+@layer base {
+  :root {
+    /* Layout */
+    --background: var(--color-background);
+    --foreground: var(--color-text);
+
+    /* Card */
+    --card: var(--color-surface);
+    --card-foreground: var(--color-text);
+
+    /* Popover */
+    --popover: var(--color-surface);
+    --popover-foreground: var(--color-text);
+
+    /* Primary */
+    --primary: var(--color-primary);
+    --primary-foreground: var(--color-primary-foreground);
+
+    /* Secondary */
+    --secondary: var(--color-secondary-light);
+    --secondary-foreground: var(--color-secondary);
+
+    /* Muted */
+    --muted: var(--color-muted);
+    --muted-foreground: var(--color-muted-foreground);
+
+    /* Accent */
+    --accent: var(--color-grey-100);
+    --accent-foreground: var(--color-grey-900);
+
+    /* Destructive */
+    --destructive: var(--color-error);
+    --destructive-foreground: var(--color-error-foreground);
+
+    /* Success */
+    --success: var(--color-success);
+    --success-foreground: var(--color-success-foreground);
+
+    /* Warning */
+    --warning: var(--color-warning);
+    --warning-foreground: var(--color-warning-foreground);
+
+    /* Borders & inputs */
+    --border: var(--color-border);
+    --input: var(--color-input);
+    --ring: var(--color-ring);
+
+    /* Border radius */
+    --radius: var(--radius-md);
+  }
+
+  * {
+    border-color: var(--border);
+  }
+
+  body {
+    background-color: var(--background);
+    color: var(--foreground);
+    font-family: var(--font-family-base);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+}

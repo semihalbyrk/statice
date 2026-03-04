@@ -1,0 +1,292 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  GATE_OPERATOR
+  LOGISTICS_PLANNER
+  REPORTING_MANAGER
+  ADMIN
+}
+
+enum OrderStatus {
+  PLANNED
+  ARRIVED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum WeighingEventStatus {
+  PENDING_GROSS
+  GROSS_COMPLETE
+  PENDING_TARE
+  TARE_COMPLETE
+  CONFIRMED
+}
+
+enum SortingStatus {
+  DRAFT
+  SUBMITTED
+}
+
+enum SupplierType {
+  PRIVATE_INDIVIDUAL
+  PRO
+  THIRD_PARTY
+}
+
+enum SkipType {
+  OPEN_TOP
+  CLOSED_TOP
+  GITTERBOX
+  PALLET
+  OTHER
+}
+
+model User {
+  id            String    @id @default(uuid())
+  email         String    @unique
+  password_hash String
+  full_name     String
+  role          Role
+  is_active     Boolean   @default(true)
+  created_at    DateTime  @default(now())
+  updated_at    DateTime  @updatedAt
+
+  orders_created     InboundOrder[]
+  events_confirmed   WeighingEvent[]
+  sessions_recorded  SortingSession[]
+  reports_generated  Report[]
+  audit_logs         AuditLog[]
+}
+
+model Carrier {
+  id              String   @id @default(uuid())
+  name            String
+  kvk_number      String?
+  contact_name    String?
+  contact_email   String?
+  contact_phone   String?
+  licence_number  String?
+  is_active       Boolean  @default(true)
+  created_at      DateTime @default(now())
+
+  orders   InboundOrder[]
+  vehicles Vehicle[]
+}
+
+model Supplier {
+  id             String       @id @default(uuid())
+  name           String
+  supplier_type  SupplierType
+  kvk_number     String?
+  contact_name   String?
+  contact_email  String?
+  is_active      Boolean      @default(true)
+  created_at     DateTime     @default(now())
+
+  orders InboundOrder[]
+}
+
+model Vehicle {
+  id                 String   @id @default(uuid())
+  registration_plate String   @unique
+  carrier_id         String
+  type               String?
+  created_at         DateTime @default(now())
+
+  carrier         Carrier         @relation(fields: [carrier_id], references: [id])
+  weighing_events WeighingEvent[]
+}
+
+model WasteStream {
+  id         String   @id @default(uuid())
+  name_en    String
+  name_nl    String
+  code       String   @unique
+  is_active  Boolean  @default(true)
+  created_at DateTime @default(now())
+
+  orders     InboundOrder[]
+  categories ProductCategory[]
+}
+
+model ProductCategory {
+  id                    String   @id @default(uuid())
+  code_cbs              String   @unique
+  description_en        String
+  description_nl        String
+  waste_stream_id       String
+  recycled_pct_default  Decimal  @default(0)
+  reused_pct_default    Decimal  @default(0)
+  disposed_pct_default  Decimal  @default(0)
+  landfill_pct_default  Decimal  @default(0)
+  is_active             Boolean  @default(true)
+  created_at            DateTime @default(now())
+
+  waste_stream  WasteStream    @relation(fields: [waste_stream_id], references: [id])
+  assets        Asset[]
+  sorting_lines SortingLine[]
+}
+
+model InboundOrder {
+  id                        String      @id @default(uuid())
+  order_number              String      @unique
+  carrier_id                String
+  supplier_id               String
+  planned_date              DateTime
+  planned_time_window_start DateTime?
+  planned_time_window_end   DateTime?
+  expected_skip_count       Int         @default(1)
+  waste_stream_id           String
+  afvalstroomnummer         String?
+  notes                     String?
+  status                    OrderStatus @default(PLANNED)
+  is_adhoc                  Boolean     @default(false)
+  created_by                String
+  created_at                DateTime    @default(now())
+  updated_at                DateTime    @updatedAt
+
+  carrier           Carrier         @relation(fields: [carrier_id], references: [id])
+  supplier          Supplier        @relation(fields: [supplier_id], references: [id])
+  waste_stream      WasteStream     @relation(fields: [waste_stream_id], references: [id])
+  created_by_user   User            @relation(fields: [created_by], references: [id])
+  weighing_events   WeighingEvent[]
+}
+
+model WeighingEvent {
+  id              String              @id @default(uuid())
+  order_id        String
+  vehicle_id      String
+  arrived_at      DateTime            @default(now())
+  gross_ticket_id String?             @unique
+  tare_ticket_id  String?             @unique
+  gross_weight_kg Decimal?
+  tare_weight_kg  Decimal?
+  net_weight_kg   Decimal?
+  status          WeighingEventStatus @default(PENDING_GROSS)
+  confirmed_by    String?
+  confirmed_at    DateTime?
+  notes           String?
+
+  order             InboundOrder    @relation(fields: [order_id], references: [id])
+  vehicle           Vehicle         @relation(fields: [vehicle_id], references: [id])
+  gross_ticket      PfisterTicket?  @relation("GrossTicket", fields: [gross_ticket_id], references: [id])
+  tare_ticket       PfisterTicket?  @relation("TareTicket", fields: [tare_ticket_id], references: [id])
+  confirmed_by_user User?           @relation(fields: [confirmed_by], references: [id])
+  assets            Asset[]
+  sorting_session   SortingSession?
+}
+
+model PfisterTicket {
+  id                 String   @id @default(uuid())
+  ticket_number      String   @unique
+  weighing_type      String
+  weight_kg          Decimal
+  unit               String   @default("kg")
+  timestamp          DateTime
+  raw_payload        String
+  is_manual_override Boolean  @default(false)
+  override_reason    String?
+  override_by        String?
+  created_at         DateTime @default(now())
+
+  gross_event WeighingEvent? @relation("GrossTicket")
+  tare_event  WeighingEvent? @relation("TareTicket")
+}
+
+model Asset {
+  id                   String   @id @default(uuid())
+  asset_label          String   @unique
+  weighing_event_id    String
+  skip_type            SkipType
+  material_category_id String
+  estimated_volume_m3  Decimal?
+  gross_weight_kg      Decimal?
+  tare_weight_kg       Decimal?
+  net_weight_kg        Decimal?
+  notes                String?
+  created_at           DateTime @default(now())
+
+  weighing_event    WeighingEvent   @relation(fields: [weighing_event_id], references: [id])
+  material_category ProductCategory @relation(fields: [material_category_id], references: [id])
+  sorting_lines     SortingLine[]
+}
+
+model SortingSession {
+  id                String        @id @default(uuid())
+  weighing_event_id String        @unique
+  order_id          String
+  recorded_by       String
+  recorded_at       DateTime      @default(now())
+  status            SortingStatus @default(DRAFT)
+  notes             String?
+
+  weighing_event   WeighingEvent @relation(fields: [weighing_event_id], references: [id])
+  recorded_by_user User          @relation(fields: [recorded_by], references: [id])
+  sorting_lines    SortingLine[]
+}
+
+model SortingLine {
+  id                   String  @id @default(uuid())
+  session_id           String
+  asset_id             String
+  category_id          String
+  net_weight_kg        Decimal
+  recycled_pct         Decimal
+  reused_pct           Decimal
+  disposed_pct         Decimal
+  landfill_pct         Decimal
+  downstream_processor String?
+  notes                String?
+
+  session  SortingSession  @relation(fields: [session_id], references: [id])
+  asset    Asset           @relation(fields: [asset_id], references: [id])
+  category ProductCategory @relation(fields: [category_id], references: [id])
+}
+
+model Report {
+  id                String   @id @default(uuid())
+  type              String
+  generated_by      String
+  generated_at      DateTime @default(now())
+  parameters_json   Json
+  file_path_pdf     String?
+  file_path_xlsx    String?
+
+  generated_by_user User @relation(fields: [generated_by], references: [id])
+}
+
+model ReportSchedule {
+  id               String    @id @default(uuid())
+  report_type      String
+  frequency        String
+  day_of_week      Int?
+  day_of_month     Int?
+  recipient_emails String[]
+  format           String
+  parameters_json  Json
+  is_active        Boolean   @default(true)
+  last_run_at      DateTime?
+  next_run_at      DateTime
+  created_at       DateTime  @default(now())
+}
+
+model AuditLog {
+  id          String   @id @default(uuid())
+  user_id     String
+  action      String
+  entity_type String
+  entity_id   String
+  diff_json   Json
+  timestamp   DateTime @default(now())
+  ip_address  String?
+
+  user User @relation(fields: [user_id], references: [id])
+}

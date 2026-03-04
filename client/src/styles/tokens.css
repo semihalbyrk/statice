@@ -1,0 +1,314 @@
+/*
+ * Design Tokens — Generated from Figma (design-tokens.json)
+ * Source of truth for all colors, typography, spacing, shadows, and radii.
+ * Never hardcode hex values in components — use these variables via Tailwind.
+ */
+
+:root {
+  /* ============================================
+     COLOR PRIMITIVES
+     ============================================ */
+
+  /* Base */
+  --color-white: #ffffff;
+  --color-black: #000000;
+
+  /* Grey */
+  --color-grey-25: #fcfcfd;
+  --color-grey-50: #f9fafb;
+  --color-grey-100: #f2f4f7;
+  --color-grey-200: #eaecf0;
+  --color-grey-300: #d0d5dd;
+  --color-grey-400: #98a2b3;
+  --color-grey-500: #667085;
+  --color-grey-600: #475467;
+  --color-grey-700: #344054;
+  --color-grey-800: #1d2939;
+  --color-grey-900: #101828;
+
+  /* Green (Brand Primary) */
+  --color-green-25: #e1f5e0;
+  --color-green-50: #c3ebc0;
+  --color-green-100: #a4e2a1;
+  --color-green-200: #86d882;
+  --color-green-300: #68ce62;
+  --color-green-400: #4ac443;
+  --color-green-500: #3ba935;
+  --color-green-600: #369b31;
+  --color-green-700: #318d2c;
+  --color-green-800: #2c7f28;
+  --color-green-900: #277123;
+
+  /* Orange */
+  --color-orange-25: #fff3da;
+  --color-orange-50: #ffe6b6;
+  --color-orange-100: #ffda91;
+  --color-orange-200: #ffcd6d;
+  --color-orange-300: #ffc148;
+  --color-orange-400: #ffb524;
+  --color-orange-500: #fea800;
+  --color-orange-600: #e99a00;
+  --color-orange-700: #d48c00;
+  --color-orange-800: #bf7e00;
+  --color-orange-900: #a97000;
+
+  /* Red */
+  --color-red-25: #fbe6e6;
+  --color-red-50: #f7cecd;
+  --color-red-100: #f3b5b4;
+  --color-red-200: #ef9c9a;
+  --color-red-300: #eb8381;
+  --color-red-400: #e76b68;
+  --color-red-500: #e3524f;
+  --color-red-600: #e03c39;
+  --color-red-700: #dc2723;
+  --color-red-800: #c62320;
+  --color-red-900: #b01f1c;
+
+  /* Blue */
+  --color-blue-25: #ddf2fc;
+  --color-blue-50: #bbe5fa;
+  --color-blue-100: #99d8f7;
+  --color-blue-200: #78cbf5;
+  --color-blue-300: #56bef2;
+  --color-blue-400: #34b1f0;
+  --color-blue-500: #12a4ed;
+  --color-blue-600: #1096d9;
+  --color-blue-700: #0f89c6;
+  --color-blue-800: #0e7bb2;
+  --color-blue-900: #0c6d9e;
+
+  /* Teal */
+  --color-teal-25: #e8f7f0;
+  --color-teal-50: #d1eee1;
+  --color-teal-100: #bae6d2;
+  --color-teal-200: #a4dec2;
+  --color-teal-300: #8dd6b3;
+  --color-teal-400: #76cda4;
+  --color-teal-500: #5fc595;
+  --color-teal-600: #4dbf89;
+  --color-teal-700: #41b37d;
+  --color-teal-800: #3aa171;
+  --color-teal-900: #348f64;
+
+  /* Light Green */
+  --color-light-green-25: #edfade;
+  --color-light-green-50: #daf5bd;
+  --color-light-green-100: #c8f09c;
+  --color-light-green-200: #b6eb7b;
+  --color-light-green-300: #a3e659;
+  --color-light-green-400: #91e138;
+  --color-light-green-500: #7ed320;
+  --color-light-green-600: #74c11d;
+  --color-light-green-700: #69b01b;
+  --color-light-green-800: #5f9e18;
+  --color-light-green-900: #548d15;
+
+  /* Yellow */
+  --color-yellow-25: #fff7db;
+  --color-yellow-50: #fff0b6;
+  --color-yellow-100: #ffe892;
+  --color-yellow-200: #ffe16d;
+  --color-yellow-300: #ffd949;
+  --color-yellow-400: #ffd224;
+  --color-yellow-500: #ffca00;
+  --color-yellow-600: #eab900;
+  --color-yellow-700: #d5a800;
+  --color-yellow-800: #bf9700;
+  --color-yellow-900: #aa8700;
+
+  /* Pink */
+  --color-pink-25: #fddeea;
+  --color-pink-50: #fabdd5;
+  --color-pink-100: #f89cc0;
+  --color-pink-200: #f67baa;
+  --color-pink-300: #f45a95;
+  --color-pink-400: #f13980;
+  --color-pink-500: #ef186b;
+  --color-pink-600: #e11061;
+  --color-pink-700: #cd0e58;
+  --color-pink-800: #b80d4f;
+  --color-pink-900: #a40b46;
+
+  /* Purple */
+  --color-purple-25: #e9e7f6;
+  --color-purple-50: #d3ceed;
+  --color-purple-100: #bdb6e4;
+  --color-purple-200: #a79ddb;
+  --color-purple-300: #9185d2;
+  --color-purple-400: #7b6cc9;
+  --color-purple-500: #6554c0;
+  --color-purple-600: #5644b9;
+  --color-purple-700: #4f3ea8;
+  --color-purple-800: #473897;
+  --color-purple-900: #3f3286;
+
+  /* Dark Blue */
+  --color-dark-blue-25: #fbfdff;
+  --color-dark-blue-50: #f7faff;
+  --color-dark-blue-100: #f5f7ff;
+  --color-dark-blue-200: #e2e7f5;
+  --color-dark-blue-300: #c8cee0;
+  --color-dark-blue-400: #adb4cb;
+  --color-dark-blue-500: #878ea8;
+  --color-dark-blue-600: #535a72;
+  --color-dark-blue-700: #414f6a;
+  --color-dark-blue-800: #2f4362;
+  --color-dark-blue-900: #0b2b51;
+
+  /* ============================================
+     SEMANTIC COLOR ALIASES
+     ============================================ */
+
+  /* Primary — Green (brand color) */
+  --color-primary: var(--color-green-600);
+  --color-primary-hover: var(--color-green-700);
+  --color-primary-active: var(--color-green-800);
+  --color-primary-light: var(--color-green-25);
+  --color-primary-foreground: var(--color-white);
+
+  /* Secondary — Dark Blue */
+  --color-secondary: var(--color-dark-blue-700);
+  --color-secondary-hover: var(--color-dark-blue-800);
+  --color-secondary-light: var(--color-dark-blue-50);
+  --color-secondary-foreground: var(--color-white);
+
+  /* Background & Surface */
+  --color-background: var(--color-white);
+  --color-background-subtle: var(--color-grey-25);
+  --color-surface: var(--color-white);
+  --color-surface-raised: var(--color-grey-25);
+  --color-surface-overlay: var(--color-grey-50);
+
+  /* Text */
+  --color-text: var(--color-grey-900);
+  --color-text-secondary: var(--color-grey-600);
+  --color-text-tertiary: var(--color-grey-500);
+  --color-text-placeholder: var(--color-grey-400);
+  --color-text-disabled: var(--color-grey-300);
+  --color-text-inverse: var(--color-white);
+
+  /* Border */
+  --color-border: var(--color-grey-200);
+  --color-border-hover: var(--color-grey-300);
+  --color-border-focus: var(--color-green-500);
+  --color-border-disabled: var(--color-grey-200);
+
+  /* Status colors */
+  --color-error: var(--color-red-600);
+  --color-error-light: var(--color-red-25);
+  --color-error-foreground: var(--color-white);
+  --color-success: var(--color-green-600);
+  --color-success-light: var(--color-green-25);
+  --color-success-foreground: var(--color-white);
+  --color-warning: var(--color-orange-500);
+  --color-warning-light: var(--color-orange-25);
+  --color-warning-foreground: var(--color-grey-900);
+  --color-info: var(--color-blue-600);
+  --color-info-light: var(--color-blue-25);
+  --color-info-foreground: var(--color-white);
+
+  /* Muted */
+  --color-muted: var(--color-grey-100);
+  --color-muted-foreground: var(--color-grey-500);
+
+  /* Input / Ring */
+  --color-input: var(--color-grey-200);
+  --color-ring: var(--color-green-500);
+
+  /* ============================================
+     TYPOGRAPHY
+     ============================================ */
+
+  /* Font family */
+  --font-family-base: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+
+  /* Font sizes */
+  --font-size-xxs: 10px;
+  --font-size-xs: 12px;
+  --font-size-sm: 14px;
+  --font-size-md: 16px;
+  --font-size-lg: 18px;
+  --font-size-xl: 20px;
+  --font-size-h-xs: 24px;
+  --font-size-h-sm: 30px;
+  --font-size-h-md: 36px;
+  --font-size-h-lg: 48px;
+  --font-size-h-xl: 60px;
+  --font-size-h-xxl: 72px;
+
+  /* Line heights */
+  --line-height-xxs: 12px;
+  --line-height-xs: 16px;
+  --line-height-sm: 20px;
+  --line-height-md: 24px;
+  --line-height-lg: 24px;
+  --line-height-xl: 32px;
+  --line-height-h-xs: 32px;
+  --line-height-h-sm: 38px;
+  --line-height-h-md: 44px;
+  --line-height-h-lg: 60px;
+  --line-height-h-xl: 72px;
+  --line-height-h-xxl: 90px;
+
+  /* Letter spacing */
+  --letter-spacing-tight-xl: -1.44px;
+  --letter-spacing-tight-lg: -1.2px;
+  --letter-spacing-tight-md: -0.96px;
+  --letter-spacing-tight-sm: -0.72px;
+  --letter-spacing-normal: 0px;
+
+  /* Font weights */
+  --font-weight-regular: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+
+  /* ============================================
+     SPACING
+     (Derived from 8px grid in Figma tokens)
+     ============================================ */
+  --spacing-0: 0px;
+  --spacing-0-5: 2px;
+  --spacing-1: 4px;
+  --spacing-1-5: 6px;
+  --spacing-2: 8px;
+  --spacing-2-5: 10px;
+  --spacing-3: 12px;
+  --spacing-3-5: 14px;
+  --spacing-4: 16px;
+  --spacing-5: 20px;
+  --spacing-6: 24px;
+  --spacing-7: 28px;
+  --spacing-8: 32px;
+  --spacing-9: 36px;
+  --spacing-10: 40px;
+  --spacing-12: 48px;
+  --spacing-14: 56px;
+  --spacing-16: 64px;
+  --spacing-20: 80px;
+  --spacing-24: 96px;
+
+  /* ============================================
+     BORDER RADIUS
+     ============================================ */
+  --radius-none: 0px;
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-xl: 12px;
+  --radius-2xl: 16px;
+  --radius-3xl: 24px;
+  --radius-full: 9999px;
+
+  /* ============================================
+     SHADOWS
+     ============================================ */
+  --shadow-xs: 0px 1px 2px 0px rgba(16, 24, 40, 0.13);
+  --shadow-sm: 0px 1px 2px 0px rgba(16, 24, 40, 0.15), 0px 1px 3px 0px rgba(16, 24, 40, 0.26);
+  --shadow-md: 0px 2px 4px -2px rgba(16, 24, 40, 0.15), 0px 4px 8px -2px rgba(16, 24, 40, 0.26);
+  --shadow-lg: 0px 4px 6px -2px rgba(16, 24, 40, 0.05), 0px 12px 16px -4px rgba(16, 24, 40, 0.20);
+  --shadow-xl: 0px 8px 8px -4px rgba(16, 24, 40, 0.05), 0px 20px 24px -4px rgba(16, 24, 40, 0.20);
+  --shadow-2xl: 0px 24px 48px -12px rgba(16, 24, 40, 0.46);
+  --shadow-3xl: 0px 32px 64px -12px rgba(16, 24, 40, 0.36);
+}
