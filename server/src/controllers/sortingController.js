@@ -10,10 +10,15 @@ async function getSession(req, res, next) {
 
 async function listSessions(req, res, next) {
   try {
-    const { order_id } = req.query;
-    if (!order_id) return res.status(400).json({ error: 'order_id query parameter is required' });
-    const sessions = await sortingService.listSessionsByOrder(order_id);
-    res.json({ data: sessions });
+    const { order_id, status, search, page, limit } = req.query;
+    // If order_id is provided, return sessions for that order (no pagination)
+    if (order_id) {
+      const sessions = await sortingService.listSessionsByOrder(order_id);
+      return res.json({ data: sessions });
+    }
+    // Otherwise, return paginated list of all sessions
+    const result = await sortingService.listAllSessions({ status, search, page, limit });
+    res.json(result);
   } catch (err) { next(err); }
 }
 

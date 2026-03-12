@@ -1,60 +1,34 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/*
- * shadcn/ui theme variables — mapped from design tokens
- * These power all shadcn components (Button, Card, Dialog, etc.)
- */
-
 @layer base {
   :root {
-    /* Layout */
     --background: var(--color-background);
     --foreground: var(--color-text);
-
-    /* Card */
     --card: var(--color-surface);
     --card-foreground: var(--color-text);
-
-    /* Popover */
     --popover: var(--color-surface);
     --popover-foreground: var(--color-text);
-
-    /* Primary */
     --primary: var(--color-primary);
     --primary-foreground: var(--color-primary-foreground);
-
-    /* Secondary */
     --secondary: var(--color-secondary-light);
     --secondary-foreground: var(--color-secondary);
-
-    /* Muted */
     --muted: var(--color-muted);
     --muted-foreground: var(--color-muted-foreground);
-
-    /* Accent */
     --accent: var(--color-grey-100);
     --accent-foreground: var(--color-grey-900);
-
-    /* Destructive */
     --destructive: var(--color-error);
     --destructive-foreground: var(--color-error-foreground);
-
-    /* Success */
     --success: var(--color-success);
     --success-foreground: var(--color-success-foreground);
-
-    /* Warning */
     --warning: var(--color-warning);
     --warning-foreground: var(--color-warning-foreground);
-
-    /* Borders & inputs */
     --border: var(--color-border);
     --input: var(--color-input);
     --ring: var(--color-ring);
-
-    /* Border radius */
     --radius: var(--radius-md);
   }
 
@@ -63,10 +37,42 @@
   }
 
   body {
-    background-color: var(--background);
+    background-color: var(--color-grey-50);
     color: var(--foreground);
-    font-family: var(--font-family-base);
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+  }
+}
+
+@layer components {
+  .app-list-filter-select {
+    @apply h-10 w-[168px] rounded-md border border-grey-300 bg-white pl-3 pr-9 text-sm text-grey-900 outline-none transition-colors;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 20 20' fill='none'%3E%3Cpath d='M5 7.5L10 12.5L15 7.5' stroke='%236B7280' stroke-width='1.7' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+    background-position: right 0.7rem center;
+    background-repeat: no-repeat;
+    background-size: 14px 14px;
+  }
+
+  .app-list-filter-select:focus {
+    border-color: rgb(34 197 94);
+    box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.15);
+  }
+
+  .app-modal-overlay {
+    @apply fixed inset-0 z-50 flex items-center justify-center p-4;
+    background: rgba(16, 24, 40, 0.72);
+    backdrop-filter: blur(3px);
+  }
+
+  .app-modal-panel {
+    @apply w-full rounded-xl border border-grey-200 bg-white;
+    box-shadow: 0 28px 80px rgba(16, 24, 40, 0.28);
+  }
+
+  .app-drawer-overlay {
+    background: rgba(16, 24, 40, 0.62);
+    backdrop-filter: blur(2px);
   }
 }

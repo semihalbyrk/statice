@@ -1,11 +1,15 @@
 import api from './axios';
 
-export const getWeighingEvents = (params) => api.get('/weighing-events', { params });
-export const getWeighingEvent = (id) => api.get(`/weighing-events/${id}`);
-export const createWeighingEvent = (data) => api.post('/weighing-events', data);
-export const triggerGrossWeighing = (id) => api.post(`/weighing-events/${id}/gross-weighing`);
-export const triggerTareWeighing = (id) => api.post(`/weighing-events/${id}/tare-weighing`);
-export const advanceToTare = (id) => api.patch(`/weighing-events/${id}/status`);
-export const confirmWeighingEvent = (id) => api.post(`/weighing-events/${id}/confirm`);
-export const overrideWeight = (id, data) => api.post(`/weighing-events/${id}/weight-override`, data);
-export const downloadTicketPdf = (id) => api.get(`/weighing-events/${id}/ticket/pdf`, { responseType: 'blob' });
+// Inbound API (replaces weighing events)
+export const getInbounds = (params) => api.get('/inbounds', { params });
+export const getInboundsByOrder = (orderId) => api.get('/inbounds/by-order', { params: { order_id: orderId } });
+export const getInbound = (id) => api.get(`/inbounds/${id}`);
+export const createInbound = (data) => api.post('/inbounds', data);
+export const updateInboundStatus = (id, status) => api.patch(`/inbounds/${id}/status`, { status });
+export const setInboundWasteStream = (id, wasteStreamId) => api.patch(`/inbounds/${id}/waste-stream`, { waste_stream_id: wasteStreamId });
+export const triggerGrossWeighing = (id) => api.post(`/inbounds/${id}/gross-weighing`);
+export const triggerTareWeighing = (id) => api.post(`/inbounds/${id}/tare-weighing`);
+export const manualWeighing = (id, data) => api.post(`/inbounds/${id}/manual-weighing`, data);
+export const overrideWeight = (id, data) => api.post(`/inbounds/${id}/weight-override`, data);
+export const assetLookup = (label) => api.get('/inbounds/asset-lookup', { params: { label } });
+export const downloadTicketPdf = (id) => api.get(`/inbounds/${id}/ticket/pdf`, { responseType: 'blob' });

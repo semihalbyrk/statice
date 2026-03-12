@@ -54,6 +54,8 @@ async function login(req, res, next) {
       return res.status(403).json({ error: 'Account disabled' });
     }
 
+    await prisma.user.update({ where: { id: user.id }, data: { last_login_at: new Date() } });
+
     const accessToken = generateAccessToken(user);
     const refreshToken = generateRefreshToken(user);
 

@@ -1,36 +1,30 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Loader2, Plus, Truck } from 'lucide-react';
+import { ExternalLink, Loader2, MoreVertical, Pencil } from 'lucide-react';
 import toast from 'react-hot-toast';
 import useOrdersStore from '../../store/ordersStore';
 import useAuthStore from '../../store/authStore';
-import StatusBadge from '../../components/ui/StatusBadge';
+import ClickableStatusBadge from '../../components/ui/ClickableStatusBadge';
 import OrderFormModal from '../../components/orders/OrderFormModal';
 import { updateOrder } from '../../api/orders';
-import { createWeighingEvent } from '../../api/weighingEvents';
 import { format } from 'date-fns';
+import Breadcrumb from '../../components/ui/Breadcrumb';
 
-const TRANSITIONS = {
-  PLANNED: ['ARRIVED', 'CANCELLED'],
-  ARRIVED: ['IN_PROGRESS', 'CANCELLED'],
-  IN_PROGRESS: ['COMPLETED'],
+const ORDER_TRANSITIONS = {
+  PLANNED: ['ARRIVED', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED'],
+  ARRIVED: ['PLANNED', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED'],
+  IN_PROGRESS: ['COMPLETED', 'CANCELLED'],
   COMPLETED: [],
-  CANCELLED: [],
+  CANCELLED: ['PLANNED', 'ARRIVED'],
 };
 
 const ACTION_LABELS = {
-  ARRIVED: 'Mark Arrived',
-  IN_PROGRESS: 'Start Processing',
-  COMPLETED: 'Complete',
   CANCELLED: 'Cancel',
 };
 
-const ACTION_STYLES = {
-  ARRIVED: 'bg-blue-600 text-white hover:bg-blue-700',
-  IN_PROGRESS: 'bg-orange-500 text-white hover:bg-orange-600',
-  COMPLETED: 'bg-green-600 text-white hover:bg-green-700',
-  CANCELLED: 'bg-red-600 text-white hover:bg-red-700',
-};
+function formatInboundTimestamp(timestamp) {
+  return timestamp ? format(new Date(timestamp), 'dd MMM yyyy HH:mm') : '—';
+}
 
 export default function OrderDetailPage() {
   const { id } = useParams();
@@ -39,14 +33,10 @@ export default function OrderDetailPage() {
   const { currentOrder: order, loading, fetchOrder } = useOrdersStore();
   const [showEdit, setShowEdit] = useState(false);
   const [transitioning, setTransitioning] = useState(false);
-  const [showCreateEvent, setShowCreateEvent] = useState(false);
-  const [plateInput, setPlateInput] = useState('');
-  const [creatingEvent, setCreatingEvent] = useState(false);
+  const [showActions, setShowActions] = useState(false);
 
   const canEdit = ['ADMIN', 'LOGISTICS_PLANNER'].includes(user?.role);
-  const canOperate = ['ADMIN', 'GATE_OPERATOR'].includes(user?.role);
-  const allowedTransitions = TRANSITIONS[order?.status] || [];
-  const canCreateEvent = canOperate && ['ARRIVED', 'IN_PROGRESS'].includes(order?.status);
+  const allowedTransitions = ORDER_TRANSITIONS[order?.status] || [];
 
   useEffect(() => {
     fetchOrder(id);
@@ -65,197 +55,165 @@ export default function OrderDetailPage() {
     }
   }
 
-  async function handleCreateEvent(e) {
-    e.preventDefault();
-    if (!plateInput.trim()) return;
-    setCreatingEvent(true);
-    try {
-      const { data } = await createWeighingEvent({
-        order_id: id,
-        registration_plate: plateInput.trim().toUpperCase(),
-      });
-      toast.success('Weighing event created');
-      setShowCreateEvent(false);
-      setPlateInput('');
-      navigate(`/weighing-events/${data.data.id}`);
-    } catch (err) {
-      toast.error(err.response?.data?.error || 'Failed to create weighing event');
-    } finally {
-      setCreatingEvent(false);
-    }
-  }
-
   if (loading || !order) {
     return (
       <div className="flex items-center justify-center py-20">
-        <Loader2 className="animate-spin text-text-placeholder" size={24} />
+        <Loader2 className="animate-spin text-grey-400" size={24} />
       </div>
     );
   }
 
   return (
-    <div className="max-w-4xl mx-auto">
-      <button
-        onClick={() => navigate('/orders')}
-        className="flex items-center gap-1.5 text-sm text-text-secondary hover:text-foreground mb-4 transition"
-      >
-        <ArrowLeft size={16} />
-        Back to Orders
-      </button>
+    <div>
+      <Breadcrumb items={[{ label: 'Orders', to: '/orders' }, { label: order.order_number }]} />
 
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
-          <h1 className="text-h-xs font-bold text-foreground">{order.order_number}</h1>
-          <StatusBadge status={order.status} />
+          <h1 className="text-xl font-semibold text-grey-900">{order.order_number}</h1>
+          <ClickableStatusBadge
+            status={order.status}
+            allowedTransitions={allowedTransitions}
+            onTransition={handleTransition}
+            disabled={!canEdit || transitioning}
+          />
           {order.is_adhoc && (
-            <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-orange-100 text-orange-700">
+            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border bg-orange-50 text-orange-700 border-orange-300">
               Ad-hoc
             </span>
           )}
         </div>
         {canEdit && order.status === 'PLANNED' && (
-          <button
-            onClick={() => setShowEdit(true)}
-            className="px-4 py-2 text-sm font-medium text-foreground border border-border rounded-lg hover:bg-muted transition"
-          >
-            Edit
-          </button>
+          <div className="relative">
+            <button
+              onClick={() => setShowActions((v) => !v)}
+              className="h-9 px-3 bg-white text-grey-700 border border-grey-300 rounded-md text-sm font-semibold hover:bg-grey-50 transition-colors inline-flex items-center gap-1.5"
+            >
+              Actions <MoreVertical size={14} />
+            </button>
+            {showActions && (
+              <div className="absolute right-0 top-full mt-1 z-10 bg-white border border-grey-200 rounded-md shadow-md py-1 min-w-[140px]">
+                <button
+                  onClick={() => { setShowActions(false); setShowEdit(true); }}
+                  className="w-full text-left px-3 py-2 text-sm text-grey-700 hover:bg-grey-50 flex items-center gap-2"
+                >
+                  <Pencil size={14} /> Edit Order
+                </button>
+              </div>
+            )}
+          </div>
         )}
       </div>
 
-      {/* Info Grid */}
-      <div className="bg-surface rounded-xl border border-border p-6 mb-6">
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-4 gap-x-8">
-          <div>
-            <span className="text-xs text-text-tertiary uppercase tracking-wide">Carrier</span>
-            <p className="text-sm font-medium text-foreground mt-0.5">{order.carrier?.name}</p>
+      <div className="bg-white rounded-lg border border-grey-200 shadow-sm p-4 mb-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-3 gap-x-8">
+          <div className="min-w-0">
+            <span className="text-xs font-medium text-grey-500 uppercase tracking-wide">Carrier</span>
+            <p className="mt-0.5 break-words text-sm font-medium text-grey-900">{order.carrier?.name}</p>
           </div>
-          <div>
-            <span className="text-xs text-text-tertiary uppercase tracking-wide">Supplier</span>
-            <p className="text-sm font-medium text-foreground mt-0.5">{order.supplier?.name}</p>
+          <div className="min-w-0">
+            <span className="text-xs font-medium text-grey-500 uppercase tracking-wide">Supplier</span>
+            <p className="mt-0.5 break-words text-sm font-medium text-grey-900">{order.supplier?.name}</p>
           </div>
-          <div>
-            <span className="text-xs text-text-tertiary uppercase tracking-wide">Waste Stream</span>
-            <p className="text-sm font-medium text-foreground mt-0.5">{order.waste_stream?.name_en}</p>
+          <div className="min-w-0">
+            <span className="text-xs font-medium text-grey-500 uppercase tracking-wide">Waste Stream</span>
+            <p className="mt-0.5 break-words text-sm font-medium text-grey-900">{order.waste_stream?.name_en}</p>
           </div>
-          <div>
-            <span className="text-xs text-text-tertiary uppercase tracking-wide">Planned Date</span>
-            <p className="text-sm font-medium text-foreground mt-0.5">
+          <div className="min-w-0">
+            <span className="text-xs font-medium text-grey-500 uppercase tracking-wide">Planned Date</span>
+            <p className="text-sm font-medium text-grey-900 mt-0.5">
               {format(new Date(order.planned_date), 'dd MMMM yyyy')}
             </p>
           </div>
-          <div>
-            <span className="text-xs text-text-tertiary uppercase tracking-wide">Expected Skips</span>
-            <p className="text-sm font-medium text-foreground mt-0.5">{order.expected_skip_count}</p>
+          <div className="min-w-0">
+            <span className="text-xs font-medium text-grey-500 uppercase tracking-wide">Expected Skips</span>
+            <p className="text-sm font-medium text-grey-900 mt-0.5">{order.expected_skip_count}</p>
           </div>
-          <div>
-            <span className="text-xs text-text-tertiary uppercase tracking-wide">Created By</span>
-            <p className="text-sm font-medium text-foreground mt-0.5">{order.created_by_user?.full_name}</p>
+          <div className="min-w-0">
+            <span className="text-xs font-medium text-grey-500 uppercase tracking-wide">Created By</span>
+            <p className="mt-0.5 break-words text-sm font-medium text-grey-900">{order.created_by_user?.full_name}</p>
           </div>
+          {order.vehicle_plate && (
+            <div className="min-w-0">
+              <span className="text-xs font-medium text-grey-500 uppercase tracking-wide">Vehicle Plate</span>
+              <p className="mt-0.5 break-all text-sm font-medium font-mono text-grey-900">{order.vehicle_plate}</p>
+            </div>
+          )}
+          {order.afvalstroomnummer && (
+            <div className="min-w-0">
+              <span className="text-xs font-medium text-grey-500 uppercase tracking-wide">Afvalstroomnummer</span>
+              <p className="mt-0.5 break-words text-sm font-medium text-grey-900">{order.afvalstroomnummer}</p>
+            </div>
+          )}
           {order.notes && (
-            <div className="sm:col-span-2">
-              <span className="text-xs text-text-tertiary uppercase tracking-wide">Notes</span>
-              <p className="text-sm text-foreground mt-0.5">{order.notes}</p>
+            <div className="min-w-0 sm:col-span-2">
+              <span className="text-xs font-medium text-grey-500 uppercase tracking-wide">Notes</span>
+              <p className="mt-0.5 break-words text-sm text-grey-700">{order.notes}</p>
             </div>
           )}
         </div>
       </div>
 
-      {/* Status Actions */}
-      {allowedTransitions.length > 0 && (
-        <div className="bg-surface rounded-xl border border-border p-5 mb-6">
-          <h2 className="text-sm font-semibold text-foreground mb-3">Actions</h2>
-          <div className="flex gap-3 flex-wrap">
-            {allowedTransitions.map((status) => (
-              <button
-                key={status}
-                onClick={() => handleTransition(status)}
-                disabled={transitioning}
-                className={`px-4 py-2 rounded-lg font-semibold text-sm transition disabled:opacity-50 ${ACTION_STYLES[status]}`}
-              >
-                {ACTION_LABELS[status]}
-              </button>
-            ))}
+      <div className="bg-white rounded-lg border border-grey-200 shadow-sm overflow-hidden">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-grey-200">
+          <div>
+            <h2 className="text-base font-semibold text-grey-900">Inbounds</h2>
+            <p className="text-sm text-grey-500 mt-1">Each order can contain multiple inbound records. This section keeps the inbound status and operational details together.</p>
           </div>
         </div>
-      )}
 
-      {/* Weighing Events */}
-      <div className="bg-surface rounded-xl border border-border p-5">
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="text-sm font-semibold text-foreground">Weighing Events</h2>
-          {canCreateEvent && !showCreateEvent && (
-            <button
-              onClick={() => setShowCreateEvent(true)}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-primary text-primary-foreground rounded-lg font-semibold text-xs hover:bg-primary-hover transition"
-            >
-              <Plus size={14} /> Create Weighing Event
-            </button>
+        <div className="p-5">
+          {order.inbounds?.length > 0 ? (
+            <div className="space-y-3">
+              {order.inbounds.map((inbound) => (
+                <div
+                  key={inbound.id}
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => navigate(`/inbounds/${inbound.id}`)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      navigate(`/inbounds/${inbound.id}`);
+                    }
+                  }}
+                  className="w-full rounded-xl border border-grey-200 bg-grey-25 px-4 py-4 text-left hover:border-green-300 hover:bg-white transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-green-500/20"
+                >
+                  <div className="min-w-0 space-y-3">
+                    <div className="flex flex-wrap items-center gap-3">
+                      <span className="min-w-0 break-words text-sm font-medium text-green-600">
+                        {inbound.inbound_number || inbound.vehicle?.registration_plate || 'Inbound'}
+                      </span>
+                      <ClickableStatusBadge
+                        status={inbound.status}
+                        allowedTransitions={[]}
+                        disabled
+                      />
+                      <span className="inline-flex items-center gap-1 text-xs font-medium text-grey-500">
+                        Open inbound
+                        <ExternalLink size={12} />
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-x-6 gap-y-3">
+                      <InboundMeta label="Vehicle Plate" value={inbound.vehicle?.registration_plate} mono />
+                      <InboundMeta label="Arrived At" value={formatInboundTimestamp(inbound.arrived_at)} />
+                      <InboundMeta
+                        label="Waste Stream"
+                        value={inbound.waste_stream?.name_en || order.waste_stream?.name_en}
+                      />
+                      <InboundMeta
+                        label="Sorting"
+                        value={inbound.sorting_session ? 'Sorting process available' : 'Not started'}
+                      />
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-grey-400">No inbounds yet</p>
           )}
         </div>
-
-        {showCreateEvent && (
-          <form onSubmit={handleCreateEvent} className="mb-4 p-4 bg-muted rounded-lg border border-border">
-            <label className="block text-sm font-medium text-text-secondary mb-1.5">
-              Vehicle Registration Plate
-            </label>
-            <div className="flex gap-3">
-              <input
-                type="text"
-                value={plateInput}
-                onChange={(e) => setPlateInput(e.target.value.toUpperCase())}
-                placeholder="AB-123-CD"
-                required
-                autoFocus
-                className="flex-1 px-3 py-2 rounded-lg border border-input text-sm font-mono text-foreground placeholder-text-placeholder focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent transition tracking-wider"
-              />
-              <button
-                type="submit"
-                disabled={creatingEvent}
-                className="flex items-center gap-1.5 px-4 py-2 bg-primary text-primary-foreground rounded-lg font-semibold text-sm hover:bg-primary-hover disabled:opacity-50 transition"
-              >
-                <Truck size={16} />
-                {creatingEvent ? 'Creating...' : 'Create'}
-              </button>
-              <button
-                type="button"
-                onClick={() => { setShowCreateEvent(false); setPlateInput(''); }}
-                className="px-3 py-2 text-sm text-text-secondary hover:text-foreground rounded-lg hover:bg-surface transition"
-              >
-                Cancel
-              </button>
-            </div>
-          </form>
-        )}
-
-        {order.weighing_events?.length > 0 ? (
-          <div className="divide-y divide-border">
-            {order.weighing_events.map((event) => (
-              <button
-                key={event.id}
-                onClick={() => navigate(`/weighing-events/${event.id}`)}
-                className="py-3 flex items-center justify-between w-full text-left hover:bg-muted rounded-lg px-2 -mx-2 transition"
-              >
-                <div>
-                  <span className="text-sm font-medium font-mono text-foreground">
-                    {event.vehicle?.registration_plate}
-                  </span>
-                  <span className="text-sm text-text-secondary ml-3">
-                    {format(new Date(event.arrived_at), 'dd MMM yyyy HH:mm')}
-                  </span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <StatusBadge status={event.status} />
-                  {event.sorting_session && (
-                    <StatusBadge status={event.sorting_session.status} />
-                  )}
-                </div>
-              </button>
-            ))}
-          </div>
-        ) : (
-          <p className="text-sm text-text-placeholder">No weighing events yet</p>
-        )}
       </div>
 
       {showEdit && (
@@ -268,6 +226,17 @@ export default function OrderDetailPage() {
           }}
         />
       )}
+    </div>
+  );
+}
+
+function InboundMeta({ label, value, mono = false }) {
+  return (
+    <div className="min-w-0">
+      <span className="text-xs font-medium text-grey-500 uppercase tracking-wide">{label}</span>
+      <p className={`mt-1 min-w-0 break-words text-sm text-grey-900 ${mono ? 'font-mono break-all' : 'font-medium'}`}>
+        {value || '—'}
+      </p>
     </div>
   );
 }

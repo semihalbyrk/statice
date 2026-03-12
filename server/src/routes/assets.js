@@ -14,4 +14,8 @@ router.post('/', requireRole(['GATE_OPERATOR', 'ADMIN']), ctrl.create);
 router.put('/:id', requireRole(['GATE_OPERATOR', 'ADMIN']), ctrl.update);
 router.delete('/:id', requireRole(['GATE_OPERATOR', 'ADMIN']), ctrl.remove);
 
+// Per-skip weight entry
+router.post('/:id/gross-weight', requireRole(['GATE_OPERATOR', 'ADMIN']), ctrl.setGrossWeight);
+router.post('/:id/tare-weight', requireRole(['GATE_OPERATOR', 'ADMIN']), ctrl.setTareWeight);
+
 module.exports = router;

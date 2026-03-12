@@ -1,545 +1,345 @@
 import { useEffect, useState, useCallback } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
-import { ArrowLeft, Loader2, Scale, Truck, CheckCircle, Download, Pencil, Trash2, Plus, Printer, AlertTriangle } from 'lucide-react';
+import { useParams, Link } from 'react-router-dom';
+import { Loader2, Scale, Download, Pencil, Trash2, Plus, Printer, AlertTriangle, ExternalLink } from 'lucide-react';
 import toast from 'react-hot-toast';
-import useWeighingStore from '../../store/weighingStore';
 import useAuthStore from '../../store/authStore';
 import useMasterDataStore from '../../store/masterDataStore';
-import StatusBadge from '../../components/ui/StatusBadge';
+import ClickableStatusBadge from '../../components/ui/ClickableStatusBadge';
 import {
+  getInbound as getInboundApi,
   triggerGrossWeighing,
   triggerTareWeighing,
-  advanceToTare,
-  confirmWeighingEvent,
+  manualWeighing as manualWeighingApi,
   overrideWeight,
   downloadTicketPdf,
+  updateInboundStatus,
+  setInboundWasteStream,
 } from '../../api/weighingEvents';
-import { createAsset, updateAsset as updateAssetApi, deleteAsset, getNextLabel } from '../../api/assets';
+import { createAsset, updateAsset as updateAssetApi, deleteAsset, getNextLabel, setAssetGrossWeight } from '../../api/assets';
 import { printAssetLabel } from '../../utils/printLabel';
 import { format } from 'date-fns';
+import Breadcrumb from '../../components/ui/Breadcrumb';
 
 const SKIP_TYPES = ['OPEN_TOP', 'CLOSED_TOP', 'GITTERBOX', 'PALLET', 'OTHER'];
 const SKIP_LABELS = { OPEN_TOP: 'Open Top', CLOSED_TOP: 'Closed Top', GITTERBOX: 'Gitterbox', PALLET: 'Pallet', OTHER: 'Other' };
 
-export default function WeighingEventPage() {
-  const { eventId } = useParams();
-  const navigate = useNavigate();
+const inputClass = "w-full h-10 px-3.5 rounded-md border border-grey-300 text-sm text-grey-900 focus:border-green-500 focus:ring-[3px] focus:ring-green-500/15 outline-none transition-colors";
+const selectClass = `${inputClass} bg-white`;
+
+// Manual transitions allowed by the operator (auto-transitions happen on backend)
+const MANUAL_TRANSITIONS = {
+  WEIGHED_OUT: ['READY_FOR_SORTING'],
+};
+
+function formatDateTime(value, pattern = 'dd MMM yyyy HH:mm') {
+  return value ? format(new Date(value), pattern) : '—';
+}
+
+function formatTicketTimestamp(ticket) {
+  return ticket?.timestamp ? format(new Date(ticket.timestamp), 'dd.MM.yyyy - HH:mm:ss') : '—';
+}
+
+export default function InboundDetailPage() {
+  const { inboundId } = useParams();
   const user = useAuthStore((s) => s.user);
-  const { currentEvent: event, isLoading, isTriggering, fetchEvent, setEvent, setTriggering, clearEvent } = useWeighingStore();
-  const { productCategories } = useMasterDataStore();
+  const { wasteStreams } = useMasterDataStore();
   const isAdmin = user?.role === 'ADMIN';
 
-  useEffect(() => {
-    fetchEvent(eventId);
-    return () => clearEvent();
-  }, [eventId, fetchEvent, clearEvent]);
+  const [inbound, setInbound] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isTriggering, setTriggering] = useState(false);
 
-  if (isLoading || !event) {
+  const fetchInbound = useCallback(async (id) => {
+    setIsLoading(true);
+    try {
+      const { data } = await getInboundApi(id);
+      setInbound(data.data);
+    } catch (err) {
+      toast.error(err.response?.data?.error || 'Failed to load inbound');
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchInbound(inboundId);
+  }, [inboundId, fetchInbound]);
+
+  const handleStatusChange = useCallback(async (newStatus) => {
+    try {
+      const { data } = await updateInboundStatus(inboundId, newStatus);
+      setInbound(data.data);
+      toast.success(`Status updated to ${newStatus.replace(/_/g, ' ')}`);
+    } catch (err) {
+      toast.error(err.response?.data?.error || 'Failed to update status');
+    }
+  }, [inboundId]);
+
+  const refreshInbound = useCallback(() => fetchInbound(inboundId), [inboundId, fetchInbound]);
+
+  if (isLoading || !inbound) {
     return (
       <div className="flex items-center justify-center py-20">
-        <Loader2 className="animate-spin text-text-placeholder" size={24} />
+        <Loader2 className="animate-spin text-grey-400" size={24} />
       </div>
     );
   }
 
-  return (
-    <div className="max-w-7xl mx-auto">
-      <Link
-        to={`/orders/${event.order_id}`}
-        className="inline-flex items-center gap-1.5 text-sm text-text-secondary hover:text-foreground mb-4 transition"
-      >
-        <ArrowLeft size={16} /> Back to Order
-      </Link>
+  const order = inbound.order;
+  const assets = inbound.assets || [];
+  const allowedManual = MANUAL_TRANSITIONS[inbound.status] || [];
 
-      <div className="grid grid-cols-1 xl:grid-cols-[1fr_2fr_1fr] gap-6">
-        {/* Left Column — Order Summary */}
-        <OrderSummaryCard event={event} />
-
-        {/* Centre Column — Weighing Controls */}
-        <WeighingControls
-          event={event}
-          isAdmin={isAdmin}
-          isTriggering={isTriggering}
-          setTriggering={setTriggering}
-          fetchEvent={fetchEvent}
-          eventId={eventId}
-          setEvent={setEvent}
-        />
-
-        {/* Right Column — Skips Panel */}
-        <SkipsPanel
-          event={event}
-          eventId={eventId}
-          fetchEvent={fetchEvent}
-          productCategories={productCategories}
-        />
-      </div>
-    </div>
-  );
-}
-
-/* ───── Order Summary Card ───── */
-function OrderSummaryCard({ event }) {
-  const order = event.order;
-  return (
-    <div className="bg-surface rounded-xl border border-border p-5 h-fit">
-      <h2 className="text-sm font-semibold text-foreground mb-4">Order Summary</h2>
-      <div className="space-y-3">
-        <InfoRow label="Order #" value={order.order_number} />
-        <InfoRow label="Status">
-          <StatusBadge status={order.status} />
-        </InfoRow>
-        <InfoRow label="Carrier" value={order.carrier?.name} />
-        <InfoRow label="Supplier" value={order.supplier?.name} />
-        <InfoRow label="Vehicle Plate">
-          <span className="font-mono text-base font-bold tracking-wider text-foreground">
-            {event.vehicle?.registration_plate}
-          </span>
-        </InfoRow>
-        <InfoRow label="Arrived At" value={format(new Date(event.arrived_at), 'dd MMM yyyy HH:mm')} />
-        <InfoRow label="Waste Stream" value={order.waste_stream ? `${order.waste_stream.name_en} (${order.waste_stream.code})` : '—'} />
-        <InfoRow label="Expected Skips" value={order.expected_skip_count} />
-        {event.notes && <InfoRow label="Notes" value={event.notes} />}
-      </div>
-    </div>
-  );
-}
-
-function InfoRow({ label, value, children }) {
   return (
     <div>
-      <span className="text-xs text-text-tertiary uppercase tracking-wide">{label}</span>
-      {children ? <div className="mt-0.5">{children}</div> : <p className="text-sm font-medium text-foreground mt-0.5">{value ?? '—'}</p>}
+      <Breadcrumb items={[{ label: 'Inbounds', to: '/inbounds' }, { label: inbound.inbound_number || 'Inbound' }]} />
+
+      {/* Title + Status */}
+      <div className="flex items-center mb-4">
+        <div className="flex items-center gap-3 flex-wrap">
+          <h1 className="text-xl font-semibold text-grey-900">{inbound.inbound_number || 'Inbound'}</h1>
+          <ClickableStatusBadge
+            status={inbound.status}
+            allowedTransitions={allowedManual}
+            onTransition={handleStatusChange}
+          />
+        </div>
+      </div>
+
+      {/* Horizontal Info Card */}
+      <div className="bg-white rounded-lg border border-grey-200 shadow-sm p-4 mb-4">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+          <div className="grid flex-1 grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-y-3 gap-x-6">
+            <InfoField label="Carrier" value={order?.carrier?.name} />
+            <InfoField label="Supplier" value={order?.supplier?.name} />
+            <InfoField label="Vehicle Plate">
+              <span className="font-mono text-sm font-bold tracking-wider text-grey-900">
+                {inbound.vehicle?.registration_plate || '—'}
+              </span>
+            </InfoField>
+            <InfoField label="Waste Stream" value={
+              inbound.waste_stream
+                ? `${inbound.waste_stream.name_en} (${inbound.waste_stream.code})`
+                : order?.waste_stream
+                  ? `${order.waste_stream.name_en} (${order.waste_stream.code})`
+                  : '—'
+            } />
+            <InfoField label="Arrived At" value={formatDateTime(inbound.arrived_at)} />
+            {inbound.notes && <InfoField className="sm:col-span-2 xl:col-span-5" label="Notes" value={inbound.notes} />}
+          </div>
+          <InfoField className="lg:min-w-[180px] lg:text-right" label="Linked Order">
+            <Link
+              to={`/orders/${inbound.order_id}`}
+              className="inline-flex items-center gap-1 text-sm font-semibold text-green-600 hover:text-green-700 transition-colors"
+            >
+              {order?.order_number || '—'}
+              <ExternalLink size={12} />
+            </Link>
+          </InfoField>
+        </div>
+      </div>
+
+      {/* Pfister Reference Weights */}
+      <div className="bg-white rounded-lg border border-grey-200 shadow-sm p-4 mb-4">
+        <PfisterSection
+          inbound={inbound}
+          inboundId={inboundId}
+          isTriggering={isTriggering}
+          setTriggering={setTriggering}
+          setInbound={setInbound}
+          isAdmin={isAdmin}
+          refreshInbound={refreshInbound}
+        />
+      </div>
+
+      {/* Skips Section */}
+      <SkipsSection
+        inbound={inbound}
+        inboundId={inboundId}
+        assets={assets}
+        wasteStreams={wasteStreams}
+        refreshInbound={refreshInbound}
+        setInbound={setInbound}
+      />
+
+      {/* Actions */}
+      <ActionsFooter
+        inbound={inbound}
+        inboundId={inboundId}
+        isTriggering={isTriggering}
+        setTriggering={setTriggering}
+        setInbound={setInbound}
+      />
     </div>
   );
 }
 
-/* ───── Weighing Controls (Centre) ───── */
-function WeighingControls({ event, isAdmin, isTriggering, setTriggering, fetchEvent, eventId, setEvent }) {
-  const navigate = useNavigate();
+/* ───── Info Field ───── */
+function InfoField({ label, value, children, className = '' }) {
+  return (
+    <div className={className}>
+      <span className="text-xs font-medium text-grey-500 uppercase tracking-wide">{label}</span>
+      {children ? <div className="mt-0.5">{children}</div> : <p className="text-sm font-medium text-grey-900 mt-0.5">{value ?? '—'}</p>}
+    </div>
+  );
+}
+
+/* ───── Pfister Section ───── */
+function PfisterSection({ inbound, inboundId, isTriggering, setTriggering, setInbound, isAdmin, refreshInbound }) {
+  const [showManualFallback, setShowManualFallback] = useState(null);
   const [showOverride, setShowOverride] = useState(false);
-  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+  const assets = inbound.assets || [];
+  const assetsWithGross = assets.filter((a) => a.gross_weight_kg != null && Number(a.gross_weight_kg) > 0);
+
+  const canTriggerGross = !inbound.gross_ticket;
+  const canTriggerTare = !!inbound.gross_ticket && !inbound.tare_ticket && assetsWithGross.length > 0;
+  const isTerminal = ['READY_FOR_SORTING', 'SORTED'].includes(inbound.status);
 
   const handleGross = useCallback(async () => {
     setTriggering(true);
     try {
-      const { data } = await triggerGrossWeighing(eventId);
-      setEvent(data.data);
-      toast.success('Gross weighing complete');
+      const { data } = await triggerGrossWeighing(inboundId);
+      setInbound(data.data);
+      toast.success('Pfister gross weighing complete — status: WEIGHED IN');
     } catch (err) {
-      toast.error(err.response?.data?.error || 'Gross weighing failed');
+      toast.error(err.response?.data?.error || 'Pfister gross weighing failed');
+      setShowManualFallback('GROSS');
     } finally {
       setTriggering(false);
     }
-  }, [eventId, setTriggering, setEvent]);
-
-  const handleAdvanceToTare = useCallback(async () => {
-    setTriggering(true);
-    try {
-      const { data } = await advanceToTare(eventId);
-      setEvent(data.data);
-      toast.success('Ready for tare weighing');
-    } catch (err) {
-      toast.error(err.response?.data?.error || 'Failed to advance');
-    } finally {
-      setTriggering(false);
-    }
-  }, [eventId, setTriggering, setEvent]);
+  }, [inboundId, setTriggering, setInbound]);
 
   const handleTare = useCallback(async () => {
     setTriggering(true);
     try {
-      const { data } = await triggerTareWeighing(eventId);
-      setEvent(data.data);
-      toast.success('Tare weighing complete');
+      const { data } = await triggerTareWeighing(inboundId);
+      setInbound(data.data);
+      toast.success('Pfister tare weighing complete — tare distributed to skips');
     } catch (err) {
-      toast.error(err.response?.data?.error || 'Tare weighing failed');
+      toast.error(err.response?.data?.error || 'Pfister tare weighing failed');
+      setShowManualFallback('TARE');
     } finally {
       setTriggering(false);
     }
-  }, [eventId, setTriggering, setEvent]);
-
-  const handleConfirm = useCallback(async () => {
-    setTriggering(true);
-    try {
-      const { data } = await confirmWeighingEvent(eventId);
-      setEvent(data.data);
-      toast.success('Weighing event confirmed');
-      setShowConfirmDialog(false);
-      if (data.data.sorting_session?.id) {
-        navigate(`/sorting/${data.data.sorting_session.id}`);
-      }
-    } catch (err) {
-      toast.error(err.response?.data?.error || 'Failed to confirm');
-    } finally {
-      setTriggering(false);
-    }
-  }, [eventId, setTriggering, setEvent, navigate]);
-
-  const handleDownloadPdf = useCallback(async () => {
-    try {
-      const response = await downloadTicketPdf(eventId);
-      const url = window.URL.createObjectURL(new Blob([response.data]));
-      const link = document.createElement('a');
-      link.href = url;
-      link.setAttribute('download', `weight-ticket-${eventId.slice(0, 8)}.pdf`);
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      window.URL.revokeObjectURL(url);
-    } catch {
-      toast.error('Failed to download PDF');
-    }
-  }, [eventId]);
-
-  const grossKg = Number(event.gross_weight_kg) || 0;
-  const tareKg = Number(event.tare_weight_kg) || 0;
-  const netKg = Number(event.net_weight_kg) || 0;
-  const assetCount = event.assets?.length || 0;
+  }, [inboundId, setTriggering, setInbound]);
 
   return (
-    <div className="space-y-4">
-      {/* Status Header */}
-      <div className="bg-surface rounded-xl border border-border p-5">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-sm font-semibold text-foreground">Weighing Process</h2>
-          <StatusBadge status={event.status} />
-        </div>
-
-        {/* Persistent Gross Weight Card */}
-        {event.gross_ticket && (
-          <WeightCard label="Gross Weight" weight={grossKg} ticket={event.gross_ticket} />
+    <div>
+      <div className="mb-3 flex items-center justify-between gap-3">
+        <h2 className="text-sm font-semibold text-grey-900">Pfister Weighbridge</h2>
+        {isAdmin && (inbound.gross_ticket || inbound.tare_ticket) && (
+          <button
+            onClick={() => setShowOverride(true)}
+            className="h-9 px-4 flex items-center gap-2 border border-grey-300 rounded-md text-sm font-medium text-grey-700 hover:bg-grey-50 transition-colors"
+          >
+            <Pencil size={14} /> Override
+          </button>
         )}
+      </div>
 
-        {/* Persistent Tare Weight Card */}
-        {event.tare_ticket && (
-          <WeightCard label="Tare Weight" weight={tareKg} ticket={event.tare_ticket} className="mt-3" />
-        )}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-3">
+        <WeightCard label="Gross Weight" weight={Number(inbound.gross_weight_kg) || null} ticket={inbound.gross_ticket} />
+        <WeightCard label="Tare Weight" weight={Number(inbound.tare_weight_kg) || null} ticket={inbound.tare_ticket} />
+        <WeightCard label="Net Weight" weight={
+          (inbound.gross_weight_kg && inbound.tare_weight_kg)
+            ? Number(inbound.net_weight_kg) || (Number(inbound.gross_weight_kg) - Number(inbound.tare_weight_kg))
+            : null
+        } highlight />
+      </div>
 
-        {/* Net Weight Summary */}
-        {event.status === 'TARE_COMPLETE' || event.status === 'CONFIRMED' ? (
-          <div className="mt-4 bg-muted rounded-lg p-4">
-            <div className="grid grid-cols-3 text-center">
-              <div>
-                <span className="text-xs text-text-tertiary">Gross</span>
-                <p className="text-sm font-semibold text-foreground">{grossKg.toLocaleString()} kg</p>
-              </div>
-              <div>
-                <span className="text-xs text-text-tertiary">Tare</span>
-                <p className="text-sm font-semibold text-foreground">{tareKg.toLocaleString()} kg</p>
-              </div>
-              <div>
-                <span className="text-xs text-text-tertiary">Net</span>
-                <p className="text-lg font-bold text-foreground">{netKg.toLocaleString()} kg</p>
-              </div>
-            </div>
-          </div>
-        ) : null}
-
-        {/* Status-dependent Action */}
-        <div className="mt-5">
-          {event.status === 'PENDING_GROSS' && (
+      {!isTerminal && (
+        <div className="flex flex-wrap gap-2">
+          {canTriggerGross && (
             <button
               onClick={handleGross}
               disabled={isTriggering}
-              className="w-full h-16 flex items-center justify-center gap-3 bg-primary text-primary-foreground rounded-xl font-semibold text-base hover:bg-primary-hover disabled:opacity-50 transition"
+              className="h-9 px-4 flex items-center gap-2 bg-green-500 text-white rounded-md font-semibold text-sm hover:bg-green-700 disabled:opacity-50 transition-colors"
             >
-              {isTriggering ? (
-                <>
-                  <Loader2 className="animate-spin" size={20} />
-                  Contacting Pfister weighbridge...
-                </>
-              ) : (
-                <>
-                  <Scale size={20} />
-                  Trigger Gross Weighing
-                </>
-              )}
+              {isTriggering ? <Loader2 className="animate-spin" size={16} /> : <Scale size={16} />}
+              Trigger Gross Weighing
             </button>
           )}
-
-          {event.status === 'GROSS_COMPLETE' && (
-            <button
-              onClick={handleAdvanceToTare}
-              disabled={isTriggering || assetCount === 0}
-              className="w-full h-16 flex items-center justify-center gap-3 bg-primary text-primary-foreground rounded-xl font-semibold text-base hover:bg-primary-hover disabled:opacity-50 transition"
-            >
-              <Truck size={20} />
-              Proceed to Tare Weighing
-            </button>
-          )}
-          {event.status === 'GROSS_COMPLETE' && assetCount === 0 && (
-            <p className="text-xs text-text-placeholder text-center mt-2">Add at least one skip before proceeding</p>
-          )}
-
-          {event.status === 'PENDING_TARE' && (
+          {canTriggerTare && (
             <button
               onClick={handleTare}
               disabled={isTriggering}
-              className="w-full h-16 flex items-center justify-center gap-3 bg-primary text-primary-foreground rounded-xl font-semibold text-base hover:bg-primary-hover disabled:opacity-50 transition"
+              className="h-9 px-4 flex items-center gap-2 bg-green-500 text-white rounded-md font-semibold text-sm hover:bg-green-700 disabled:opacity-50 transition-colors"
             >
-              {isTriggering ? (
-                <>
-                  <Loader2 className="animate-spin" size={20} />
-                  Contacting Pfister weighbridge...
-                </>
-              ) : (
-                <>
-                  <Scale size={20} />
-                  Trigger Tare Weighing
-                </>
-              )}
+              {isTriggering ? <Loader2 className="animate-spin" size={16} /> : <Scale size={16} />}
+              Trigger Tare Weighing
             </button>
           )}
-
-          {event.status === 'TARE_COMPLETE' && (
-            <button
-              onClick={() => setShowConfirmDialog(true)}
-              disabled={isTriggering}
-              className="w-full h-16 flex items-center justify-center gap-3 bg-green-600 text-white rounded-xl font-semibold text-base hover:bg-green-700 disabled:opacity-50 transition"
-            >
-              <CheckCircle size={20} />
-              Confirm & Complete
-            </button>
-          )}
-
-          {event.status === 'CONFIRMED' && (
-            <div className="space-y-3">
-              <button
-                onClick={handleDownloadPdf}
-                className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-primary text-primary-foreground rounded-xl font-semibold text-sm hover:bg-primary-hover transition"
-              >
-                <Download size={16} />
-                Download Weight Ticket (PDF)
-              </button>
-              {event.sorting_session && (
-                <Link
-                  to={`/sorting/${event.sorting_session.id}`}
-                  className="w-full flex items-center justify-center gap-2 px-4 py-3 border border-border rounded-xl font-semibold text-sm text-foreground hover:bg-muted transition"
-                >
-                  View Sorting Record
-                  <StatusBadge status={event.sorting_session.status} />
-                </Link>
-              )}
-            </div>
+          {!canTriggerTare && !canTriggerGross && inbound.gross_ticket && !inbound.tare_ticket && (
+            <p className="text-xs text-grey-400">Add at least one skip with gross weight to enable tare</p>
           )}
         </div>
+      )}
 
-        {/* Override Link (ADMIN only) */}
-        {isAdmin && (event.gross_ticket || event.tare_ticket) && event.status !== 'CONFIRMED' && (
-          <button
-            onClick={() => setShowOverride(true)}
-            className="mt-3 text-xs text-text-tertiary hover:text-foreground underline transition"
-          >
-            Override Weight
-          </button>
-        )}
-      </div>
-
-      {/* Confirm Dialog */}
-      {showConfirmDialog && (
-        <ConfirmDialog
-          event={event}
-          grossKg={grossKg}
-          tareKg={tareKg}
-          netKg={netKg}
-          isTriggering={isTriggering}
-          onConfirm={handleConfirm}
-          onCancel={() => setShowConfirmDialog(false)}
+      {showManualFallback && (
+        <ManualWeighingDialog
+          weightType={showManualFallback}
+          inboundId={inboundId}
+          onSuccess={async (data) => { setInbound(data); setShowManualFallback(null); }}
+          onClose={() => setShowManualFallback(null)}
         />
       )}
 
-      {/* Override Dialog */}
       {showOverride && (
         <OverrideDialog
-          eventId={eventId}
-          event={event}
+          inboundId={inboundId}
+          inbound={inbound}
           onClose={() => setShowOverride(false)}
-          onSuccess={async () => { setShowOverride(false); await fetchEvent(eventId); }}
+          onSuccess={async () => { setShowOverride(false); await refreshInbound(); }}
         />
       )}
     </div>
   );
 }
 
-function WeightCard({ label, weight, ticket, className = '' }) {
+function WeightCard({ label, weight, ticket, highlight }) {
   return (
-    <div className={`bg-muted rounded-lg p-3 ${className}`}>
-      <div className="flex items-center justify-between">
-        <span className="text-xs text-text-tertiary">{label}</span>
-        {ticket.is_manual_override && (
-          <span className="text-xs text-orange-600 font-medium">Overridden</span>
-        )}
-      </div>
-      <p className="text-lg font-bold text-foreground">{weight.toLocaleString()} kg</p>
-      <p className="text-xs text-text-placeholder mt-0.5">
-        {ticket.ticket_number} — {format(new Date(ticket.timestamp), 'dd MMM yyyy HH:mm:ss')}
+    <div className={`rounded-md p-3 ${highlight && weight ? 'bg-green-25 border border-green-200' : 'bg-grey-50 border border-grey-200'}`}>
+      <span className={`text-xs ${highlight && weight ? 'text-green-700' : 'text-grey-500'}`}>{label}</span>
+      <p className={`text-lg font-bold ${highlight && weight ? 'text-green-700' : weight ? 'text-grey-900' : 'text-grey-400'}`}>
+        {weight ? `${weight.toLocaleString()} kg` : '—'}
       </p>
+      {ticket && (
+        <>
+          <p className="mt-1 text-xs font-semibold tracking-[0.02em] text-grey-600">
+            {formatTicketTimestamp(ticket)}
+            {ticket.is_manual_override && <span className="text-orange-600 ml-1">(overridden)</span>}
+          </p>
+          <p className="text-[10px] font-mono text-grey-400 mt-0.5">Ticket: {ticket.ticket_number}</p>
+        </>
+      )}
     </div>
   );
 }
 
-/* ───── Confirm Dialog ───── */
-function ConfirmDialog({ grossKg, tareKg, netKg, isTriggering, onConfirm, onCancel }) {
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-surface-overlay/50">
-      <div className="bg-surface rounded-2xl border border-border shadow-xl w-full max-w-sm mx-4 p-6">
-        <div className="flex items-center gap-2 mb-4">
-          <AlertTriangle size={20} className="text-orange-500" />
-          <h3 className="text-lg font-semibold text-foreground">Confirm Weighing</h3>
-        </div>
-        <p className="text-sm text-text-secondary mb-4">This action cannot be undone. The weighing event will be finalized.</p>
-        <div className="bg-muted rounded-lg p-3 mb-5">
-          <div className="grid grid-cols-3 text-center text-sm">
-            <div>
-              <span className="text-xs text-text-tertiary">Gross</span>
-              <p className="font-semibold text-foreground">{grossKg.toLocaleString()} kg</p>
-            </div>
-            <div>
-              <span className="text-xs text-text-tertiary">Tare</span>
-              <p className="font-semibold text-foreground">{tareKg.toLocaleString()} kg</p>
-            </div>
-            <div>
-              <span className="text-xs text-text-tertiary">Net</span>
-              <p className="font-bold text-foreground">{netKg.toLocaleString()} kg</p>
-            </div>
-          </div>
-        </div>
-        <div className="flex justify-end gap-3">
-          <button onClick={onCancel} className="px-4 py-2 text-sm text-text-secondary hover:text-foreground rounded-lg hover:bg-muted transition">
-            Cancel
-          </button>
-          <button
-            onClick={onConfirm}
-            disabled={isTriggering}
-            className="px-4 py-2 bg-green-600 text-white rounded-lg font-semibold text-sm hover:bg-green-700 disabled:opacity-50 transition"
-          >
-            {isTriggering ? 'Confirming...' : 'Confirm & Complete'}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-/* ───── Override Dialog ───── */
-function OverrideDialog({ eventId, event, onClose, onSuccess }) {
-  const [form, setForm] = useState({
-    weight_type: 'GROSS',
-    weight_kg: '',
-    reason_code: '',
-    notes: '',
-  });
-  const [submitting, setSubmitting] = useState(false);
-
-  async function handleSubmit(e) {
-    e.preventDefault();
-    setSubmitting(true);
-    try {
-      await overrideWeight(eventId, { ...form, weight_kg: Number(form.weight_kg) });
-      toast.success('Weight overridden');
-      onSuccess();
-    } catch (err) {
-      toast.error(err.response?.data?.error || 'Override failed');
-    } finally {
-      setSubmitting(false);
-    }
-  }
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-surface-overlay/50">
-      <div className="bg-surface rounded-2xl border border-border shadow-xl w-full max-w-md mx-4">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-border">
-          <h2 className="text-lg font-semibold text-foreground">Override Weight</h2>
-          <button onClick={onClose} className="p-1 rounded-md hover:bg-muted transition text-text-tertiary">&times;</button>
-        </div>
-        <form onSubmit={handleSubmit} className="px-6 py-5 space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-text-secondary mb-1.5">Weight Type</label>
-            <div className="flex gap-4">
-              {['GROSS', 'TARE'].map((t) => (
-                <label key={t} className="flex items-center gap-2 text-sm text-foreground">
-                  <input
-                    type="radio"
-                    name="weight_type"
-                    value={t}
-                    checked={form.weight_type === t}
-                    onChange={(e) => setForm((p) => ({ ...p, weight_type: e.target.value }))}
-                    disabled={t === 'GROSS' ? !event.gross_ticket : !event.tare_ticket}
-                    className="accent-primary"
-                  />
-                  {t}
-                </label>
-              ))}
-            </div>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-text-secondary mb-1.5">New Weight (kg)</label>
-            <input
-              type="number"
-              value={form.weight_kg}
-              onChange={(e) => setForm((p) => ({ ...p, weight_kg: e.target.value }))}
-              required
-              min="1"
-              className="w-full px-3 py-2.5 rounded-lg border border-input text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent transition"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-text-secondary mb-1.5">Reason Code</label>
-            <select
-              value={form.reason_code}
-              onChange={(e) => setForm((p) => ({ ...p, reason_code: e.target.value }))}
-              required
-              className="w-full px-3 py-2.5 rounded-lg border border-input text-sm text-foreground bg-surface focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent transition"
-            >
-              <option value="">Select reason...</option>
-              <option value="CALIBRATION_ERROR">Calibration Error</option>
-              <option value="EQUIPMENT_MALFUNCTION">Equipment Malfunction</option>
-              <option value="INCORRECT_READING">Incorrect Reading</option>
-              <option value="OTHER">Other</option>
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-text-secondary mb-1.5">Notes</label>
-            <textarea
-              value={form.notes}
-              onChange={(e) => setForm((p) => ({ ...p, notes: e.target.value }))}
-              rows={2}
-              className="w-full px-3 py-2.5 rounded-lg border border-input text-sm text-foreground placeholder-text-placeholder focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent transition resize-none"
-            />
-          </div>
-          <div className="flex justify-end gap-3 pt-2">
-            <button type="button" onClick={onClose} className="px-4 py-2 text-sm font-medium text-text-secondary hover:text-foreground rounded-lg hover:bg-muted transition">
-              Cancel
-            </button>
-            <button type="submit" disabled={submitting} className="px-4 py-2 bg-primary text-primary-foreground rounded-lg font-semibold text-sm hover:bg-primary-hover disabled:opacity-50 transition">
-              {submitting ? 'Saving...' : 'Override'}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
-  );
-}
-
-/* ───── Skips Panel (Right Column) ───── */
-function SkipsPanel({ event, eventId, fetchEvent, productCategories }) {
+/* ───── Skips Section ───── */
+function SkipsSection({ inbound, inboundId, assets, wasteStreams, refreshInbound, setInbound }) {
   const [showAdd, setShowAdd] = useState(false);
-  const assets = event.assets || [];
-  const isConfirmed = event.status === 'CONFIRMED';
-  const isPendingGross = event.status === 'PENDING_GROSS';
-  const canAdd = !isConfirmed && !isPendingGross;
+  const isTerminal = ['READY_FOR_SORTING', 'SORTED'].includes(inbound.status);
+
+  const totals = assets.reduce(
+    (acc, a) => {
+      acc.gross += Number(a.gross_weight_kg) || 0;
+      acc.tare += Number(a.tare_weight_kg) || 0;
+      acc.net += Number(a.net_weight_kg) || 0;
+      return acc;
+    },
+    { gross: 0, tare: 0, net: 0 }
+  );
 
   return (
-    <div className="bg-surface rounded-xl border border-border p-5 h-fit">
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="text-sm font-semibold text-foreground">
-          Skips <span className="ml-1 text-xs font-normal text-text-tertiary">({assets.length})</span>
+    <div className="bg-white rounded-lg border border-grey-200 shadow-sm p-4 mb-4">
+      <div className="flex items-center justify-between mb-3">
+        <h2 className="text-sm font-semibold text-grey-900">
+          Skip Containers <span className="ml-1 text-xs font-normal text-grey-500">({assets.length})</span>
         </h2>
-        {canAdd && !showAdd && (
+        {!isTerminal && !showAdd && (
           <button
             onClick={() => setShowAdd(true)}
-            className="flex items-center gap-1 px-2.5 py-1 bg-primary text-primary-foreground rounded-lg font-semibold text-xs hover:bg-primary-hover transition"
+            className="flex items-center gap-1 px-3 py-1.5 bg-green-500 text-white rounded-md font-semibold text-xs hover:bg-green-700 transition-colors"
           >
             <Plus size={14} /> Add Skip
           </button>
@@ -548,125 +348,284 @@ function SkipsPanel({ event, eventId, fetchEvent, productCategories }) {
 
       {showAdd && (
         <AddSkipPanel
-          eventId={eventId}
-          productCategories={productCategories}
+          inboundId={inboundId}
+          wasteStreams={wasteStreams}
           onClose={() => setShowAdd(false)}
-          onSuccess={async () => { setShowAdd(false); await fetchEvent(eventId); }}
+          onSuccess={async () => { setShowAdd(false); await refreshInbound(); }}
         />
       )}
 
       {assets.length === 0 ? (
-        <p className="text-sm text-text-placeholder">No skips added yet</p>
+        <p className="text-sm text-grey-400">No skips added yet</p>
       ) : (
-        <div className="space-y-2">
-          {assets.map((asset) => (
-            <SkipCard
-              key={asset.id}
-              asset={asset}
-              order={event.order}
-              isConfirmed={isConfirmed}
-              eventId={eventId}
-              fetchEvent={fetchEvent}
-              productCategories={productCategories}
-            />
-          ))}
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[980px] text-sm">
+            <thead>
+              <tr className="bg-grey-50 border-b border-grey-200">
+                <th className="px-3 py-2.5 text-left text-xs font-medium text-grey-500 uppercase tracking-wide">Label</th>
+                <th className="px-3 py-2.5 text-left text-xs font-medium text-grey-500 uppercase tracking-wide">Type</th>
+                <th className="px-3 py-2.5 text-left text-xs font-medium text-grey-500 uppercase tracking-wide">Waste Stream</th>
+                <th className="px-3 py-2.5 text-right text-xs font-medium text-grey-500 uppercase tracking-wide">Volume (m³)</th>
+                <th className="px-3 py-2.5 text-right text-xs font-medium text-grey-500 uppercase tracking-wide">Gross (kg)</th>
+                <th className="px-3 py-2.5 text-right text-xs font-medium text-grey-500 uppercase tracking-wide">Tare (kg)</th>
+                <th className="px-3 py-2.5 text-right text-xs font-medium text-grey-500 uppercase tracking-wide">Net (kg)</th>
+                <th className="px-3 py-2.5 text-left text-xs font-medium text-grey-500 uppercase tracking-wide">Notes</th>
+                <th className="px-3 py-2.5 text-right text-xs font-medium text-grey-500 uppercase tracking-wide w-20"></th>
+              </tr>
+            </thead>
+            <tbody>
+              {assets.map((asset) => (
+                <SkipRow
+                  key={asset.id}
+                  asset={asset}
+                  order={inbound.order}
+                  isTerminal={isTerminal}
+                  hasTare={!!inbound.tare_ticket}
+                  inboundId={inboundId}
+                  refreshInbound={refreshInbound}
+                  wasteStreams={wasteStreams}
+                />
+              ))}
+            </tbody>
+            <tfoot>
+              <tr className="border-t border-grey-300 bg-grey-50">
+                <td colSpan={4} className="px-3 py-2.5 text-xs font-semibold text-grey-700">Totals</td>
+                <td className="px-3 py-2.5 text-right text-sm font-semibold text-grey-900">{totals.gross ? totals.gross.toLocaleString() : '—'}</td>
+                <td className="px-3 py-2.5 text-right text-sm font-semibold text-grey-900">{totals.tare ? totals.tare.toLocaleString() : '—'}</td>
+                <td className="px-3 py-2.5 text-right text-sm font-bold text-grey-900">{totals.net ? totals.net.toLocaleString() : '—'}</td>
+                <td className="px-3 py-2.5 text-xs text-grey-500">—</td>
+                <td className="px-3 py-2.5 text-right text-xs text-grey-500">{assets.length} skip(s)</td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      )}
+
+      {/* Pfister total vs skip total comparison */}
+      {inbound.gross_weight_kg && assets.length > 0 && (
+        <div className="mt-3 flex flex-wrap gap-4 text-xs text-grey-500">
+          <span>Pfister Gross: <strong className="text-grey-700">{Number(inbound.gross_weight_kg).toLocaleString()} kg</strong></span>
+          <span>Skip Gross Total: <strong className="text-grey-700">{totals.gross.toLocaleString()} kg</strong></span>
+          {totals.gross > 0 && (
+            <span className={Math.abs(totals.gross - Number(inbound.gross_weight_kg)) > 50 ? 'text-orange-600' : 'text-green-600'}>
+              Diff: {(totals.gross - Number(inbound.gross_weight_kg)).toLocaleString()} kg
+            </span>
+          )}
         </div>
       )}
     </div>
   );
 }
 
-function SkipCard({ asset, order, isConfirmed, eventId, fetchEvent, productCategories }) {
+/* ───── Skip Table Row ───── */
+function SkipRow({ asset, order, isTerminal, hasTare, inboundId, refreshInbound, wasteStreams }) {
   const [showEdit, setShowEdit] = useState(false);
+  const [grossInput, setGrossInput] = useState(asset.gross_weight_kg ? String(Number(asset.gross_weight_kg)) : '');
+  const [savingGross, setSavingGross] = useState(false);
+
+  const grossKg = Number(asset.gross_weight_kg) || 0;
+  const tareKg = Number(asset.tare_weight_kg) || 0;
+  const netKg = Number(asset.net_weight_kg) || 0;
+
+  const handleGrossBlur = useCallback(async () => {
+    const val = Number(grossInput);
+    if (!val || val === grossKg) return;
+    setSavingGross(true);
+    try {
+      await setAssetGrossWeight(asset.id, { weight_kg: val });
+      toast.success('Gross weight saved');
+      await refreshInbound();
+    } catch (err) {
+      toast.error(err.response?.data?.error || 'Failed to save');
+      setGrossInput(grossKg ? String(grossKg) : '');
+    } finally {
+      setSavingGross(false);
+    }
+  }, [grossInput, grossKg, asset.id, refreshInbound]);
+
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter') { e.target.blur(); handleGrossBlur(); }
+  };
 
   async function handleDelete() {
     if (!window.confirm(`Delete skip ${asset.asset_label}?`)) return;
     try {
       await deleteAsset(asset.id);
       toast.success('Skip deleted');
-      await fetchEvent(eventId);
+      await refreshInbound();
     } catch (err) {
-      toast.error(err.response?.data?.error || 'Failed to delete skip');
+      toast.error(err.response?.data?.error || 'Failed to delete');
     }
   }
 
   if (showEdit) {
     return (
-      <EditSkipPanel
-        asset={asset}
-        productCategories={productCategories}
-        onClose={() => setShowEdit(false)}
-        onSuccess={async () => { setShowEdit(false); await fetchEvent(eventId); }}
-      />
+      <tr>
+        <td colSpan={9} className="p-2">
+          <EditSkipPanel
+            asset={asset}
+            wasteStreams={wasteStreams}
+            onClose={() => setShowEdit(false)}
+            onSuccess={async () => { setShowEdit(false); await refreshInbound(); }}
+          />
+        </td>
+      </tr>
     );
   }
 
   return (
-    <div className="bg-muted rounded-lg p-3">
-      <div className="flex items-center justify-between mb-1">
-        <span className="text-sm font-mono font-bold text-foreground">{asset.asset_label}</span>
-        <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-blue-100 text-blue-700">
+    <tr className="border-b border-grey-100 hover:bg-grey-50 group">
+      <td className="px-3 py-3">
+        <span className="text-sm font-mono font-bold text-grey-900">{asset.asset_label}</span>
+      </td>
+      <td className="px-3 py-3">
+        <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-300">
           {SKIP_LABELS[asset.skip_type] || asset.skip_type}
         </span>
-      </div>
-      <p className="text-xs text-text-secondary">{asset.material_category?.code_cbs} — {asset.material_category?.description_en}</p>
-      {asset.net_weight_kg && (
-        <p className="text-xs text-text-tertiary mt-1">
-          G: {Number(asset.gross_weight_kg || 0).toFixed(0)} / T: {Number(asset.tare_weight_kg || 0).toFixed(0)} / <strong>N: {Number(asset.net_weight_kg).toFixed(0)} kg</strong>
-        </p>
+      </td>
+      <td className="px-3 py-3 text-sm text-grey-700">
+        {asset.waste_stream ? `${asset.waste_stream.name_en} (${asset.waste_stream.code})` : '—'}
+      </td>
+      <td className="px-3 py-3 text-right text-sm text-grey-700">
+        {asset.estimated_volume_m3 != null ? Number(asset.estimated_volume_m3).toLocaleString() : '—'}
+      </td>
+      <td className="px-3 py-3 text-right">
+        {isTerminal || hasTare ? (
+          <span className="text-sm font-semibold text-grey-900">{grossKg ? grossKg.toLocaleString() : '—'}</span>
+        ) : (
+          <div className="relative inline-block w-24">
+            <input
+              type="number"
+              value={grossInput}
+              onChange={(e) => setGrossInput(e.target.value)}
+              onBlur={handleGrossBlur}
+              onKeyDown={handleKeyDown}
+              placeholder="0"
+              min="0"
+              step="0.1"
+              disabled={savingGross}
+              className="w-full px-2 py-1.5 rounded-md border border-grey-300 text-sm text-right text-grey-900 focus:border-green-500 focus:ring-[3px] focus:ring-green-500/15 outline-none disabled:bg-grey-50"
+            />
+            {savingGross && <Loader2 size={12} className="absolute right-2 top-2.5 animate-spin text-grey-400" />}
+          </div>
+        )}
+      </td>
+      <td className="px-3 py-3 text-right text-sm text-grey-700">
+        {tareKg ? tareKg.toLocaleString() : '—'}
+      </td>
+      <td className="px-3 py-3 text-right text-sm font-bold text-grey-900">
+        {netKg ? netKg.toLocaleString() : '—'}
+      </td>
+      <td className="px-3 py-3 text-sm text-grey-700 max-w-[180px] truncate">
+        {asset.notes || '—'}
+      </td>
+      <td className="px-3 py-3 text-right">
+        {!isTerminal && (
+          <div className="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+            <button onClick={() => setShowEdit(true)} className="p-1.5 rounded-md hover:bg-grey-100 text-grey-400 hover:text-grey-900">
+              <Pencil size={14} />
+            </button>
+            <button onClick={handleDelete} className="p-1.5 rounded-md hover:bg-grey-100 text-grey-400 hover:text-red-600">
+              <Trash2 size={14} />
+            </button>
+            <button onClick={() => printAssetLabel(asset, order)} className="p-1.5 rounded-md hover:bg-grey-100 text-grey-400 hover:text-grey-900">
+              <Printer size={14} />
+            </button>
+          </div>
+        )}
+      </td>
+    </tr>
+  );
+}
+
+/* ───── Actions Footer ───── */
+function ActionsFooter({ inbound, inboundId, isTriggering, setTriggering, setInbound }) {
+  const handleReadyForSorting = useCallback(async () => {
+    setTriggering(true);
+    try {
+      const { data } = await updateInboundStatus(inboundId, 'READY_FOR_SORTING');
+      setInbound(data.data);
+      toast.success('Inbound ready for sorting — sorting process created');
+    } catch (err) {
+      toast.error(err.response?.data?.error || 'Failed to update status');
+    } finally {
+      setTriggering(false);
+    }
+  }, [inboundId, setTriggering, setInbound]);
+
+  const handleDownloadPdf = useCallback(async () => {
+    try {
+      const response = await downloadTicketPdf(inboundId);
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `weight-ticket-${inbound.inbound_number || inboundId.slice(0, 8)}.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch {
+      toast.error('Failed to download PDF');
+    }
+  }, [inboundId, inbound.inbound_number]);
+
+  return (
+    <div className="flex flex-wrap items-center gap-3">
+      {inbound.status === 'WEIGHED_OUT' && (
+        <button
+          onClick={handleReadyForSorting}
+          disabled={isTriggering}
+          className="h-10 px-6 flex items-center gap-2 bg-green-500 text-white rounded-md font-semibold text-sm hover:bg-green-700 disabled:opacity-50 transition-colors"
+        >
+          Ready for Sorting
+        </button>
       )}
-      {!isConfirmed && (
-        <div className="flex gap-1 mt-2">
-          <button onClick={() => setShowEdit(true)} className="p-1 rounded hover:bg-surface transition text-text-tertiary hover:text-foreground">
-            <Pencil size={13} />
+
+      {['READY_FOR_SORTING', 'SORTED'].includes(inbound.status) && (
+        <>
+          <button
+            onClick={handleDownloadPdf}
+            className="h-9 px-4 flex items-center gap-2 bg-green-500 text-white rounded-md font-semibold text-sm hover:bg-green-700 transition-colors"
+          >
+            <Download size={16} /> Download Weight Ticket
           </button>
-          <button onClick={handleDelete} className="p-1 rounded hover:bg-surface transition text-text-tertiary hover:text-red-600">
-            <Trash2 size={13} />
-          </button>
-          <button onClick={() => printAssetLabel(asset, order)} className="p-1 rounded hover:bg-surface transition text-text-tertiary hover:text-foreground">
-            <Printer size={13} />
-          </button>
-        </div>
-      )}
-      {isConfirmed && (
-        <div className="flex gap-1 mt-2">
-          <button onClick={() => printAssetLabel(asset, order)} className="p-1 rounded hover:bg-surface transition text-text-tertiary hover:text-foreground">
-            <Printer size={13} />
-          </button>
-        </div>
+          {inbound.sorting_session && (
+            <Link
+              to={`/sorting/${inbound.sorting_session.id}`}
+              className="h-9 px-4 flex items-center gap-2 border border-grey-300 rounded-md font-semibold text-sm text-grey-700 hover:bg-grey-50 transition-colors"
+            >
+              View Sorting Process
+            </Link>
+          )}
+        </>
       )}
     </div>
   );
 }
 
 /* ───── Add Skip Panel ───── */
-function AddSkipPanel({ eventId, productCategories, onClose, onSuccess }) {
+function AddSkipPanel({ inboundId, wasteStreams, onClose, onSuccess }) {
   const [form, setForm] = useState({
     skip_type: '',
-    material_category_id: '',
+    waste_stream_id: '',
     estimated_volume_m3: '',
     notes: '',
   });
   const [nextLabel, setNextLabel] = useState('');
   const [submitting, setSubmitting] = useState(false);
-  const [catSearch, setCatSearch] = useState('');
 
   useEffect(() => {
     getNextLabel().then(({ data }) => setNextLabel(data.data.label)).catch(() => {});
   }, []);
-
-  const filteredCategories = productCategories.filter(
-    (c) => !catSearch || c.code_cbs.toLowerCase().includes(catSearch.toLowerCase()) || c.description_en.toLowerCase().includes(catSearch.toLowerCase())
-  );
 
   async function handleSubmit(e) {
     e.preventDefault();
     setSubmitting(true);
     try {
       await createAsset({
-        weighing_event_id: eventId,
+        inbound_id: inboundId,
         skip_type: form.skip_type,
-        material_category_id: form.material_category_id,
+        waste_stream_id: form.waste_stream_id || null,
         estimated_volume_m3: form.estimated_volume_m3 ? Number(form.estimated_volume_m3) : null,
         notes: form.notes || null,
       });
@@ -680,70 +639,47 @@ function AddSkipPanel({ eventId, productCategories, onClose, onSuccess }) {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="bg-muted rounded-lg p-4 mb-3 space-y-3">
+    <form onSubmit={handleSubmit} className="bg-grey-50 rounded-md p-4 mb-3 border border-grey-200">
       {nextLabel && (
-        <p className="text-xs text-text-tertiary">Next label: <span className="font-mono font-bold text-foreground">{nextLabel}</span></p>
+        <p className="text-xs text-grey-500 mb-3">Next label: <span className="font-mono font-bold text-grey-900">{nextLabel}</span></p>
       )}
-      <div>
-        <label className="block text-xs font-medium text-text-secondary mb-1">Skip Type</label>
-        <select
-          value={form.skip_type}
-          onChange={(e) => setForm((p) => ({ ...p, skip_type: e.target.value }))}
-          required
-          className="w-full px-2.5 py-2 rounded-lg border border-input text-sm text-foreground bg-surface focus:outline-none focus:ring-2 focus:ring-ring transition"
-        >
-          <option value="">Select...</option>
-          {SKIP_TYPES.map((t) => <option key={t} value={t}>{SKIP_LABELS[t]}</option>)}
-        </select>
+      <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+        <div>
+          <label className="block text-xs font-medium text-grey-700 mb-1">Skip Type</label>
+          <select value={form.skip_type} onChange={(e) => setForm((p) => ({ ...p, skip_type: e.target.value }))} required className={selectClass}>
+            <option value="">Select...</option>
+            {SKIP_TYPES.map((t) => <option key={t} value={t}>{SKIP_LABELS[t]}</option>)}
+          </select>
+        </div>
+        <div>
+          <label className="block text-xs font-medium text-grey-700 mb-1">Waste Stream</label>
+          <select value={form.waste_stream_id} onChange={(e) => setForm((p) => ({ ...p, waste_stream_id: e.target.value }))} className={selectClass}>
+            <option value="">Select...</option>
+            {wasteStreams.map((ws) => <option key={ws.id} value={ws.id}>{ws.name_en} ({ws.code})</option>)}
+          </select>
+        </div>
+        <div>
+          <label className="block text-xs font-medium text-grey-700 mb-1">Volume (m³)</label>
+          <input
+            type="number" step="0.1" min="0" placeholder="Optional"
+            value={form.estimated_volume_m3}
+            onChange={(e) => setForm((p) => ({ ...p, estimated_volume_m3: e.target.value }))}
+            className={inputClass}
+          />
+        </div>
+        <div>
+          <label className="block text-xs font-medium text-grey-700 mb-1">Notes</label>
+          <input
+            type="text" placeholder="Optional"
+            value={form.notes}
+            onChange={(e) => setForm((p) => ({ ...p, notes: e.target.value }))}
+            className={inputClass}
+          />
+        </div>
       </div>
-      <div>
-        <label className="block text-xs font-medium text-text-secondary mb-1">Material Category</label>
-        <input
-          type="text"
-          placeholder="Search categories..."
-          value={catSearch}
-          onChange={(e) => setCatSearch(e.target.value)}
-          className="w-full px-2.5 py-1.5 rounded-lg border border-input text-xs text-foreground placeholder-text-placeholder mb-1 focus:outline-none focus:ring-2 focus:ring-ring transition"
-        />
-        <select
-          value={form.material_category_id}
-          onChange={(e) => setForm((p) => ({ ...p, material_category_id: e.target.value }))}
-          required
-          size={4}
-          className="w-full px-2.5 py-1 rounded-lg border border-input text-xs text-foreground bg-surface focus:outline-none focus:ring-2 focus:ring-ring transition"
-        >
-          {filteredCategories.map((c) => (
-            <option key={c.id} value={c.id}>{c.code_cbs} — {c.description_en}</option>
-          ))}
-        </select>
-      </div>
-      <div>
-        <label className="block text-xs font-medium text-text-secondary mb-1">Volume (m³)</label>
-        <input
-          type="number"
-          step="0.1"
-          min="0"
-          value={form.estimated_volume_m3}
-          onChange={(e) => setForm((p) => ({ ...p, estimated_volume_m3: e.target.value }))}
-          placeholder="Optional"
-          className="w-full px-2.5 py-2 rounded-lg border border-input text-sm text-foreground placeholder-text-placeholder focus:outline-none focus:ring-2 focus:ring-ring transition"
-        />
-      </div>
-      <div>
-        <label className="block text-xs font-medium text-text-secondary mb-1">Notes</label>
-        <input
-          type="text"
-          value={form.notes}
-          onChange={(e) => setForm((p) => ({ ...p, notes: e.target.value }))}
-          placeholder="Optional"
-          className="w-full px-2.5 py-2 rounded-lg border border-input text-sm text-foreground placeholder-text-placeholder focus:outline-none focus:ring-2 focus:ring-ring transition"
-        />
-      </div>
-      <div className="flex justify-end gap-2">
-        <button type="button" onClick={onClose} className="px-3 py-1.5 text-xs text-text-secondary hover:text-foreground rounded-lg hover:bg-surface transition">
-          Cancel
-        </button>
-        <button type="submit" disabled={submitting} className="px-3 py-1.5 bg-primary text-primary-foreground rounded-lg font-semibold text-xs hover:bg-primary-hover disabled:opacity-50 transition">
+      <div className="flex justify-end gap-2 mt-3">
+        <button type="button" onClick={onClose} className="px-3 py-1.5 text-xs text-grey-700 hover:text-grey-900 rounded-md hover:bg-white transition-colors">Cancel</button>
+        <button type="submit" disabled={submitting} className="px-4 py-1.5 bg-green-500 text-white rounded-md font-semibold text-xs hover:bg-green-700 disabled:opacity-50 transition-colors">
           {submitting ? 'Adding...' : 'Add Skip'}
         </button>
       </div>
@@ -752,10 +688,10 @@ function AddSkipPanel({ eventId, productCategories, onClose, onSuccess }) {
 }
 
 /* ───── Edit Skip Panel ───── */
-function EditSkipPanel({ asset, productCategories, onClose, onSuccess }) {
+function EditSkipPanel({ asset, wasteStreams, onClose, onSuccess }) {
   const [form, setForm] = useState({
     skip_type: asset.skip_type,
-    material_category_id: asset.material_category_id || asset.material_category?.id || '',
+    waste_stream_id: asset.waste_stream_id || asset.waste_stream?.id || '',
     estimated_volume_m3: asset.estimated_volume_m3 || '',
     notes: asset.notes || '',
   });
@@ -767,57 +703,159 @@ function EditSkipPanel({ asset, productCategories, onClose, onSuccess }) {
     try {
       await updateAssetApi(asset.id, {
         skip_type: form.skip_type,
-        material_category_id: form.material_category_id,
+        waste_stream_id: form.waste_stream_id || null,
         estimated_volume_m3: form.estimated_volume_m3 ? Number(form.estimated_volume_m3) : null,
         notes: form.notes || null,
       });
       toast.success('Skip updated');
       onSuccess();
     } catch (err) {
-      toast.error(err.response?.data?.error || 'Failed to update skip');
+      toast.error(err.response?.data?.error || 'Failed to update');
     } finally {
       setSubmitting(false);
     }
   }
 
   return (
-    <form onSubmit={handleSubmit} className="bg-muted rounded-lg p-3 space-y-2">
-      <p className="text-xs font-mono font-bold text-foreground">{asset.asset_label}</p>
-      <select
-        value={form.skip_type}
-        onChange={(e) => setForm((p) => ({ ...p, skip_type: e.target.value }))}
-        required
-        className="w-full px-2.5 py-1.5 rounded-lg border border-input text-xs text-foreground bg-surface focus:outline-none focus:ring-2 focus:ring-ring transition"
-      >
-        {SKIP_TYPES.map((t) => <option key={t} value={t}>{SKIP_LABELS[t]}</option>)}
-      </select>
-      <select
-        value={form.material_category_id}
-        onChange={(e) => setForm((p) => ({ ...p, material_category_id: e.target.value }))}
-        required
-        className="w-full px-2.5 py-1.5 rounded-lg border border-input text-xs text-foreground bg-surface focus:outline-none focus:ring-2 focus:ring-ring transition"
-      >
-        {productCategories.map((c) => (
-          <option key={c.id} value={c.id}>{c.code_cbs} — {c.description_en}</option>
-        ))}
-      </select>
-      <input
-        type="number"
-        step="0.1"
-        min="0"
-        value={form.estimated_volume_m3}
-        onChange={(e) => setForm((p) => ({ ...p, estimated_volume_m3: e.target.value }))}
-        placeholder="Volume (m³)"
-        className="w-full px-2.5 py-1.5 rounded-lg border border-input text-xs text-foreground placeholder-text-placeholder focus:outline-none focus:ring-2 focus:ring-ring transition"
-      />
+    <form onSubmit={handleSubmit} className="bg-grey-50 rounded-md p-3 space-y-2">
+      <p className="text-xs font-mono font-bold text-grey-900">{asset.asset_label}</p>
+      <div className="grid grid-cols-2 gap-2">
+        <select value={form.skip_type} onChange={(e) => setForm((p) => ({ ...p, skip_type: e.target.value }))} required className="w-full px-2.5 py-1.5 rounded-md border border-grey-300 text-xs text-grey-900 bg-white focus:border-green-500 outline-none">
+          {SKIP_TYPES.map((t) => <option key={t} value={t}>{SKIP_LABELS[t]}</option>)}
+        </select>
+        <select value={form.waste_stream_id} onChange={(e) => setForm((p) => ({ ...p, waste_stream_id: e.target.value }))} className="w-full px-2.5 py-1.5 rounded-md border border-grey-300 text-xs text-grey-900 bg-white focus:border-green-500 outline-none">
+          <option value="">Select waste stream...</option>
+          {wasteStreams.map((ws) => <option key={ws.id} value={ws.id}>{ws.name_en} ({ws.code})</option>)}
+        </select>
+      </div>
       <div className="flex justify-end gap-2">
-        <button type="button" onClick={onClose} className="px-2.5 py-1 text-xs text-text-secondary hover:text-foreground rounded-lg hover:bg-surface transition">
-          Cancel
-        </button>
-        <button type="submit" disabled={submitting} className="px-2.5 py-1 bg-primary text-primary-foreground rounded-lg font-semibold text-xs hover:bg-primary-hover disabled:opacity-50 transition">
+        <button type="button" onClick={onClose} className="px-2.5 py-1 text-xs text-grey-700 hover:text-grey-900 rounded-md hover:bg-white transition-colors">Cancel</button>
+        <button type="submit" disabled={submitting} className="px-2.5 py-1 bg-green-500 text-white rounded-md font-semibold text-xs hover:bg-green-700 disabled:opacity-50 transition-colors">
           {submitting ? 'Saving...' : 'Save'}
         </button>
       </div>
     </form>
+  );
+}
+
+/* ───── Manual Weighing Dialog ───── */
+function ManualWeighingDialog({ weightType, inboundId, onSuccess, onClose }) {
+  const [form, setForm] = useState({ weight_kg: '', reason: '' });
+  const [submitting, setSubmitting] = useState(false);
+
+  async function handleSubmit(e) {
+    e.preventDefault();
+    setSubmitting(true);
+    try {
+      const { data } = await manualWeighingApi(inboundId, {
+        weight_type: weightType,
+        weight_kg: Number(form.weight_kg),
+        reason: form.reason,
+      });
+      toast.success(`Manual ${weightType.toLowerCase()} weight recorded`);
+      onSuccess(data.data);
+    } catch (err) {
+      toast.error(err.response?.data?.error || 'Manual entry failed');
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  return (
+    <div className="mt-3 bg-orange-50 border border-orange-200 rounded-lg p-4">
+      <div className="flex items-center gap-2 mb-3">
+        <AlertTriangle size={16} className="text-orange-500" />
+        <span className="text-sm font-semibold text-grey-900">Manual {weightType} Weight Entry</span>
+      </div>
+      <form onSubmit={handleSubmit} className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div>
+          <label className="block text-xs font-medium text-grey-700 mb-1">Weight (kg)</label>
+          <input type="number" value={form.weight_kg} onChange={(e) => setForm((p) => ({ ...p, weight_kg: e.target.value }))} required min="1" className={inputClass} />
+        </div>
+        <div>
+          <label className="block text-xs font-medium text-grey-700 mb-1">Reason</label>
+          <select value={form.reason} onChange={(e) => setForm((p) => ({ ...p, reason: e.target.value }))} required className={selectClass}>
+            <option value="">Select...</option>
+            <option value="Pfister unavailable">Pfister unavailable</option>
+            <option value="Communication error">Communication error</option>
+            <option value="Calibration in progress">Calibration in progress</option>
+            <option value="Other">Other</option>
+          </select>
+        </div>
+        <div className="flex items-end gap-2">
+          <button type="button" onClick={onClose} className="h-10 px-3 text-xs text-grey-700 hover:text-grey-900 rounded-md hover:bg-white transition-colors">Cancel</button>
+          <button type="submit" disabled={submitting} className="h-10 px-4 bg-orange-500 text-white rounded-md font-semibold text-xs hover:bg-orange-600 disabled:opacity-50 transition-colors">
+            {submitting ? 'Recording...' : `Record ${weightType}`}
+          </button>
+        </div>
+      </form>
+    </div>
+  );
+}
+
+/* ───── Override Dialog ───── */
+function OverrideDialog({ inboundId, inbound, onClose, onSuccess }) {
+  const [form, setForm] = useState({ weight_type: 'GROSS', weight_kg: '', reason_code: '', notes: '' });
+  const [submitting, setSubmitting] = useState(false);
+
+  async function handleSubmit(e) {
+    e.preventDefault();
+    setSubmitting(true);
+    try {
+      await overrideWeight(inboundId, { ...form, weight_kg: Number(form.weight_kg) });
+      toast.success('Pfister weight overridden');
+      onSuccess();
+    } catch (err) {
+      toast.error(err.response?.data?.error || 'Override failed');
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  return (
+    <div className="app-modal-overlay">
+      <div className="app-modal-panel max-w-md">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-grey-200">
+          <h2 className="text-lg font-semibold text-grey-900">Override Pfister Weight</h2>
+          <button onClick={onClose} className="p-1 rounded-md hover:bg-grey-50 text-grey-400">&times;</button>
+        </div>
+        <form onSubmit={handleSubmit} className="px-6 py-5 space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-grey-700 mb-1.5">Weight Type</label>
+            <div className="flex gap-4">
+              {['GROSS', 'TARE'].map((t) => (
+                <label key={t} className="flex items-center gap-2 text-sm text-grey-900">
+                  <input type="radio" name="weight_type" value={t} checked={form.weight_type === t}
+                    onChange={(e) => setForm((p) => ({ ...p, weight_type: e.target.value }))}
+                    disabled={t === 'GROSS' ? !inbound.gross_ticket : !inbound.tare_ticket}
+                    className="accent-green-500" />
+                  {t}
+                </label>
+              ))}
+            </div>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-grey-700 mb-1.5">New Weight (kg)</label>
+            <input type="number" value={form.weight_kg} onChange={(e) => setForm((p) => ({ ...p, weight_kg: e.target.value }))} required min="1" className={inputClass} />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-grey-700 mb-1.5">Reason Code</label>
+            <select value={form.reason_code} onChange={(e) => setForm((p) => ({ ...p, reason_code: e.target.value }))} required className={selectClass}>
+              <option value="">Select reason...</option>
+              <option value="CALIBRATION_ERROR">Calibration Error</option>
+              <option value="EQUIPMENT_MALFUNCTION">Equipment Malfunction</option>
+              <option value="INCORRECT_READING">Incorrect Reading</option>
+              <option value="OTHER">Other</option>
+            </select>
+          </div>
+          <div className="flex justify-end gap-3 pt-2">
+            <button type="button" onClick={onClose} className="h-9 px-4 bg-white text-grey-700 border border-grey-300 rounded-md text-sm font-semibold hover:bg-grey-50 transition-colors">Cancel</button>
+            <button type="submit" disabled={submitting} className="h-9 px-4 bg-green-500 text-white rounded-md font-semibold text-sm hover:bg-green-700 disabled:opacity-50 transition-colors">
+              {submitting ? 'Saving...' : 'Override'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
   );
 }

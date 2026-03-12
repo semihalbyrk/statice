@@ -5,7 +5,7 @@ const useOrdersStore = create((set, get) => ({
   orders: [],
   totalCount: 0,
   currentOrder: null,
-  filters: { status: '', search: '', page: 1, limit: 20 },
+  filters: { status: '', search: '', page: 1, limit: 20, date_from: '', date_to: '' },
   loading: false,
   error: null,
 
@@ -14,7 +14,7 @@ const useOrdersStore = create((set, get) => ({
   },
 
   clearFilters: () => {
-    set({ filters: { status: '', search: '', page: 1, limit: 20 } });
+    set({ filters: { status: '', search: '', page: 1, limit: 20, date_from: '', date_to: '' } });
   },
 
   fetchOrders: async () => {
@@ -24,6 +24,8 @@ const useOrdersStore = create((set, get) => ({
       const params = {};
       if (filters.status) params.status = filters.status;
       if (filters.search) params.search = filters.search;
+      if (filters.date_from) params.date_from = filters.date_from;
+      if (filters.date_to) params.date_to = filters.date_to;
       params.page = filters.page;
       params.limit = filters.limit;
 

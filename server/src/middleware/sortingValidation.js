@@ -53,7 +53,7 @@ async function validateSessionDraft(req, res, next) {
       return res.status(404).json({ error: 'Sorting session not found' });
     }
 
-    if (session.status !== 'DRAFT') {
+    if (session.status !== 'PLANNED') {
       return res.status(409).json({
         error: 'Sorting session is locked',
         message: 'This record has been submitted and cannot be modified. Contact an administrator to reopen.',

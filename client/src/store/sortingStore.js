@@ -17,7 +17,7 @@ const useSortingStore = create((set) => ({
       set({
         currentSession: session,
         isLoading: false,
-        activeAssetId: session?.weighing_event?.assets?.[0]?.id ?? null,
+        activeAssetId: session?.inbound?.assets?.[0]?.id ?? null,
       });
       return session;
     } catch (err) {

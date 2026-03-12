@@ -26,5 +26,8 @@ Thumbs.db
 *.log
 npm-debug.log*
 
+# Generated reports storage
+server/storage/
+
 # Claude Code
 .claude/

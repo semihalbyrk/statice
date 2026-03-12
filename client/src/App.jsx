@@ -11,12 +11,26 @@ import CarriersPage from './pages/admin/CarriersPage';
 import SuppliersPage from './pages/admin/SuppliersPage';
 import WasteStreamsPage from './pages/admin/WasteStreamsPage';
 import WeighingEventPage from './pages/weighing/WeighingEventPage';
+import OrderCreatePage from './pages/orders/OrderCreatePage';
+import InboundsPage from './pages/inbounds/InboundsPage';
 import SortingPage from './pages/sorting/SortingPage';
+import SortingProcessListPage from './pages/sorting/SortingProcessListPage';
+import ReportsPage from './pages/reports/ReportsPage';
+import SchedulesPage from './pages/reports/SchedulesPage';
+import UsersPage from './pages/admin/UsersPage';
+import AuditLogPage from './pages/admin/AuditLogPage';
+import SystemSettingsPage from './pages/admin/SystemSettingsPage';
+import NotFoundPage from './pages/errors/NotFoundPage';
+import UnauthorisedPage from './pages/errors/UnauthorisedPage';
 
-function ProtectedRoute({ children }) {
+function ProtectedRoute({ children, allowedRoles }) {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated());
+  const user = useAuthStore((state) => state.user);
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
+  }
+  if (allowedRoles && !allowedRoles.includes(user?.role)) {
+    return <UnauthorisedPage />;
   }
   return children;
 }
@@ -35,17 +49,26 @@ export default function App() {
           }
         >
           <Route path="/dashboard" element={<DashboardPage />} />
-          <Route path="/orders" element={<OrdersPage />} />
-          <Route path="/orders/:id" element={<OrderDetailPage />} />
-          <Route path="/arrival" element={<ArrivalPage />} />
-          <Route path="/weighing-events/:eventId" element={<WeighingEventPage />} />
-          <Route path="/sorting/:sessionId" element={<SortingPage />} />
-          <Route path="/admin/carriers" element={<CarriersPage />} />
-          <Route path="/admin/suppliers" element={<SuppliersPage />} />
-          <Route path="/admin/waste-streams" element={<WasteStreamsPage />} />
+          <Route path="/orders" element={<ProtectedRoute allowedRoles={['ADMIN', 'LOGISTICS_PLANNER']}><OrdersPage /></ProtectedRoute>} />
+          <Route path="/orders/new" element={<ProtectedRoute allowedRoles={['ADMIN', 'LOGISTICS_PLANNER']}><OrderCreatePage /></ProtectedRoute>} />
+          <Route path="/orders/:id" element={<ProtectedRoute allowedRoles={['ADMIN', 'LOGISTICS_PLANNER']}><OrderDetailPage /></ProtectedRoute>} />
+          <Route path="/arrival" element={<ProtectedRoute allowedRoles={['GATE_OPERATOR', 'ADMIN']}><ArrivalPage /></ProtectedRoute>} />
+          <Route path="/inbounds" element={<ProtectedRoute allowedRoles={['GATE_OPERATOR', 'ADMIN']}><InboundsPage /></ProtectedRoute>} />
+          <Route path="/inbounds/:inboundId" element={<ProtectedRoute allowedRoles={['GATE_OPERATOR', 'ADMIN']}><WeighingEventPage /></ProtectedRoute>} />
+          <Route path="/weighing-events/:eventId" element={<Navigate to="/inbounds" replace />} />
+          <Route path="/sorting" element={<ProtectedRoute allowedRoles={['SORTING_EMPLOYEE', 'GATE_OPERATOR', 'ADMIN']}><SortingProcessListPage /></ProtectedRoute>} />
+          <Route path="/sorting/:sessionId" element={<ProtectedRoute allowedRoles={['SORTING_EMPLOYEE', 'GATE_OPERATOR', 'ADMIN']}><SortingPage /></ProtectedRoute>} />
+          <Route path="/reports" element={<ProtectedRoute allowedRoles={['REPORTING_MANAGER', 'ADMIN']}><ReportsPage /></ProtectedRoute>} />
+          <Route path="/reports/schedules" element={<ProtectedRoute allowedRoles={['REPORTING_MANAGER', 'ADMIN']}><SchedulesPage /></ProtectedRoute>} />
+          <Route path="/admin/users" element={<ProtectedRoute allowedRoles={['ADMIN']}><UsersPage /></ProtectedRoute>} />
+          <Route path="/admin/carriers" element={<ProtectedRoute allowedRoles={['ADMIN']}><CarriersPage /></ProtectedRoute>} />
+          <Route path="/admin/suppliers" element={<ProtectedRoute allowedRoles={['ADMIN']}><SuppliersPage /></ProtectedRoute>} />
+          <Route path="/admin/waste-streams" element={<ProtectedRoute allowedRoles={['ADMIN']}><WasteStreamsPage /></ProtectedRoute>} />
+          <Route path="/admin/audit-log" element={<ProtectedRoute allowedRoles={['ADMIN']}><AuditLogPage /></ProtectedRoute>} />
+          <Route path="/admin/settings" element={<ProtectedRoute allowedRoles={['ADMIN']}><SystemSettingsPage /></ProtectedRoute>} />
         </Route>
         <Route path="/" element={<Navigate to="/dashboard" replace />} />
-        <Route path="*" element={<Navigate to="/dashboard" replace />} />
+        <Route path="*" element={<NotFoundPage />} />
       </Routes>
     </BrowserRouter>
   );

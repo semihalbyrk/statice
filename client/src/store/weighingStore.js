@@ -1,53 +1,38 @@
 import { create } from 'zustand';
-import { getWeighingEvent } from '../api/weighingEvents';
+import { getInbounds } from '../api/weighingEvents';
 
-const useWeighingStore = create((set) => ({
-  currentEvent: null,
-  isLoading: false,
-  isTriggering: false,
+const useInboundsListStore = create((set, get) => ({
+  inbounds: [],
+  totalCount: 0,
+  filters: { status: '', search: '', page: 1, limit: 20 },
+  loading: false,
   error: null,
 
-  fetchEvent: async (id) => {
-    set({ isLoading: true, error: null });
-    try {
-      const { data } = await getWeighingEvent(id);
-      set({ currentEvent: data.data, isLoading: false });
-      return data.data;
-    } catch (err) {
-      set({ error: err.response?.data?.error || 'Failed to load event', isLoading: false });
-      return null;
-    }
+  setFilters: (filters) => {
+    set((state) => ({ filters: { ...state.filters, ...filters, page: filters.page || 1 } }));
   },
 
-  setEvent: (event) => set({ currentEvent: event }),
+  clearFilters: () => {
+    set({ filters: { status: '', search: '', page: 1, limit: 20 } });
+  },
 
-  setTriggering: (val) => set({ isTriggering: val }),
+  fetchInbounds: async () => {
+    set({ loading: true, error: null });
+    try {
+      const { filters } = get();
+      const params = {};
+      if (filters.status) params.status = filters.status;
+      if (filters.search) params.search = filters.search;
+      params.page = filters.page;
+      params.limit = filters.limit;
 
-  addAsset: (asset) =>
-    set((state) => ({
-      currentEvent: state.currentEvent
-        ? { ...state.currentEvent, assets: [...(state.currentEvent.assets || []), asset] }
-        : null,
-    })),
-
-  removeAsset: (assetId) =>
-    set((state) => ({
-      currentEvent: state.currentEvent
-        ? { ...state.currentEvent, assets: (state.currentEvent.assets || []).filter((a) => a.id !== assetId) }
-        : null,
-    })),
-
-  updateAsset: (assetId, updated) =>
-    set((state) => ({
-      currentEvent: state.currentEvent
-        ? {
-            ...state.currentEvent,
-            assets: (state.currentEvent.assets || []).map((a) => (a.id === assetId ? { ...a, ...updated } : a)),
-          }
-        : null,
-    })),
-
-  clearEvent: () => set({ currentEvent: null, isLoading: false, isTriggering: false, error: null }),
+      const { data } = await getInbounds(params);
+      set({ inbounds: data.data, totalCount: data.total, loading: false });
+    } catch (err) {
+      set({ error: err.response?.data?.error || 'Failed to fetch inbounds', loading: false });
+    }
+  },
 }));
 
-export default useWeighingStore;
+export { useInboundsListStore };
+export default useInboundsListStore;

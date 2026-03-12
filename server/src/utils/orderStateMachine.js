@@ -1,20 +1,9 @@
-/**
- * Order status state machine.
- *
- * Valid transitions:
- *   PLANNED     → ARRIVED, CANCELLED
- *   ARRIVED     → IN_PROGRESS, CANCELLED
- *   IN_PROGRESS → COMPLETED
- *   COMPLETED   → (terminal)
- *   CANCELLED   → (terminal)
- */
-
 const TRANSITIONS = {
-  PLANNED: ['ARRIVED', 'CANCELLED'],
-  ARRIVED: ['IN_PROGRESS', 'CANCELLED'],
-  IN_PROGRESS: ['COMPLETED'],
+  PLANNED: ['ARRIVED', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED'],
+  ARRIVED: ['PLANNED', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED'],
+  IN_PROGRESS: ['COMPLETED', 'CANCELLED'],
   COMPLETED: [],
-  CANCELLED: [],
+  CANCELLED: ['PLANNED', 'ARRIVED'],
 };
 
 function canTransition(from, to) {

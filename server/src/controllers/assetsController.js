@@ -3,9 +3,9 @@ const { previewNextLabel } = require('../utils/assetLabel');
 
 async function list(req, res, next) {
   try {
-    const { weighing_event_id } = req.query;
-    if (!weighing_event_id) return res.status(400).json({ error: 'weighing_event_id query parameter is required' });
-    const assets = await assetService.listAssets(weighing_event_id);
+    const inboundId = req.query.inbound_id || req.query.weighing_event_id;
+    if (!inboundId) return res.status(400).json({ error: 'inbound_id query parameter is required' });
+    const assets = await assetService.listAssets(inboundId);
     res.json({ data: assets });
   } catch (err) { next(err); }
 }
@@ -30,7 +30,7 @@ async function create(req, res, next) {
     const asset = await assetService.createAsset(req.body, req.user.userId);
     res.status(201).json({ data: asset });
   } catch (err) {
-    if (err.statusCode === 409) return res.status(409).json({ error: err.message });
+    if (err.statusCode) return res.status(err.statusCode).json({ error: err.message });
     next(err);
   }
 }
@@ -41,7 +41,7 @@ async function update(req, res, next) {
     if (!asset) return res.status(404).json({ error: 'Asset not found' });
     res.json({ data: asset });
   } catch (err) {
-    if (err.statusCode === 409) return res.status(409).json({ error: err.message });
+    if (err.statusCode) return res.status(err.statusCode).json({ error: err.message });
     next(err);
   }
 }
@@ -52,9 +52,33 @@ async function remove(req, res, next) {
     if (!asset) return res.status(404).json({ error: 'Asset not found' });
     res.json({ data: { message: 'Asset deleted', id: req.params.id } });
   } catch (err) {
-    if (err.statusCode === 409) return res.status(409).json({ error: err.message });
+    if (err.statusCode) return res.status(err.statusCode).json({ error: err.message });
     next(err);
   }
 }
 
-module.exports = { list, getById, getNextLabel, create, update, remove };
+async function setGrossWeight(req, res, next) {
+  try {
+    const { weight_kg } = req.body;
+    if (!weight_kg) return res.status(400).json({ error: 'weight_kg is required' });
+    const asset = await assetService.setAssetGrossWeight(req.params.id, weight_kg, req.user.userId);
+    res.json({ data: asset });
+  } catch (err) {
+    if (err.statusCode) return res.status(err.statusCode).json({ error: err.message });
+    next(err);
+  }
+}
+
+async function setTareWeight(req, res, next) {
+  try {
+    const { weight_kg } = req.body;
+    if (!weight_kg) return res.status(400).json({ error: 'weight_kg is required' });
+    const asset = await assetService.setAssetTareWeight(req.params.id, weight_kg, req.user.userId);
+    res.json({ data: asset });
+  } catch (err) {
+    if (err.statusCode) return res.status(err.statusCode).json({ error: err.message });
+    next(err);
+  }
+}
+
+module.exports = { list, getById, getNextLabel, create, update, remove, setGrossWeight, setTareWeight };

@@ -21,12 +21,12 @@ const useMasterDataStore = create((set) => ({
   },
 
   fetchWasteStreams: async () => {
-    const { data } = await getWasteStreams();
+    const { data } = await getWasteStreams({ active: 'true' });
     set({ wasteStreams: data.data });
   },
 
   fetchProductCategories: async () => {
-    const { data } = await getProductCategories();
+    const { data } = await getProductCategories({ active: 'true' });
     set({ productCategories: data.data });
   },
 
@@ -36,8 +36,8 @@ const useMasterDataStore = create((set) => ({
       const [carriersRes, suppliersRes, streamsRes, categoriesRes] = await Promise.all([
         getCarriers({ limit: 100, active: 'true' }),
         getSuppliers({ limit: 100, active: 'true' }),
-        getWasteStreams(),
-        getProductCategories(),
+        getWasteStreams({ active: 'true' }),
+        getProductCategories({ active: 'true' }),
       ]);
       set({
         carriers: carriersRes.data.data,

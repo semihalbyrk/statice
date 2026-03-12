@@ -17,7 +17,4 @@ router.post('/', requireRole(['ADMIN', 'LOGISTICS_PLANNER']), orderController.cr
 router.put('/:id', requireRole(['ADMIN', 'LOGISTICS_PLANNER']), orderController.update);
 router.delete('/:id', requireRole(['ADMIN']), orderController.cancel);
 
-// Arrival action on existing order
-router.post('/:id/arrive', requireRole(['GATE_OPERATOR', 'ADMIN']), arrivalController.arrive);
-
 module.exports = router;

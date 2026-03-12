@@ -6,3 +6,5 @@ export const getNextLabel = () => api.get('/assets/next-label');
 export const createAsset = (data) => api.post('/assets', data);
 export const updateAsset = (id, data) => api.put(`/assets/${id}`, data);
 export const deleteAsset = (id) => api.delete(`/assets/${id}`);
+export const setAssetGrossWeight = (id, data) => api.post(`/assets/${id}/gross-weight`, data);
+export const setAssetTareWeight = (id, data) => api.post(`/assets/${id}/tare-weight`, data);

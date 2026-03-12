@@ -1,5 +1,5 @@
 const prisma = require('../utils/prismaClient');
-const { canTransition } = require('../utils/orderStateMachine');
+const { canTransition: canInboundTransition } = require('../utils/inboundStateMachine');
 const { writeAuditLog } = require('../utils/auditLog');
 
 const LINE_INCLUDE = {
@@ -8,7 +8,7 @@ const LINE_INCLUDE = {
 };
 
 const SESSION_INCLUDE = {
-  weighing_event: {
+  inbound: {
     include: {
       vehicle: { select: { id: true, registration_plate: true } },
       order: {
@@ -20,7 +20,7 @@ const SESSION_INCLUDE = {
       },
       assets: {
         include: {
-          material_category: { select: { id: true, code_cbs: true, description_en: true } },
+          waste_stream: { select: { id: true, name_en: true, code: true } },
         },
         orderBy: { created_at: 'asc' },
       },
@@ -38,14 +38,11 @@ function createError(message, statusCode) {
   return err;
 }
 
-/**
- * Compute per-asset allocation fields and attach them to assets.
- */
 function addAllocationFields(session) {
-  if (!session || !session.weighing_event?.assets) return session;
+  if (!session || !session.inbound?.assets) return session;
 
   const lines = session.sorting_lines || [];
-  const assets = session.weighing_event.assets;
+  const assets = session.inbound.assets;
 
   for (const asset of assets) {
     const assetLines = lines.filter((l) => l.asset_id === asset.id);
@@ -79,13 +76,40 @@ async function listSessionsByOrder(orderId) {
   return sessions.map(addAllocationFields);
 }
 
+async function listAllSessions({ status, search, page = 1, limit = 20 }) {
+  const pageNum = Math.max(1, parseInt(page, 10));
+  const limitNum = Math.min(100, Math.max(1, parseInt(limit, 10)));
+  const skip = (pageNum - 1) * limitNum;
+
+  const where = {};
+  if (status) where.status = status;
+  if (search) {
+    const normalizedSearch = search.replace(/^SRT-/i, 'INB-');
+    where.OR = [
+      { inbound: { inbound_number: { contains: normalizedSearch, mode: 'insensitive' } } },
+      { inbound: { order: { order_number: { contains: search, mode: 'insensitive' } } } },
+    ];
+  }
+
+  const [sessions, total] = await Promise.all([
+    prisma.sortingSession.findMany({
+      where, skip, take: limitNum,
+      include: SESSION_INCLUDE,
+      orderBy: { recorded_at: 'desc' },
+    }),
+    prisma.sortingSession.count({ where }),
+  ]);
+
+  return { data: sessions.map(addAllocationFields), total, page: pageNum, limit: limitNum };
+}
+
 async function submitSession(sessionId, userId) {
   return prisma.$transaction(async (tx) => {
     const session = await tx.sortingSession.findUnique({
       where: { id: sessionId },
       include: {
         sorting_lines: true,
-        weighing_event: {
+        inbound: {
           include: {
             order: { select: { id: true, status: true } },
             assets: { select: { id: true, net_weight_kg: true } },
@@ -95,7 +119,7 @@ async function submitSession(sessionId, userId) {
     });
 
     if (!session) throw createError('Sorting session not found', 404);
-    if (session.status !== 'DRAFT') throw createError('Session is already submitted', 409);
+    if (session.status !== 'PLANNED') throw createError('Session is already submitted', 409);
     if (session.sorting_lines.length === 0) {
       throw createError('Add at least one material line before submitting', 409);
     }
@@ -117,11 +141,11 @@ async function submitSession(sessionId, userId) {
       throw err;
     }
 
-    // Update session status
+    // Update session status → SORTED
     const updated = await tx.sortingSession.update({
       where: { id: sessionId },
       data: {
-        status: 'SUBMITTED',
+        status: 'SORTED',
         recorded_by: userId,
         recorded_at: new Date(),
       },
@@ -133,25 +157,25 @@ async function submitSession(sessionId, userId) {
       action: 'SUBMIT',
       entityType: 'SortingSession',
       entityId: sessionId,
-      before: { status: 'DRAFT' },
-      after: { status: 'SUBMITTED' },
+      before: { status: 'PLANNED' },
+      after: { status: 'SORTED' },
     }, tx);
 
-    // Transition order to COMPLETED
-    const order = session.weighing_event.order;
-    if (canTransition(order.status, 'COMPLETED')) {
-      await tx.inboundOrder.update({
-        where: { id: order.id },
-        data: { status: 'COMPLETED' },
+    // Transition Inbound → SORTED
+    const inbound = session.inbound;
+    if (inbound && canInboundTransition(inbound.status, 'SORTED')) {
+      await tx.inbound.update({
+        where: { id: inbound.id },
+        data: { status: 'SORTED' },
       });
 
       await writeAuditLog({
         userId,
         action: 'STATUS_CHANGE',
-        entityType: 'InboundOrder',
-        entityId: order.id,
-        before: { status: order.status },
-        after: { status: 'COMPLETED' },
+        entityType: 'Inbound',
+        entityId: inbound.id,
+        before: { status: inbound.status },
+        after: { status: 'SORTED', trigger: 'sorting_submitted' },
       }, tx);
     }
 
@@ -163,13 +187,14 @@ async function reopenSession(sessionId, reason, userId) {
   return prisma.$transaction(async (tx) => {
     const session = await tx.sortingSession.findUnique({
       where: { id: sessionId },
+      include: { inbound: { select: { id: true, status: true } } },
     });
     if (!session) throw createError('Sorting session not found', 404);
-    if (session.status !== 'SUBMITTED') throw createError('Session is not submitted', 409);
+    if (session.status !== 'SORTED') throw createError('Session is not submitted', 409);
 
     const updated = await tx.sortingSession.update({
       where: { id: sessionId },
-      data: { status: 'DRAFT' },
+      data: { status: 'PLANNED' },
       include: SESSION_INCLUDE,
     });
 
@@ -178,9 +203,26 @@ async function reopenSession(sessionId, reason, userId) {
       action: 'REOPEN',
       entityType: 'SortingSession',
       entityId: sessionId,
-      before: { status: 'SUBMITTED' },
-      after: { status: 'DRAFT', reason },
+      before: { status: 'SORTED' },
+      after: { status: 'PLANNED', reason },
     }, tx);
+
+    // Revert Inbound SORTED → READY_FOR_SORTING
+    if (session.inbound && session.inbound.status === 'SORTED') {
+      await tx.inbound.update({
+        where: { id: session.inbound.id },
+        data: { status: 'READY_FOR_SORTING' },
+      });
+
+      await writeAuditLog({
+        userId,
+        action: 'STATUS_CHANGE',
+        entityType: 'Inbound',
+        entityId: session.inbound.id,
+        before: { status: 'SORTED' },
+        after: { status: 'READY_FOR_SORTING', trigger: 'sorting_reopened' },
+      }, tx);
+    }
 
     return addAllocationFields(updated);
   });
@@ -191,18 +233,17 @@ async function createLine(sessionId, data, userId) {
     const session = await tx.sortingSession.findUnique({
       where: { id: sessionId },
       include: {
-        weighing_event: { select: { id: true } },
+        inbound: { select: { id: true } },
         sorting_lines: { select: { asset_id: true, net_weight_kg: true } },
       },
     });
     if (!session) throw createError('Sorting session not found', 404);
-    if (session.status !== 'DRAFT') throw createError('Session is locked', 409);
+    if (session.status !== 'PLANNED') throw createError('Session is locked', 409);
 
-    // Validate asset belongs to this session's weighing event
     const asset = await tx.asset.findFirst({
-      where: { id: data.asset_id, weighing_event_id: session.weighing_event_id },
+      where: { id: data.asset_id, inbound_id: session.inbound_id },
     });
-    if (!asset) throw createError('Asset does not belong to this weighing event', 400);
+    if (!asset) throw createError('Asset does not belong to this inbound', 400);
 
     const line = await tx.sortingLine.create({
       data: {
@@ -215,6 +256,11 @@ async function createLine(sessionId, data, userId) {
         disposed_pct: parseFloat(data.disposed_pct),
         landfill_pct: parseFloat(data.landfill_pct),
         downstream_processor: data.downstream_processor || null,
+        downstream_processor_address: data.downstream_processor_address || null,
+        downstream_permit_number: data.downstream_permit_number || null,
+        transfer_date: data.transfer_date ? new Date(data.transfer_date) : null,
+        transfer_method: data.transfer_method || null,
+        certificate_reference: data.certificate_reference || null,
         notes: data.notes || null,
       },
       include: LINE_INCLUDE,
@@ -228,7 +274,6 @@ async function createLine(sessionId, data, userId) {
       after: { session_id: sessionId, asset_id: data.asset_id, category_id: data.category_id, net_weight_kg: data.net_weight_kg },
     }, tx);
 
-    // Check over-allocation
     const existingSum = session.sorting_lines
       .filter((l) => l.asset_id === data.asset_id)
       .reduce((sum, l) => sum + Number(l.net_weight_kg), 0);
@@ -247,11 +292,11 @@ async function updateLine(sessionId, lineId, data, userId) {
   return prisma.$transaction(async (tx) => {
     const existing = await tx.sortingLine.findUnique({
       where: { id: lineId },
-      include: { session: { select: { id: true, status: true, weighing_event_id: true } } },
+      include: { session: { select: { id: true, status: true, inbound_id: true } } },
     });
     if (!existing) throw createError('Sorting line not found', 404);
     if (existing.session_id !== sessionId) throw createError('Line does not belong to this session', 400);
-    if (existing.session.status !== 'DRAFT') throw createError('Session is locked', 409);
+    if (existing.session.status !== 'PLANNED') throw createError('Session is locked', 409);
 
     const updateData = {};
     if (data.category_id !== undefined) updateData.category_id = data.category_id;
@@ -261,6 +306,11 @@ async function updateLine(sessionId, lineId, data, userId) {
     if (data.disposed_pct !== undefined) updateData.disposed_pct = parseFloat(data.disposed_pct);
     if (data.landfill_pct !== undefined) updateData.landfill_pct = parseFloat(data.landfill_pct);
     if (data.downstream_processor !== undefined) updateData.downstream_processor = data.downstream_processor;
+    if (data.downstream_processor_address !== undefined) updateData.downstream_processor_address = data.downstream_processor_address;
+    if (data.downstream_permit_number !== undefined) updateData.downstream_permit_number = data.downstream_permit_number;
+    if (data.transfer_date !== undefined) updateData.transfer_date = data.transfer_date ? new Date(data.transfer_date) : null;
+    if (data.transfer_method !== undefined) updateData.transfer_method = data.transfer_method;
+    if (data.certificate_reference !== undefined) updateData.certificate_reference = data.certificate_reference;
     if (data.notes !== undefined) updateData.notes = data.notes;
 
     const updated = await tx.sortingLine.update({
@@ -278,7 +328,6 @@ async function updateLine(sessionId, lineId, data, userId) {
       after: { net_weight_kg: Number(updated.net_weight_kg), category_id: updated.category_id },
     }, tx);
 
-    // Check over-allocation
     const allLines = await tx.sortingLine.findMany({
       where: { session_id: sessionId, asset_id: updated.asset_id },
       select: { net_weight_kg: true },
@@ -307,7 +356,7 @@ async function deleteLine(sessionId, lineId, userId) {
     });
     if (!existing) throw createError('Sorting line not found', 404);
     if (existing.session_id !== sessionId) throw createError('Line does not belong to this session', 400);
-    if (existing.session.status !== 'DRAFT') throw createError('Session is locked', 409);
+    if (existing.session.status !== 'PLANNED') throw createError('Session is locked', 409);
 
     await tx.sortingLine.delete({ where: { id: lineId } });
 
@@ -351,6 +400,7 @@ async function getCategoryDefaults(categoryId) {
 module.exports = {
   getSession,
   listSessionsByOrder,
+  listAllSessions,
   submitSession,
   reopenSession,
   createLine,

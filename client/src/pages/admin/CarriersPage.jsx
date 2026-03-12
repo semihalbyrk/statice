@@ -3,6 +3,8 @@ import { Plus, Pencil, Trash2, Search } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { getCarriers, createCarrier, updateCarrier, deleteCarrier } from '../../api/carriers';
 
+const inputClass = "w-full h-10 px-3.5 rounded-md border border-grey-300 text-sm text-grey-900 focus:border-green-500 focus:ring-[3px] focus:ring-green-500/15 outline-none transition-colors";
+
 function CarrierFormModal({ carrier, onClose, onSuccess }) {
   const isEdit = !!carrier;
   const [form, setForm] = useState({
@@ -39,45 +41,40 @@ function CarrierFormModal({ carrier, onClose, onSuccess }) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-surface-overlay/50">
-      <div className="bg-surface rounded-2xl border border-border shadow-xl w-full max-w-md mx-4">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-border">
-          <h2 className="text-lg font-semibold text-foreground">
+    <div className="app-modal-overlay">
+      <div className="app-modal-panel max-w-md">
+        <div className="flex items-center justify-between px-5 py-3 border-b border-grey-200">
+          <h2 className="text-lg font-semibold text-grey-900">
             {isEdit ? 'Edit Carrier' : 'New Carrier'}
           </h2>
-          <button onClick={onClose} className="p-1 rounded-md hover:bg-muted transition text-text-tertiary">&times;</button>
+          <button onClick={onClose} className="p-1 rounded-md hover:bg-grey-50 transition-colors text-grey-400">&times;</button>
         </div>
-        <form onSubmit={handleSubmit} className="px-6 py-5 space-y-4">
+        <form onSubmit={handleSubmit} className="px-5 py-4 space-y-4">
           <div>
-            <label className="block text-sm font-medium text-text-secondary mb-1.5">Name</label>
-            <input name="name" value={form.name} onChange={handleChange} required
-              className="w-full px-3 py-2.5 rounded-lg border border-input text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent transition" />
+            <label className="block text-sm font-medium text-grey-700 mb-1.5">Name <span className="text-red-500">*</span></label>
+            <input name="name" value={form.name} onChange={handleChange} required className={inputClass} />
           </div>
           <div>
-            <label className="block text-sm font-medium text-text-secondary mb-1.5">KVK Number</label>
-            <input name="kvk_number" value={form.kvk_number} onChange={handleChange}
-              className="w-full px-3 py-2.5 rounded-lg border border-input text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent transition" />
+            <label className="block text-sm font-medium text-grey-700 mb-1.5">KVK Number</label>
+            <input name="kvk_number" value={form.kvk_number} onChange={handleChange} className={inputClass} />
           </div>
           <div>
-            <label className="block text-sm font-medium text-text-secondary mb-1.5">Contact Name</label>
-            <input name="contact_name" value={form.contact_name} onChange={handleChange}
-              className="w-full px-3 py-2.5 rounded-lg border border-input text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent transition" />
+            <label className="block text-sm font-medium text-grey-700 mb-1.5">Contact Name</label>
+            <input name="contact_name" value={form.contact_name} onChange={handleChange} className={inputClass} />
           </div>
           <div>
-            <label className="block text-sm font-medium text-text-secondary mb-1.5">Contact Email</label>
-            <input name="contact_email" type="email" value={form.contact_email} onChange={handleChange}
-              className="w-full px-3 py-2.5 rounded-lg border border-input text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent transition" />
+            <label className="block text-sm font-medium text-grey-700 mb-1.5">Contact Email</label>
+            <input name="contact_email" type="email" value={form.contact_email} onChange={handleChange} className={inputClass} />
           </div>
           <div>
-            <label className="block text-sm font-medium text-text-secondary mb-1.5">Contact Phone</label>
-            <input name="contact_phone" value={form.contact_phone} onChange={handleChange}
-              className="w-full px-3 py-2.5 rounded-lg border border-input text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent transition" />
+            <label className="block text-sm font-medium text-grey-700 mb-1.5">Contact Phone</label>
+            <input name="contact_phone" value={form.contact_phone} onChange={handleChange} className={inputClass} />
           </div>
           <div className="flex justify-end gap-3 pt-2">
             <button type="button" onClick={onClose}
-              className="px-4 py-2 text-sm font-medium text-text-secondary hover:text-foreground rounded-lg hover:bg-muted transition">Cancel</button>
+              className="h-9 px-4 bg-white text-grey-700 border border-grey-300 rounded-md text-sm font-semibold hover:bg-grey-50 transition-colors">Cancel</button>
             <button type="submit" disabled={submitting}
-              className="px-4 py-2 bg-primary text-primary-foreground rounded-lg font-semibold text-sm hover:bg-primary-hover disabled:opacity-50 transition">
+              className="h-9 px-4 bg-green-500 text-white rounded-md text-sm font-semibold hover:bg-green-700 disabled:opacity-50 transition-colors">
               {submitting ? 'Saving...' : isEdit ? 'Update' : 'Create'}
             </button>
           </div>
@@ -123,53 +120,57 @@ export default function CarriersPage() {
   }
 
   return (
-    <div className="max-w-5xl mx-auto">
+    <div>
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-h-xs font-bold text-foreground">Carriers</h1>
+        <h1 className="text-xl font-semibold text-grey-900">Carriers</h1>
         <button onClick={() => { setEditCarrier(null); setShowModal(true); }}
-          className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg font-semibold text-sm hover:bg-primary-hover transition">
-          <Plus size={16} /> Add Carrier
+          className="flex items-center gap-2 h-9 px-4 bg-green-500 text-white rounded-md text-sm font-semibold hover:bg-green-700 transition-colors">
+          <Plus size={16} strokeWidth={2} /> Add Carrier
         </button>
       </div>
 
       <div className="relative max-w-xs mb-4">
-        <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-placeholder" />
+        <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-grey-400" />
         <input type="text" placeholder="Search carriers..." value={search} onChange={(e) => setSearch(e.target.value)}
-          className="w-full pl-9 pr-3 py-2 rounded-lg border border-input text-sm text-foreground placeholder-text-placeholder focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent transition" />
+          className="w-full h-10 pl-9 pr-3 rounded-md border border-grey-300 text-sm text-grey-900 placeholder:text-grey-400 focus:border-green-500 focus:ring-[3px] focus:ring-green-500/15 outline-none transition-colors" />
       </div>
 
-      <div className="bg-surface rounded-xl border border-border overflow-hidden">
+      <div className="bg-white rounded-lg border border-grey-200 shadow-sm overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b border-border bg-muted">
-              <th className="text-left px-4 py-3 font-medium text-text-secondary">Name</th>
-              <th className="text-left px-4 py-3 font-medium text-text-secondary">KVK</th>
-              <th className="text-left px-4 py-3 font-medium text-text-secondary">Contact</th>
-              <th className="text-left px-4 py-3 font-medium text-text-secondary">Status</th>
-              <th className="text-right px-4 py-3 font-medium text-text-secondary">Actions</th>
+            <tr className="bg-grey-50 border-b border-grey-200">
+              <th className="text-left px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide">Name</th>
+              <th className="text-left px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide">KVK</th>
+              <th className="text-left px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide">Contact Name</th>
+              <th className="text-left px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide">Contact Email</th>
+              <th className="text-left px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide">Contact Phone</th>
+              <th className="text-left px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide">Status</th>
+              <th className="text-right px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide">Actions</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-border">
+          <tbody>
             {loading ? (
-              <tr><td colSpan={5} className="px-4 py-8 text-center text-text-placeholder">Loading...</td></tr>
+              <tr><td colSpan={7} className="px-4 py-8 text-center text-grey-400">Loading...</td></tr>
             ) : carriers.length === 0 ? (
-              <tr><td colSpan={5} className="px-4 py-8 text-center text-text-placeholder">No carriers found</td></tr>
+              <tr><td colSpan={7} className="px-4 py-8 text-center text-grey-400">No carriers found</td></tr>
             ) : carriers.map((c) => (
-              <tr key={c.id} className="hover:bg-muted transition">
-                <td className="px-4 py-3 font-medium text-foreground">{c.name}</td>
-                <td className="px-4 py-3 text-text-secondary">{c.kvk_number || '—'}</td>
-                <td className="px-4 py-3 text-text-secondary">{c.contact_email || c.contact_name || '—'}</td>
-                <td className="px-4 py-3">
-                  <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${c.is_active ? 'bg-green-100 text-green-700' : 'bg-grey-100 text-grey-500'}`}>
+              <tr key={c.id} className="border-b border-grey-100 hover:bg-grey-50 transition-colors">
+                <td className="px-4 py-2.5 font-medium text-grey-900">{c.name}</td>
+                <td className="px-4 py-2.5 text-grey-700">{c.kvk_number || '—'}</td>
+                <td className="px-4 py-2.5 text-grey-700">{c.contact_name || '—'}</td>
+                <td className="px-4 py-2.5 text-grey-700">{c.contact_email || '—'}</td>
+                <td className="px-4 py-2.5 text-grey-700">{c.contact_phone || '—'}</td>
+                <td className="px-4 py-2.5">
+                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${c.is_active ? 'bg-green-25 text-green-700 border-green-300' : 'bg-grey-100 text-grey-500 border-grey-300'}`}>
                     {c.is_active ? 'Active' : 'Inactive'}
                   </span>
                 </td>
-                <td className="px-4 py-3 text-right">
+                <td className="px-4 py-2.5 text-right">
                   <button onClick={() => { setEditCarrier(c); setShowModal(true); }}
-                    className="p-1.5 rounded-md hover:bg-muted transition text-text-tertiary hover:text-foreground"><Pencil size={15} /></button>
+                    className="p-1.5 rounded-md hover:bg-grey-100 transition-colors text-grey-400 hover:text-grey-600"><Pencil size={15} /></button>
                   {c.is_active && (
                     <button onClick={() => handleDelete(c.id)}
-                      className="p-1.5 rounded-md hover:bg-muted transition text-text-tertiary hover:text-red-600 ml-1"><Trash2 size={15} /></button>
+                      className="p-1.5 rounded-md hover:bg-grey-100 transition-colors text-grey-400 hover:text-red-600 ml-1"><Trash2 size={15} /></button>
                   )}
                 </td>
               </tr>

@@ -58,7 +58,7 @@ Full PRD is in /docs/PRD.md — read it before making any decisions.
 └── docker-compose.yml
 
 
-All UI work must reference the Figma design tokens in `/docs/design-tokens.json`.
+All UI work must reference the @evreka-design skill.
 
 Rules:
 - Never hardcode color hex values — always use the CSS variables or Tailwind classes 

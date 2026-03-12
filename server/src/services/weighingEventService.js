@@ -335,6 +335,30 @@ async function confirmWeighingEvent(eventId, userId) {
       after: { status: 'CONFIRMED', sorting_session_id: session.id },
     }, tx);
 
+    // Check if order should be completed — count all confirmed events vs expected_skip_count
+    const order = await tx.inboundOrder.findUnique({ where: { id: event.order_id } });
+    if (order && order.status === 'IN_PROGRESS') {
+      const confirmedEvents = await tx.weighingEvent.findMany({
+        where: { order_id: event.order_id, status: 'CONFIRMED' },
+        include: { assets: true },
+      });
+      const totalAssets = confirmedEvents.reduce((sum, e) => sum + e.assets.length, 0);
+      if (totalAssets >= order.expected_skip_count) {
+        await tx.inboundOrder.update({
+          where: { id: order.id },
+          data: { status: 'COMPLETED' },
+        });
+        await writeAuditLog({
+          userId,
+          action: 'STATUS_CHANGE',
+          entityType: 'InboundOrder',
+          entityId: order.id,
+          before: { status: 'IN_PROGRESS' },
+          after: { status: 'COMPLETED', reason: 'All expected skips confirmed' },
+        }, tx);
+      }
+    }
+
     updated.can_add_skips = false;
     updated.sorting_session = { id: session.id, status: session.status };
     return updated;
@@ -444,6 +468,121 @@ async function overrideWeight(eventId, data, userId) {
   });
 }
 
+async function manualWeighing(eventId, data, userId) {
+  const weightKg = parseFloat(data.weight_kg);
+  if (isNaN(weightKg) || weightKg <= 0) {
+    const err = new Error('weight_kg must be a positive number');
+    err.statusCode = 400;
+    throw err;
+  }
+
+  return prisma.$transaction(async (tx) => {
+    const event = await tx.weighingEvent.findUnique({ where: { id: eventId } });
+    if (!event) throw new Error('Weighing event not found');
+
+    const isGross = data.weight_type === 'GROSS';
+    const expectedStatus = isGross ? 'PENDING_GROSS' : 'PENDING_TARE';
+
+    if (event.status !== expectedStatus) {
+      const err = new Error(`Cannot manually enter ${data.weight_type} weight from status ${event.status}`);
+      err.statusCode = 409;
+      throw err;
+    }
+
+    // Create a PfisterTicket with is_manual_override = true
+    const ticket = await tx.pfisterTicket.create({
+      data: {
+        ticket_number: `MAN-${Date.now()}`,
+        weighing_type: data.weight_type,
+        weight_kg: weightKg,
+        unit: 'kg',
+        timestamp: new Date(),
+        raw_payload: JSON.stringify({ manual_entry: true, reason: data.reason || 'Pfister unavailable' }),
+        is_manual_override: true,
+        override_reason: data.reason || 'Pfister unavailable',
+        override_by: userId,
+      },
+    });
+
+    const updateData = {};
+    if (isGross) {
+      updateData.gross_ticket_id = ticket.id;
+      updateData.gross_weight_kg = weightKg;
+      updateData.status = 'GROSS_COMPLETE';
+    } else {
+      updateData.tare_ticket_id = ticket.id;
+      updateData.tare_weight_kg = weightKg;
+      updateData.net_weight_kg = Number(event.gross_weight_kg) - weightKg;
+      updateData.status = 'TARE_COMPLETE';
+
+      // Distribute net weight if tare
+      const assets = await tx.asset.findMany({
+        where: { weighing_event_id: eventId },
+        orderBy: { created_at: 'asc' },
+      });
+      const netWeightKg = Number(event.gross_weight_kg) - weightKg;
+      const grossWeightKg = Number(event.gross_weight_kg);
+      const totalVolume = assets.reduce((sum, a) => sum + (Number(a.estimated_volume_m3) || 0), 0);
+      const useVolume = totalVolume > 0;
+      let distributed = 0;
+
+      for (let i = 0; i < assets.length; i++) {
+        let assetNet;
+        if (i === assets.length - 1) {
+          assetNet = Math.round((netWeightKg - distributed) * 100) / 100;
+        } else if (useVolume) {
+          const proportion = (Number(assets[i].estimated_volume_m3) || 0) / totalVolume;
+          assetNet = Math.round(netWeightKg * proportion * 100) / 100;
+        } else {
+          assetNet = Math.round((netWeightKg / assets.length) * 100) / 100;
+        }
+        distributed += assetNet;
+        const proportion = netWeightKg > 0 ? assetNet / netWeightKg : 1 / assets.length;
+        await tx.asset.update({
+          where: { id: assets[i].id },
+          data: {
+            net_weight_kg: assetNet,
+            gross_weight_kg: Math.round(grossWeightKg * proportion * 100) / 100,
+            tare_weight_kg: Math.round(weightKg * proportion * 100) / 100,
+          },
+        });
+      }
+    }
+
+    const updated = await tx.weighingEvent.update({
+      where: { id: eventId },
+      data: updateData,
+      include: EVENT_INCLUDE,
+    });
+
+    await writeAuditLog({
+      userId,
+      action: isGross ? 'GROSS_WEIGHING' : 'TARE_WEIGHING',
+      entityType: 'WeighingEvent',
+      entityId: eventId,
+      before: { status: event.status },
+      after: { status: updated.status, weight_kg: weightKg, manual: true },
+    }, tx);
+
+    updated.can_add_skips = !['CONFIRMED'].includes(updated.status);
+    return updated;
+  });
+}
+
+async function lookupAsset(assetLabel) {
+  return prisma.asset.findUnique({
+    where: { asset_label: assetLabel },
+    include: {
+      weighing_event: {
+        select: { id: true, order_id: true, status: true },
+      },
+      material_category: {
+        select: { id: true, code_cbs: true, description_en: true },
+      },
+    },
+  });
+}
+
 module.exports = {
   getWeighingEvent,
   listWeighingEvents,
@@ -453,4 +592,6 @@ module.exports = {
   advanceToTare,
   confirmWeighingEvent,
   overrideWeight,
+  manualWeighing,
+  lookupAsset,
 };

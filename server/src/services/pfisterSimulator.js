@@ -18,27 +18,12 @@
 const prisma = require('../utils/prismaClient');
 
 /**
- * Generate the next Pfister ticket number in format PF-YYYY-NNNNNN.
- * @param {import('@prisma/client').PrismaClient} tx - transaction client
- * @returns {Promise<string>}
+ * Generate a random 5-digit Pfister ticket number.
+ * @returns {string}
  */
-async function generateTicketNumber(tx) {
-  const year = new Date().getFullYear();
-  const prefix = `PF-${year}-`;
-
-  const lastTicket = await tx.pfisterTicket.findFirst({
-    where: { ticket_number: { startsWith: prefix } },
-    orderBy: { ticket_number: 'desc' },
-    select: { ticket_number: true },
-  });
-
-  let nextSeq = 1;
-  if (lastTicket) {
-    const lastSeq = parseInt(lastTicket.ticket_number.replace(prefix, ''), 10);
-    nextSeq = lastSeq + 1;
-  }
-
-  return `${prefix}${String(nextSeq).padStart(6, '0')}`;
+function generateTicketNumber() {
+  const num = Math.floor(10000 + Math.random() * 90000);
+  return `PF-${num}`;
 }
 
 /**
@@ -76,7 +61,7 @@ async function requestWeighing(weighingType, grossWeightKg) {
   const timestamp = new Date();
 
   const ticket = await prisma.$transaction(async (tx) => {
-    const ticketNumber = await generateTicketNumber(tx);
+    const ticketNumber = generateTicketNumber();
 
     return tx.pfisterTicket.create({
       data: {

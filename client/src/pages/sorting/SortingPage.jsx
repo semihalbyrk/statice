@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo, useCallback } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
-import { ArrowLeft, Loader2, Plus, Pencil, Trash2, AlertTriangle, CheckCircle } from 'lucide-react';
+import { useParams, Link } from 'react-router-dom';
+import { Loader2, Plus, Pencil, Trash2, AlertTriangle, CheckCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
 import useSortingStore from '../../store/sortingStore';
 import useAuthStore from '../../store/authStore';
@@ -15,12 +15,15 @@ import {
   getCategoryDefaults,
 } from '../../api/sorting';
 import { format } from 'date-fns';
+import { getSortingName } from '../../utils/entityNames';
 
 const SKIP_LABELS = { OPEN_TOP: 'Open Top', CLOSED_TOP: 'Closed Top', GITTERBOX: 'Gitterbox', PALLET: 'Pallet', OTHER: 'Other' };
 
+const inputClass = "w-full h-10 px-3.5 rounded-md border border-grey-300 text-sm text-grey-900 focus:border-green-500 focus:ring-[3px] focus:ring-green-500/15 outline-none transition-colors";
+const selectClass = `${inputClass} bg-white`;
+
 export default function SortingPage() {
   const { sessionId } = useParams();
-  const navigate = useNavigate();
   const user = useAuthStore((s) => s.user);
   const { productCategories, wasteStreams } = useMasterDataStore();
   const {
@@ -31,7 +34,7 @@ export default function SortingPage() {
   } = useSortingStore();
 
   const isAdmin = user?.role === 'ADMIN';
-  const canOperate = ['ADMIN', 'GATE_OPERATOR'].includes(user?.role);
+  const canOperate = ['ADMIN', 'GATE_OPERATOR', 'SORTING_EMPLOYEE'].includes(user?.role);
 
   useEffect(() => {
     fetchSession(sessionId);
@@ -41,19 +44,18 @@ export default function SortingPage() {
   if (isLoading || !session) {
     return (
       <div className="flex items-center justify-center py-20">
-        <Loader2 className="animate-spin text-text-placeholder" size={24} />
+        <Loader2 className="animate-spin text-grey-400" size={24} />
       </div>
     );
   }
 
-  const order = session.weighing_event?.order;
-  const assets = session.weighing_event?.assets || [];
+  const order = session.inbound?.order;
+  const assets = session.inbound?.assets || [];
   const lines = session.sorting_lines || [];
-  const isDraft = session.status === 'DRAFT';
+  const isDraft = session.status === 'PLANNED';
 
   return (
-    <div className="max-w-6xl mx-auto">
-      {/* Page Header */}
+    <div>
       <PageHeader
         session={session}
         order={order}
@@ -64,12 +66,10 @@ export default function SortingPage() {
         sessionId={sessionId}
         setSubmitting={setSubmitting}
         fetchSession={fetchSession}
-        navigate={navigate}
         lines={lines}
         assets={assets}
       />
 
-      {/* Skip Tabs */}
       {assets.length > 0 && (
         <>
           <SkipTabs
@@ -79,7 +79,6 @@ export default function SortingPage() {
             onSelect={setActiveAssetId}
           />
 
-          {/* Active Skip Content */}
           <ActiveSkipPanel
             session={session}
             assets={assets}
@@ -102,7 +101,7 @@ export default function SortingPage() {
       )}
 
       {assets.length === 0 && (
-        <div className="bg-surface rounded-xl border border-border p-8 text-center text-text-placeholder text-sm">
+        <div className="bg-white rounded-lg border border-grey-200 shadow-sm p-8 text-center text-grey-400 text-sm">
           No skips found on this weighing event
         </div>
       )}
@@ -111,9 +110,10 @@ export default function SortingPage() {
 }
 
 /* ───── Page Header ───── */
-function PageHeader({ session, order, isDraft, isAdmin, canOperate, isSubmitting, sessionId, setSubmitting, fetchSession, navigate, lines, assets }) {
+function PageHeader({ session, order, isDraft, isAdmin, canOperate, isSubmitting, sessionId, setSubmitting, fetchSession, lines, assets }) {
   const [showSubmitDialog, setShowSubmitDialog] = useState(false);
   const [showReopenDialog, setShowReopenDialog] = useState(false);
+  const totalNetWeight = assets.reduce((sum, asset) => sum + (Number(asset.net_weight_kg) || 0), 0);
 
   const handleSubmit = useCallback(async () => {
     setSubmitting(true);
@@ -136,30 +136,19 @@ function PageHeader({ session, order, isDraft, isAdmin, canOperate, isSubmitting
 
   return (
     <>
-      <Link
-        to={`/weighing-events/${session.weighing_event_id}`}
-        className="inline-flex items-center gap-1.5 text-sm text-text-secondary hover:text-foreground mb-4 transition"
-      >
-        <ArrowLeft size={16} /> Back to Weighing Event
-      </Link>
-
       <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
-        <div>
+        <div className="flex items-center gap-3 flex-wrap">
           <div className="flex items-center gap-3 mb-1">
-            <h1 className="text-h-xs font-bold text-foreground">Sorting Record</h1>
+            <h1 className="text-2xl font-bold text-grey-900">{getSortingName(session)}</h1>
             <StatusBadge status={session.status} />
           </div>
-          <p className="text-sm text-text-secondary">
-            Order {order?.order_number} — {order?.carrier?.name} — {session.weighing_event?.vehicle?.registration_plate}
-            {session.recorded_at && ` — ${format(new Date(session.recorded_at), 'dd MMM yyyy')}`}
-          </p>
         </div>
         <div className="flex items-center gap-2">
           {isDraft && canOperate && (
             <button
               onClick={() => setShowSubmitDialog(true)}
               disabled={isSubmitting}
-              className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg font-semibold text-sm hover:bg-green-700 disabled:opacity-50 transition"
+              className="flex items-center gap-2 h-9 px-4 bg-green-500 text-white rounded-md font-semibold text-sm hover:bg-green-700 disabled:opacity-50 transition-colors"
             >
               <CheckCircle size={16} />
               Submit Sorting Record
@@ -168,7 +157,7 @@ function PageHeader({ session, order, isDraft, isAdmin, canOperate, isSubmitting
           {!isDraft && isAdmin && (
             <button
               onClick={() => setShowReopenDialog(true)}
-              className="px-3 py-1.5 text-sm text-text-secondary hover:text-foreground border border-border rounded-lg hover:bg-muted transition"
+              className="h-9 px-3 text-sm text-grey-700 border border-grey-300 rounded-md hover:bg-grey-50 transition-colors"
             >
               Reopen
             </button>
@@ -176,7 +165,28 @@ function PageHeader({ session, order, isDraft, isAdmin, canOperate, isSubmitting
         </div>
       </div>
 
-      {/* Submit Confirmation Dialog */}
+      <div className="bg-white rounded-lg border border-grey-200 shadow-sm p-4 mb-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-6 gap-y-3 gap-x-6">
+          <InfoField label="Linked Inbound">
+            <Link to={`/inbounds/${session.inbound_id}`} className="inline-flex items-center text-sm font-semibold text-green-600 hover:text-green-700 hover:underline transition-colors">
+              {session.inbound?.inbound_number || '—'}
+            </Link>
+          </InfoField>
+          <InfoField label="Linked Order">
+            <Link to={`/orders/${order?.id}`} className="inline-flex items-center text-sm font-semibold text-green-600 hover:text-green-700 hover:underline transition-colors">
+              {order?.order_number || '—'}
+            </Link>
+          </InfoField>
+          <InfoField label="Carrier" value={order?.carrier?.name} />
+          <InfoField label="Supplier" value={order?.supplier?.name} />
+          <InfoField label="Vehicle Plate" value={session.inbound?.vehicle?.registration_plate} mono />
+          <InfoField label="Recorded At" value={session.recorded_at ? format(new Date(session.recorded_at), 'dd MMM yyyy HH:mm') : '—'} />
+          <InfoField label="Waste Stream" value={order?.waste_stream?.name_en} />
+          <InfoField label="Skip Count" value={String(assets.length)} />
+          <InfoField label="Net Weight" value={totalNetWeight ? `${totalNetWeight.toLocaleString()} kg` : '—'} />
+        </div>
+      </div>
+
       {showSubmitDialog && (
         <SubmitDialog
           lineCount={lines.length}
@@ -188,7 +198,6 @@ function PageHeader({ session, order, isDraft, isAdmin, canOperate, isSubmitting
         />
       )}
 
-      {/* Reopen Dialog */}
       {showReopenDialog && (
         <ReopenDialog
           sessionId={sessionId}
@@ -200,34 +209,46 @@ function PageHeader({ session, order, isDraft, isAdmin, canOperate, isSubmitting
   );
 }
 
+function InfoField({ label, value, children, mono = false }) {
+  return (
+    <div>
+      <span className="text-xs font-medium text-grey-500 uppercase tracking-wide">{label}</span>
+      {children ? (
+        <div className="mt-1">{children}</div>
+      ) : (
+        <p className={`mt-1 text-sm text-grey-900 ${mono ? 'font-mono' : 'font-medium'}`}>{value || '—'}</p>
+      )}
+    </div>
+  );
+}
+
 function SubmitDialog({ lineCount, assets, lines, isSubmitting, onConfirm, onCancel }) {
-  // Check for empty skips
   const emptySkips = assets.filter((a) => !lines.some((l) => l.asset_id === a.id));
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-surface-overlay/50">
-      <div className="bg-surface rounded-2xl border border-border shadow-xl w-full max-w-sm mx-4 p-6">
+    <div className="app-modal-overlay">
+      <div className="app-modal-panel max-w-sm p-6">
         <div className="flex items-center gap-2 mb-4">
           <AlertTriangle size={20} className="text-orange-500" />
-          <h3 className="text-lg font-semibold text-foreground">Submit Sorting Record</h3>
+          <h3 className="text-lg font-semibold text-grey-900">Submit Sorting Record</h3>
         </div>
         {emptySkips.length > 0 && (
-          <div className="bg-orange-50 border border-orange-200 rounded-lg p-3 mb-3 text-sm text-orange-700">
+          <div className="bg-orange-50 border border-orange-200 rounded-md p-3 mb-3 text-sm text-orange-700">
             {emptySkips.map((a) => a.asset_label).join(', ')} {emptySkips.length === 1 ? 'has' : 'have'} no material lines.
           </div>
         )}
-        <p className="text-sm text-text-secondary mb-5">
+        <p className="text-sm text-grey-600 mb-5">
           Once submitted, this record cannot be edited without administrator access.
           All {lineCount} material line{lineCount !== 1 ? 's' : ''} will be locked.
         </p>
         <div className="flex justify-end gap-3">
-          <button onClick={onCancel} className="px-4 py-2 text-sm text-text-secondary hover:text-foreground rounded-lg hover:bg-muted transition">
+          <button onClick={onCancel} className="h-9 px-4 bg-white text-grey-700 border border-grey-300 rounded-md text-sm font-semibold hover:bg-grey-50 transition-colors">
             Cancel
           </button>
           <button
             onClick={onConfirm}
             disabled={isSubmitting}
-            className="px-4 py-2 bg-green-600 text-white rounded-lg font-semibold text-sm hover:bg-green-700 disabled:opacity-50 transition"
+            className="h-9 px-4 bg-green-500 text-white rounded-md font-semibold text-sm hover:bg-green-700 disabled:opacity-50 transition-colors"
           >
             {isSubmitting ? 'Submitting...' : 'Submit'}
           </button>
@@ -256,23 +277,23 @@ function ReopenDialog({ sessionId, fetchSession, onClose }) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-surface-overlay/50">
-      <div className="bg-surface rounded-2xl border border-border shadow-xl w-full max-w-sm mx-4 p-6">
-        <h3 className="text-lg font-semibold text-foreground mb-3">Reopen Sorting Record</h3>
-        <label className="block text-sm font-medium text-text-secondary mb-1.5">Reason</label>
+    <div className="app-modal-overlay">
+      <div className="app-modal-panel max-w-sm p-6">
+        <h3 className="text-lg font-semibold text-grey-900 mb-3">Reopen Sorting Record</h3>
+        <label className="block text-sm font-medium text-grey-700 mb-1.5">Reason</label>
         <textarea
           value={reason}
           onChange={(e) => setReason(e.target.value)}
           rows={3}
           required
           placeholder="Reason for reopening..."
-          className="w-full px-3 py-2.5 rounded-lg border border-input text-sm text-foreground placeholder-text-placeholder focus:outline-none focus:ring-2 focus:ring-ring transition resize-none mb-4"
+          className="w-full min-h-[80px] px-3.5 py-2.5 rounded-md border border-grey-300 text-sm text-grey-900 placeholder:text-grey-400 focus:border-green-500 focus:ring-[3px] focus:ring-green-500/15 outline-none transition-colors resize-vertical mb-4"
         />
         <div className="flex justify-end gap-3">
-          <button onClick={onClose} className="px-4 py-2 text-sm text-text-secondary hover:text-foreground rounded-lg hover:bg-muted transition">
+          <button onClick={onClose} className="h-9 px-4 bg-white text-grey-700 border border-grey-300 rounded-md text-sm font-semibold hover:bg-grey-50 transition-colors">
             Cancel
           </button>
-          <button onClick={handleReopen} disabled={submitting || !reason.trim()} className="px-4 py-2 bg-primary text-primary-foreground rounded-lg font-semibold text-sm hover:bg-primary-hover disabled:opacity-50 transition">
+          <button onClick={handleReopen} disabled={submitting || !reason.trim()} className="h-9 px-4 bg-green-500 text-white rounded-md font-semibold text-sm hover:bg-green-700 disabled:opacity-50 transition-colors">
             {submitting ? 'Reopening...' : 'Reopen'}
           </button>
         </div>
@@ -284,7 +305,7 @@ function ReopenDialog({ sessionId, fetchSession, onClose }) {
 /* ───── Skip Tabs ───── */
 function SkipTabs({ assets, lines, activeAssetId, onSelect }) {
   return (
-    <div className="flex gap-1 overflow-x-auto border-b border-border mb-4 pb-0">
+    <div className="flex gap-1 overflow-x-auto border-b border-grey-200 mb-4 pb-0">
       {assets.map((asset) => {
         const assetLines = lines.filter((l) => l.asset_id === asset.id);
         const hasLines = assetLines.length > 0;
@@ -292,18 +313,18 @@ function SkipTabs({ assets, lines, activeAssetId, onSelect }) {
         const isOver = totalAllocated > Number(asset.net_weight_kg);
         const isActive = asset.id === activeAssetId;
 
-        let dotColor = 'bg-grey-300'; // grey = no lines
-        if (hasLines && !isOver) dotColor = 'bg-green-500'; // green
-        if (hasLines && isOver) dotColor = 'bg-orange-500'; // amber
+        let dotColor = 'bg-grey-300';
+        if (hasLines && !isOver) dotColor = 'bg-green-500';
+        if (hasLines && isOver) dotColor = 'bg-orange-500';
 
         return (
           <button
             key={asset.id}
             onClick={() => onSelect(asset.id)}
-            className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium whitespace-nowrap transition border-b-2 -mb-px ${
+            className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium whitespace-nowrap transition-colors border-b-2 -mb-px ${
               isActive
-                ? 'border-primary text-foreground'
-                : 'border-transparent text-text-tertiary hover:text-text-secondary hover:border-border'
+                ? 'border-green-500 text-grey-900'
+                : 'border-transparent text-grey-500 hover:text-grey-600 hover:border-grey-300'
             }`}
           >
             <span className={`w-2 h-2 rounded-full ${dotColor}`} />
@@ -335,36 +356,36 @@ function ActiveSkipPanel({
   return (
     <div>
       {/* Skip Summary Bar */}
-      <div className="bg-surface rounded-xl border border-border p-4 mb-4">
+      <div className="bg-white rounded-lg border border-grey-200 shadow-sm p-4 mb-4">
         <div className="flex items-center justify-between flex-wrap gap-3 mb-3">
           <div className="flex items-center gap-3">
-            <span className="font-mono font-bold text-foreground">{asset.asset_label}</span>
-            <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-blue-100 text-blue-700">
+            <span className="text-sm font-semibold text-grey-900">{asset.asset_label}</span>
+            <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-300">
               {SKIP_LABELS[asset.skip_type] || asset.skip_type}
             </span>
-            {asset.material_category && (
-              <span className="text-xs text-text-tertiary">{asset.material_category.code_cbs}</span>
+            {asset.waste_stream && (
+              <span className="text-xs text-grey-500">{asset.waste_stream.name_en}</span>
             )}
           </div>
           <div className="flex items-center gap-6 text-sm">
             <div>
-              <span className="text-text-tertiary">Net Weight: </span>
-              <span className="font-semibold text-foreground">{netWeight.toLocaleString()} kg</span>
+              <span className="text-grey-500">Net Weight: </span>
+              <span className="font-semibold text-grey-900">{netWeight.toLocaleString()} kg</span>
             </div>
             <div>
-              <span className="text-text-tertiary">Allocated: </span>
-              <span className="font-semibold text-foreground">{totalAllocated.toLocaleString()} kg</span>
+              <span className="text-grey-500">Allocated: </span>
+              <span className="font-semibold text-grey-900">{totalAllocated.toLocaleString()} kg</span>
             </div>
             <div>
-              <span className="text-text-tertiary">Remaining: </span>
-              <span className={`font-semibold ${isOver ? 'text-red-600' : remaining > 0 ? 'text-foreground' : 'text-green-600'}`}>
+              <span className="text-grey-500">Remaining: </span>
+              <span className={`font-semibold ${isOver ? 'text-red-600' : remaining > 0 ? 'text-grey-900' : 'text-green-600'}`}>
                 {remaining.toLocaleString()} kg
               </span>
             </div>
           </div>
         </div>
         {/* Progress bar */}
-        <div className="w-full h-2 rounded-full bg-muted overflow-hidden">
+        <div className="w-full h-2 rounded-full bg-grey-100 overflow-hidden">
           <div
             className={`h-full rounded-full transition-all ${isOver ? 'bg-red-500' : 'bg-green-500'}`}
             style={{ width: `${Math.min(allocPct, 100)}%` }}
@@ -373,35 +394,27 @@ function ActiveSkipPanel({
       </div>
 
       {/* Sorting Lines Table */}
-      <div className="bg-surface rounded-xl border border-border overflow-hidden mb-4">
+      <div className="bg-white rounded-lg border border-grey-200 shadow-sm overflow-hidden mb-4">
         {assetLines.length > 0 ? (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-border bg-muted">
-                  <th className="text-left px-4 py-2.5 font-medium text-text-secondary">Category</th>
-                  <th className="text-right px-4 py-2.5 font-medium text-text-secondary">Weight (kg)</th>
-                  <th className="text-right px-4 py-2.5 font-medium text-text-secondary">Recycled %</th>
-                  <th className="text-right px-4 py-2.5 font-medium text-text-secondary">Reused %</th>
-                  <th className="text-right px-4 py-2.5 font-medium text-text-secondary">Disposed %</th>
-                  <th className="text-right px-4 py-2.5 font-medium text-text-secondary">Landfill %</th>
-                  <th className="text-left px-4 py-2.5 font-medium text-text-secondary">Processor</th>
-                  {isDraft && canOperate && <th className="text-right px-4 py-2.5 font-medium text-text-secondary">Actions</th>}
+                <tr className="bg-grey-50 border-b border-grey-200">
+                  <th className="text-left px-4 py-2.5 text-xs font-medium text-grey-500 uppercase tracking-wide">Category</th>
+                  <th className="text-right px-4 py-2.5 text-xs font-medium text-grey-500 uppercase tracking-wide">Weight (kg)</th>
+                  <th className="text-left px-4 py-2.5 text-xs font-medium text-grey-500 uppercase tracking-wide">Notes</th>
+                  {isDraft && canOperate && <th className="text-right px-4 py-2.5 text-xs font-medium text-grey-500 uppercase tracking-wide">Actions</th>}
                 </tr>
               </thead>
-              <tbody className="divide-y divide-border">
+              <tbody>
                 {assetLines.map((line) => (
-                  <tr key={line.id} className="hover:bg-muted transition">
-                    <td className="px-4 py-2.5 text-foreground">
+                  <tr key={line.id} className="border-b border-grey-100 hover:bg-grey-50 transition-colors">
+                    <td className="px-4 py-2.5 text-grey-900">
                       <span className="font-medium">{line.category?.code_cbs}</span>
-                      <span className="text-text-tertiary ml-1.5 text-xs">{line.category?.description_en}</span>
+                      <span className="text-grey-500 ml-1.5 text-xs">{line.category?.description_en}</span>
                     </td>
-                    <td className="px-4 py-2.5 text-right text-foreground font-medium">{Number(line.net_weight_kg).toLocaleString()}</td>
-                    <td className="px-4 py-2.5 text-right text-text-secondary">{Number(line.recycled_pct)}</td>
-                    <td className="px-4 py-2.5 text-right text-text-secondary">{Number(line.reused_pct)}</td>
-                    <td className="px-4 py-2.5 text-right text-text-secondary">{Number(line.disposed_pct)}</td>
-                    <td className="px-4 py-2.5 text-right text-text-secondary">{Number(line.landfill_pct)}</td>
-                    <td className="px-4 py-2.5 text-text-secondary">{line.downstream_processor || '—'}</td>
+                    <td className="px-4 py-2.5 text-right text-grey-900 font-medium">{Number(line.net_weight_kg).toLocaleString()}</td>
+                    <td className="px-4 py-2.5 text-grey-600 max-w-[200px] truncate">{line.notes || '—'}</td>
                     {isDraft && canOperate && (
                       <td className="px-4 py-2.5 text-right">
                         <button
@@ -411,15 +424,10 @@ function ActiveSkipPanel({
                             fields: {
                               category_id: line.category?.id || line.category_id,
                               net_weight_kg: String(Number(line.net_weight_kg)),
-                              recycled_pct: String(Number(line.recycled_pct)),
-                              reused_pct: String(Number(line.reused_pct)),
-                              disposed_pct: String(Number(line.disposed_pct)),
-                              landfill_pct: String(Number(line.landfill_pct)),
-                              downstream_processor: line.downstream_processor || '',
                               notes: line.notes || '',
                             },
                           })}
-                          className="p-1.5 rounded-md hover:bg-muted transition text-text-tertiary hover:text-foreground"
+                          className="p-1.5 rounded-md hover:bg-grey-50 transition-colors text-grey-500 hover:text-grey-900"
                         >
                           <Pencil size={14} />
                         </button>
@@ -437,11 +445,11 @@ function ActiveSkipPanel({
           </div>
         ) : (
           <div className="p-8 text-center">
-            <p className="text-sm text-text-placeholder mb-3">No materials recorded for this skip yet</p>
+            <p className="text-sm text-grey-400 mb-3">No materials recorded for this skip yet</p>
             {isDraft && canOperate && (
               <button
                 onClick={() => setLineForm({ mode: 'add', lineId: null, fields: defaultLineFields() })}
-                className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg font-semibold text-sm hover:bg-primary-hover transition"
+                className="inline-flex items-center gap-2 h-9 px-4 bg-green-500 text-white rounded-md font-semibold text-sm hover:bg-green-700 transition-colors"
               >
                 <Plus size={16} /> Add Material Line
               </button>
@@ -454,7 +462,7 @@ function ActiveSkipPanel({
       {isDraft && canOperate && assetLines.length > 0 && !lineForm && (
         <button
           onClick={() => setLineForm({ mode: 'add', lineId: null, fields: defaultLineFields() })}
-          className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg font-semibold text-sm hover:bg-primary-hover transition mb-4"
+          className="flex items-center gap-2 h-9 px-4 bg-green-500 text-white rounded-md font-semibold text-sm hover:bg-green-700 transition-colors mb-4"
         >
           <Plus size={16} /> Add Material Line
         </button>
@@ -484,11 +492,6 @@ function defaultLineFields() {
   return {
     category_id: '',
     net_weight_kg: '',
-    recycled_pct: '',
-    reused_pct: '',
-    disposed_pct: '',
-    landfill_pct: '',
-    downstream_processor: '',
     notes: '',
   };
 }
@@ -506,7 +509,7 @@ function DeleteLineButton({ sessionId, lineId, removeLineFromStore }) {
   }
 
   return (
-    <button onClick={handleDelete} className="p-1.5 rounded-md hover:bg-muted transition text-text-tertiary hover:text-red-600 ml-1">
+    <button onClick={handleDelete} className="p-1.5 rounded-md hover:bg-grey-50 transition-colors text-grey-500 hover:text-red-600 ml-1">
       <Trash2 size={14} />
     </button>
   );
@@ -527,17 +530,6 @@ function LineForm({
     setLineForm({ ...form, fields: { ...fields, [field]: value } });
   }
 
-  // Pct sum computation
-  const pctSum = useMemo(() => {
-    return Math.round(
-      (Number(fields.recycled_pct || 0) + Number(fields.reused_pct || 0) +
-       Number(fields.disposed_pct || 0) + Number(fields.landfill_pct || 0)) * 100
-    ) / 100;
-  }, [fields.recycled_pct, fields.reused_pct, fields.disposed_pct, fields.landfill_pct]);
-
-  const pctValid = pctSum === 100;
-
-  // Category filter
   const filteredCategories = useMemo(() => {
     if (!catSearch) return productCategories;
     const q = catSearch.toLowerCase();
@@ -546,7 +538,6 @@ function LineForm({
     );
   }, [productCategories, catSearch]);
 
-  // Group categories by waste stream
   const groupedCategories = useMemo(() => {
     const groups = {};
     for (const cat of filteredCategories) {
@@ -560,83 +551,37 @@ function LineForm({
     return Object.values(groups);
   }, [filteredCategories, wasteStreams]);
 
-  // Auto-fill defaults when category changes
-  async function handleCategoryChange(categoryId) {
-    updateField('category_id', categoryId);
-    if (!categoryId) return;
-    try {
-      const { data } = await getCategoryDefaults(categoryId);
-      const d = data.data;
-      setLineForm({
-        ...form,
-        fields: {
-          ...fields,
-          category_id: categoryId,
-          recycled_pct: String(Number(d.recycled_pct_default)),
-          reused_pct: String(Number(d.reused_pct_default)),
-          disposed_pct: String(Number(d.disposed_pct_default)),
-          landfill_pct: String(Number(d.landfill_pct_default)),
-        },
-      });
-    } catch {
-      // Defaults fetch failed — keep fields as-is
-    }
-  }
-
-  function handleAutoAdjust() {
-    const vals = [
-      Number(fields.recycled_pct || 0),
-      Number(fields.reused_pct || 0),
-      Number(fields.disposed_pct || 0),
-      Number(fields.landfill_pct || 0),
-    ];
-    const sum = vals.reduce((a, b) => a + b, 0);
-    if (sum === 0) {
-      // All zeros: distribute 25 each
-      setLineForm({
-        ...form,
-        fields: { ...fields, recycled_pct: '25', reused_pct: '25', disposed_pct: '25', landfill_pct: '25' },
-      });
-      return;
-    }
-    // Proportional scale to 100
-    const scaled = vals.map((v) => Math.round((v / sum) * 100 * 100) / 100);
-    // Adjust largest to absorb rounding error
-    const scaledSum = scaled.reduce((a, b) => a + b, 0);
-    const diff = Math.round((100 - scaledSum) * 100) / 100;
-    const maxIdx = scaled.indexOf(Math.max(...scaled));
-    scaled[maxIdx] = Math.round((scaled[maxIdx] + diff) * 100) / 100;
-
-    setLineForm({
-      ...form,
-      fields: {
-        ...fields,
-        recycled_pct: String(scaled[0]),
-        reused_pct: String(scaled[1]),
-        disposed_pct: String(scaled[2]),
-        landfill_pct: String(scaled[3]),
-      },
-    });
-  }
-
   function handleUseRemaining() {
     updateField('net_weight_kg', String(Math.max(0, remaining)));
   }
 
   async function handleSubmit(e) {
     e.preventDefault();
-    if (!pctValid) return;
     setSubmitting(true);
+
+    // Fetch category defaults for recovery rates
+    let recycled_pct = 75, reused_pct = 15, disposed_pct = 8, landfill_pct = 2;
+    if (fields.category_id) {
+      try {
+        const { data } = await getCategoryDefaults(fields.category_id);
+        const d = data.data;
+        recycled_pct = Number(d.recycled_pct_default);
+        reused_pct = Number(d.reused_pct_default);
+        disposed_pct = Number(d.disposed_pct_default);
+        landfill_pct = Number(d.landfill_pct_default);
+      } catch {
+        // Use defaults if fetch fails
+      }
+    }
 
     const payload = {
       asset_id: assetId,
       category_id: fields.category_id,
       net_weight_kg: Number(fields.net_weight_kg),
-      recycled_pct: Number(fields.recycled_pct),
-      reused_pct: Number(fields.reused_pct),
-      disposed_pct: Number(fields.disposed_pct),
-      landfill_pct: Number(fields.landfill_pct),
-      downstream_processor: fields.downstream_processor || null,
+      recycled_pct,
+      reused_pct,
+      disposed_pct,
+      landfill_pct,
       notes: fields.notes || null,
     };
 
@@ -653,7 +598,6 @@ function LineForm({
         toast.success('Line added');
       }
       clearLineForm();
-      // Refresh to get updated allocation fields
       await fetchSession(sessionId);
     } catch (err) {
       toast.error(err.response?.data?.error || 'Failed to save line');
@@ -663,25 +607,25 @@ function LineForm({
   }
 
   return (
-    <form onSubmit={handleSubmit} className="bg-surface rounded-xl border border-border p-5 mb-4 space-y-4">
-      <h3 className="text-sm font-semibold text-foreground">{isEdit ? 'Edit Material Line' : 'Add Material Line'}</h3>
+    <form onSubmit={handleSubmit} className="bg-white rounded-lg border border-grey-200 shadow-sm p-5 mb-4 space-y-4">
+      <h3 className="text-sm font-semibold text-grey-900">{isEdit ? 'Edit Material Line' : 'Add Material Line'}</h3>
 
       {/* Category */}
       <div>
-        <label className="block text-xs font-medium text-text-secondary mb-1">Product Category</label>
+        <label className="block text-xs font-medium text-grey-700 mb-1">Product Category</label>
         <input
           type="text"
           placeholder="Search categories..."
           value={catSearch}
           onChange={(e) => setCatSearch(e.target.value)}
-          className="w-full px-3 py-1.5 rounded-lg border border-input text-xs text-foreground placeholder-text-placeholder mb-1 focus:outline-none focus:ring-2 focus:ring-ring transition"
+          className="w-full px-3 py-1.5 rounded-md border border-grey-300 text-xs text-grey-900 placeholder:text-grey-400 mb-1 focus:border-green-500 focus:ring-[3px] focus:ring-green-500/15 outline-none transition-colors"
         />
         <select
           value={fields.category_id}
-          onChange={(e) => handleCategoryChange(e.target.value)}
+          onChange={(e) => updateField('category_id', e.target.value)}
           required
           size={5}
-          className="w-full px-3 py-1 rounded-lg border border-input text-xs text-foreground bg-surface focus:outline-none focus:ring-2 focus:ring-ring transition"
+          className="w-full px-3 py-1 rounded-md border border-grey-300 text-xs text-grey-900 bg-white focus:border-green-500 focus:ring-[3px] focus:ring-green-500/15 outline-none transition-colors"
         >
           <option value="">Select category...</option>
           {groupedCategories.map((group) => (
@@ -696,7 +640,7 @@ function LineForm({
 
       {/* Weight */}
       <div>
-        <label className="block text-xs font-medium text-text-secondary mb-1">Weight (kg)</label>
+        <label className="block text-xs font-medium text-grey-700 mb-1">Weight (kg)</label>
         <div className="flex gap-2 items-center">
           <input
             type="number"
@@ -705,91 +649,40 @@ function LineForm({
             value={fields.net_weight_kg}
             onChange={(e) => updateField('net_weight_kg', e.target.value)}
             required
-            className="flex-1 px-3 py-2 rounded-lg border border-input text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring transition"
+            className={`flex-1 ${inputClass}`}
           />
           <button
             type="button"
             onClick={handleUseRemaining}
-            className="px-3 py-2 text-xs font-medium text-primary hover:text-primary-hover border border-border rounded-lg hover:bg-muted transition whitespace-nowrap"
+            className="h-9 px-3 text-xs font-medium text-green-500 hover:text-green-700 border border-grey-300 rounded-md hover:bg-grey-50 transition-colors whitespace-nowrap"
           >
             Use remaining ({Math.max(0, remaining).toLocaleString()} kg)
           </button>
         </div>
       </div>
 
-      {/* Recovery Rates */}
-      <div>
-        <label className="block text-xs font-medium text-text-secondary mb-1">Recovery Rates (%)</label>
-        <div className="grid grid-cols-2 gap-3">
-          {[
-            { field: 'recycled_pct', label: 'Recycled' },
-            { field: 'reused_pct', label: 'Reused' },
-            { field: 'disposed_pct', label: 'Disposed' },
-            { field: 'landfill_pct', label: 'Landfill' },
-          ].map(({ field, label }) => (
-            <div key={field}>
-              <label className="block text-xs text-text-tertiary mb-0.5">{label} %</label>
-              <input
-                type="number"
-                step="0.01"
-                min="0"
-                max="100"
-                value={fields[field]}
-                onChange={(e) => updateField(field, e.target.value)}
-                required
-                className="w-full px-3 py-2 rounded-lg border border-input text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring transition"
-              />
-            </div>
-          ))}
-        </div>
-        <div className="flex items-center justify-between mt-2">
-          <span className={`text-xs font-medium ${pctValid ? 'text-green-600' : 'text-red-600'}`}>
-            Total: {pctSum}% {!pctValid && '— Must equal 100%'}
-          </span>
-          <button
-            type="button"
-            onClick={handleAutoAdjust}
-            className="text-xs text-primary hover:text-primary-hover underline transition"
-          >
-            Auto-adjust to 100%
-          </button>
-        </div>
-      </div>
-
-      {/* Downstream Processor */}
-      <div>
-        <label className="block text-xs font-medium text-text-secondary mb-1">Downstream Processor</label>
-        <input
-          type="text"
-          value={fields.downstream_processor}
-          onChange={(e) => updateField('downstream_processor', e.target.value)}
-          placeholder="Name of receiving facility"
-          className="w-full px-3 py-2 rounded-lg border border-input text-sm text-foreground placeholder-text-placeholder focus:outline-none focus:ring-2 focus:ring-ring transition"
-        />
-      </div>
-
       {/* Notes */}
       <div>
-        <label className="block text-xs font-medium text-text-secondary mb-1">Notes</label>
+        <label className="block text-xs font-medium text-grey-700 mb-1">Notes</label>
         <textarea
           value={fields.notes}
           onChange={(e) => updateField('notes', e.target.value)}
           maxLength={300}
           rows={2}
           placeholder="Optional notes..."
-          className="w-full px-3 py-2 rounded-lg border border-input text-sm text-foreground placeholder-text-placeholder focus:outline-none focus:ring-2 focus:ring-ring transition resize-none"
+          className="w-full min-h-[64px] px-3.5 py-2.5 rounded-md border border-grey-300 text-sm text-grey-900 placeholder:text-grey-400 focus:border-green-500 focus:ring-[3px] focus:ring-green-500/15 outline-none transition-colors resize-vertical"
         />
       </div>
 
       {/* Actions */}
       <div className="flex justify-end gap-3">
-        <button type="button" onClick={clearLineForm} className="px-4 py-2 text-sm text-text-secondary hover:text-foreground rounded-lg hover:bg-muted transition">
+        <button type="button" onClick={clearLineForm} className="h-9 px-4 bg-white text-grey-700 border border-grey-300 rounded-md text-sm font-semibold hover:bg-grey-50 transition-colors">
           Cancel
         </button>
         <button
           type="submit"
-          disabled={submitting || !pctValid}
-          className="px-4 py-2 bg-primary text-primary-foreground rounded-lg font-semibold text-sm hover:bg-primary-hover disabled:opacity-50 transition"
+          disabled={submitting}
+          className="h-9 px-4 bg-green-500 text-white rounded-md font-semibold text-sm hover:bg-green-700 disabled:opacity-50 transition-colors"
         >
           {submitting ? 'Saving...' : isEdit ? 'Update Line' : 'Save Line'}
         </button>

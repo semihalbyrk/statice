@@ -11,6 +11,7 @@ async function main() {
   const plannerHash = await bcrypt.hash('Planner123!', 10);
   const gateHash = await bcrypt.hash('Gate1234!', 10);
   const reportHash = await bcrypt.hash('Report123!', 10);
+  const sortingHash = await bcrypt.hash('Sorting123!', 10);
 
   await prisma.user.upsert({
     where: { email: 'admin@statice.nl' },
@@ -56,6 +57,31 @@ async function main() {
     },
   });
 
+  await prisma.user.upsert({
+    where: { email: 'sorting@statice.nl' },
+    update: {},
+    create: {
+      email: 'sorting@statice.nl',
+      password_hash: sortingHash,
+      full_name: 'Sorting Employee',
+      role: 'SORTING_EMPLOYEE',
+    },
+  });
+
+  // System user for scheduled report generation
+  const systemHash = await bcrypt.hash('System!NoLogin!2026', 10);
+  await prisma.user.upsert({
+    where: { email: 'system@statice.nl' },
+    update: {},
+    create: {
+      email: 'system@statice.nl',
+      password_hash: systemHash,
+      full_name: 'System',
+      role: 'ADMIN',
+      is_active: false,
+    },
+  });
+
   console.log('Users seeded.');
 
   // Waste Streams
@@ -91,41 +117,48 @@ async function main() {
 
   console.log('Waste streams seeded.');
 
-  // Product Categories (20 WEEE categories)
+  // Product Categories (20 WEEE categories) with realistic recovery rates
   const categories = [
-    { code_cbs: 'WEEE-01', description_en: 'Large household appliances', description_nl: 'Grote huishoudelijke apparaten' },
-    { code_cbs: 'WEEE-02', description_en: 'Small household appliances', description_nl: 'Kleine huishoudelijke apparaten' },
-    { code_cbs: 'WEEE-03', description_en: 'IT and telecoms equipment', description_nl: 'IT- en telecomapparatuur' },
-    { code_cbs: 'WEEE-04', description_en: 'Consumer electronics', description_nl: 'Consumentenelektronica' },
-    { code_cbs: 'WEEE-05', description_en: 'Lighting equipment', description_nl: 'Verlichtingsapparatuur' },
-    { code_cbs: 'WEEE-06', description_en: 'Electrical and electronic tools', description_nl: 'Elektrisch gereedschap' },
-    { code_cbs: 'WEEE-07', description_en: 'Toys and leisure equipment', description_nl: 'Speelgoed en vrijetijdsapparatuur' },
-    { code_cbs: 'WEEE-08', description_en: 'Medical devices', description_nl: 'Medische apparatuur' },
-    { code_cbs: 'WEEE-09', description_en: 'Monitoring instruments', description_nl: 'Meetinstrumenten' },
-    { code_cbs: 'WEEE-10', description_en: 'Automatic dispensers', description_nl: 'Automaten' },
-    { code_cbs: 'WEEE-11', description_en: 'Monitors and screens', description_nl: 'Beeldschermen' },
-    { code_cbs: 'WEEE-12', description_en: 'Modems and routers', description_nl: 'Modems en routers' },
-    { code_cbs: 'WEEE-13', description_en: 'Circuit boards / PCBs', description_nl: 'Printplaten' },
-    { code_cbs: 'WEEE-14', description_en: 'Cables and wiring', description_nl: 'Kabels en bedrading' },
-    { code_cbs: 'WEEE-15', description_en: 'Batteries', description_nl: 'Batterijen' },
-    { code_cbs: 'WEEE-16', description_en: 'Printers', description_nl: 'Printers' },
-    { code_cbs: 'WEEE-17', description_en: 'Mobile phones', description_nl: 'Mobiele telefoons' },
-    { code_cbs: 'WEEE-18', description_en: 'Laptops', description_nl: 'Laptops' },
-    { code_cbs: 'WEEE-19', description_en: 'Keyboards and peripherals', description_nl: 'Toetsenborden en randapparatuur' },
-    { code_cbs: 'WEEE-20', description_en: 'Other WEEE', description_nl: 'Overige WEEE' },
+    { code_cbs: 'WEEE-01', description_en: 'Large household appliances', description_nl: 'Grote huishoudelijke apparaten', r: 78, u: 10, d: 9, l: 3 },
+    { code_cbs: 'WEEE-02', description_en: 'Small household appliances', description_nl: 'Kleine huishoudelijke apparaten', r: 65, u: 12, d: 18, l: 5 },
+    { code_cbs: 'WEEE-03', description_en: 'IT and telecoms equipment', description_nl: 'IT- en telecomapparatuur', r: 60, u: 25, d: 12, l: 3 },
+    { code_cbs: 'WEEE-04', description_en: 'Consumer electronics', description_nl: 'Consumentenelektronica', r: 68, u: 15, d: 13, l: 4 },
+    { code_cbs: 'WEEE-05', description_en: 'Lighting equipment', description_nl: 'Verlichtingsapparatuur', r: 55, u: 5, d: 30, l: 10 },
+    { code_cbs: 'WEEE-06', description_en: 'Electrical and electronic tools', description_nl: 'Elektrisch gereedschap', r: 72, u: 18, d: 7, l: 3 },
+    { code_cbs: 'WEEE-07', description_en: 'Toys and leisure equipment', description_nl: 'Speelgoed en vrijetijdsapparatuur', r: 50, u: 8, d: 32, l: 10 },
+    { code_cbs: 'WEEE-08', description_en: 'Medical devices', description_nl: 'Medische apparatuur', r: 45, u: 5, d: 40, l: 10 },
+    { code_cbs: 'WEEE-09', description_en: 'Monitoring instruments', description_nl: 'Meetinstrumenten', r: 58, u: 22, d: 15, l: 5 },
+    { code_cbs: 'WEEE-10', description_en: 'Automatic dispensers', description_nl: 'Automaten', r: 80, u: 8, d: 9, l: 3 },
+    { code_cbs: 'WEEE-11', description_en: 'Monitors and screens', description_nl: 'Beeldschermen', r: 62, u: 10, d: 22, l: 6 },
+    { code_cbs: 'WEEE-12', description_en: 'Modems and routers', description_nl: 'Modems en routers', r: 55, u: 30, d: 12, l: 3 },
+    { code_cbs: 'WEEE-13', description_en: 'Circuit boards / PCBs', description_nl: 'Printplaten', r: 90, u: 2, d: 6, l: 2 },
+    { code_cbs: 'WEEE-14', description_en: 'Cables and wiring', description_nl: 'Kabels en bedrading', r: 92, u: 3, d: 4, l: 1 },
+    { code_cbs: 'WEEE-15', description_en: 'Batteries', description_nl: 'Batterijen', r: 70, u: 0, d: 25, l: 5 },
+    { code_cbs: 'WEEE-16', description_en: 'Printers', description_nl: 'Printers', r: 63, u: 15, d: 17, l: 5 },
+    { code_cbs: 'WEEE-17', description_en: 'Mobile phones', description_nl: 'Mobiele telefoons', r: 50, u: 35, d: 12, l: 3 },
+    { code_cbs: 'WEEE-18', description_en: 'Laptops', description_nl: 'Laptops', r: 55, u: 30, d: 12, l: 3 },
+    { code_cbs: 'WEEE-19', description_en: 'Keyboards and peripherals', description_nl: 'Toetsenborden en randapparatuur', r: 60, u: 10, d: 24, l: 6 },
+    { code_cbs: 'WEEE-20', description_en: 'Other WEEE', description_nl: 'Overige WEEE', r: 65, u: 10, d: 18, l: 7 },
   ];
 
   for (const cat of categories) {
     await prisma.productCategory.upsert({
       where: { code_cbs: cat.code_cbs },
-      update: {},
+      update: {
+        recycled_pct_default: cat.r,
+        reused_pct_default: cat.u,
+        disposed_pct_default: cat.d,
+        landfill_pct_default: cat.l,
+      },
       create: {
-        ...cat,
+        code_cbs: cat.code_cbs,
+        description_en: cat.description_en,
+        description_nl: cat.description_nl,
         waste_stream_id: weeeStream.id,
-        recycled_pct_default: 75,
-        reused_pct_default: 15,
-        disposed_pct_default: 8,
-        landfill_pct_default: 2,
+        recycled_pct_default: cat.r,
+        reused_pct_default: cat.u,
+        disposed_pct_default: cat.d,
+        landfill_pct_default: cat.l,
       },
     });
   }
@@ -193,6 +226,15 @@ async function main() {
   });
 
   console.log('Suppliers seeded.');
+
+  // System Settings (singleton)
+  await prisma.systemSetting.upsert({
+    where: { id: 'singleton' },
+    update: {},
+    create: { id: 'singleton' },
+  });
+
+  console.log('System settings seeded.');
   console.log('Database seeding complete.');
 }
 

@@ -32,26 +32,24 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background-subtle flex items-center justify-center px-4">
+    <div className="min-h-screen bg-grey-50 flex items-center justify-center px-4">
       <div className="w-full max-w-md">
-        <div className="bg-surface rounded-2xl shadow-sm border border-border p-8">
-          {/* Logo */}
+        <div className="bg-white rounded-lg shadow-sm border border-grey-200 p-8">
           <div className="text-center mb-8">
-            <div className="inline-flex items-center justify-center w-12 h-12 bg-primary rounded-xl mb-4">
-              <span className="text-primary-foreground font-bold text-lg">S</span>
+            <div className="inline-flex items-center justify-center w-12 h-12 bg-green-500 rounded-lg mb-4">
+              <span className="text-white font-bold text-lg">S</span>
             </div>
-            <h1 className="text-h-xs font-bold text-foreground tracking-tight">
+            <h1 className="text-2xl font-bold text-grey-900 tracking-tight">
               STATICE MRF
             </h1>
-            <p className="text-sm text-text-secondary mt-1">
+            <p className="text-sm text-grey-500 mt-1">
               Material Recovery Facility Dashboard
             </p>
           </div>
 
-          {/* Form */}
           <form onSubmit={handleSubmit} className="space-y-5">
             {error && (
-              <div className="bg-destructive-light border border-red-200 text-red-700 text-sm rounded-lg px-4 py-3">
+              <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-md p-3">
                 {error}
               </div>
             )}
@@ -71,7 +69,7 @@ export default function LoginPage() {
                 required
                 autoComplete="email"
                 placeholder="you@statice.nl"
-                className="w-full px-3.5 py-2.5 rounded-lg border border-input text-foreground placeholder-text-placeholder text-sm focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent transition"
+                className="w-full h-10 px-3.5 rounded-md border border-grey-300 text-grey-900 placeholder:text-grey-400 text-sm focus:border-green-500 focus:ring-[3px] focus:ring-green-500/15 outline-none transition-colors"
               />
             </div>
 
@@ -90,21 +88,21 @@ export default function LoginPage() {
                 required
                 autoComplete="current-password"
                 placeholder="••••••••"
-                className="w-full px-3.5 py-2.5 rounded-lg border border-input text-foreground placeholder-text-placeholder text-sm focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent transition"
+                className="w-full h-10 px-3.5 rounded-md border border-grey-300 text-grey-900 placeholder:text-grey-400 text-sm focus:border-green-500 focus:ring-[3px] focus:ring-green-500/15 outline-none transition-colors"
               />
             </div>
 
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-2.5 px-4 bg-primary hover:bg-primary-hover disabled:bg-green-400 text-primary-foreground font-semibold text-sm rounded-lg transition focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+              className="w-full h-9 px-4 bg-green-500 text-white rounded-md text-sm font-semibold hover:bg-green-700 disabled:opacity-50 transition-colors"
             >
               {loading ? 'Signing in...' : 'Sign In'}
             </button>
           </form>
         </div>
 
-        <p className="text-center text-xs text-text-placeholder mt-6">
+        <p className="text-center text-xs text-grey-400 mt-6">
           Statice B.V. — Internal Use Only
         </p>
       </div>
