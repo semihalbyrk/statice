@@ -12,6 +12,9 @@ const STATUS_CONFIG = {
   SORTED: { label: 'Sorted', className: 'bg-green-25 text-green-700 border-green-400' },
   ACTIVE: { label: 'Active', className: 'bg-green-25 text-green-700 border-green-400' },
   INACTIVE: { label: 'Inactive', className: 'bg-grey-50 text-grey-600 border-grey-300' },
+  // Order lifecycle statuses
+  DISPUTE: { label: 'Dispute', className: 'bg-red-25 text-red-700 border-red-300' },
+  INVOICED: { label: 'Invoiced', className: 'bg-purple-25 text-purple-700 border-purple-300' },
 };
 
 export default function StatusBadge({ status }) {

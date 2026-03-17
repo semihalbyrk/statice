@@ -1,6 +1,9 @@
 # Statice MRF Dashboard
+
 Read CLAUDE.md and docs/PRD.md fully before writing any code.
+
 ## Project Overview
+
 E-waste MRF management system for Statice facility. 
 Full PRD is in /docs/PRD.md — read it before making any decisions.
 

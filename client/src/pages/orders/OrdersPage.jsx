@@ -5,20 +5,23 @@ import toast from 'react-hot-toast';
 import useOrdersStore from '../../store/ordersStore';
 import useAuthStore from '../../store/authStore';
 import ClickableStatusBadge from '../../components/ui/ClickableStatusBadge';
+import SupplierTypeBadge from '../../components/ui/SupplierTypeBadge';
 import { updateOrder } from '../../api/orders';
 import { format } from 'date-fns';
 
-const STATUSES = ['', 'PLANNED', 'ARRIVED', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED'];
+const STATUSES = ['', 'PLANNED', 'ARRIVED', 'IN_PROGRESS', 'COMPLETED', 'DISPUTE', 'INVOICED', 'CANCELLED'];
 const TABS = [
   { key: 'all', label: 'All Orders' },
   { key: 'today', label: 'Today' },
 ];
 const ORDER_TRANSITIONS = {
-  PLANNED: ['ARRIVED', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED'],
-  ARRIVED: ['PLANNED', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED'],
-  IN_PROGRESS: ['COMPLETED', 'CANCELLED'],
-  COMPLETED: [],
-  CANCELLED: ['PLANNED', 'ARRIVED'],
+  PLANNED: ['ARRIVED', 'CANCELLED'],
+  ARRIVED: ['IN_PROGRESS', 'DISPUTE', 'CANCELLED'],
+  IN_PROGRESS: ['COMPLETED', 'DISPUTE', 'CANCELLED'],
+  DISPUTE: ['IN_PROGRESS', 'COMPLETED', 'CANCELLED'],
+  COMPLETED: ['INVOICED'],
+  INVOICED: [],
+  CANCELLED: ['PLANNED'],
 };
 
 function formatTimeWindow(order) {
@@ -147,7 +150,7 @@ export default function OrdersPage() {
               <th className="text-left px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide min-w-[240px]">Time Window</th>
               <th className="text-left px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide min-w-[140px]">Vehicle Plate</th>
               <th className="text-left px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide min-w-[170px]">Afvalstroomnummer</th>
-              <th className="text-right px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide min-w-[110px]">Exp. Skips</th>
+              <th className="text-right px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide min-w-[110px]">Exp. Parcels</th>
               <th className="text-left px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide min-w-[320px]">Notes</th>
             </tr>
           </thead>
@@ -182,8 +185,17 @@ export default function OrdersPage() {
                     />
                   </td>
                   <td className="px-4 py-2.5 text-grey-700">{order.carrier?.name}</td>
-                  <td className="px-4 py-2.5 text-grey-700">{order.supplier?.name}</td>
-                  <td className="px-4 py-2.5 text-grey-700">{order.waste_stream?.name_en}</td>
+                  <td className="px-4 py-2.5 text-grey-700">
+                    <div className="flex items-center gap-1.5">
+                      <span>{order.supplier?.name || '—'}</span>
+                      <SupplierTypeBadge type={order.supplier?.supplier_type} />
+                    </div>
+                  </td>
+                  <td className="px-4 py-2.5 text-grey-700">
+                    {order.waste_streams?.length > 0
+                      ? order.waste_streams.map((ows) => ows.waste_stream?.name_en).filter(Boolean).join(', ') || order.waste_stream?.name_en
+                      : order.waste_stream?.name_en}
+                  </td>
                   <td className="px-4 py-2.5 text-grey-700">
                     {format(new Date(order.planned_date), 'dd MMM yyyy')}
                   </td>

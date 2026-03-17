@@ -59,9 +59,9 @@ async function setWasteStream(req, res, next) {
   }
 }
 
-async function triggerGross(req, res, next) {
+async function triggerNextWeighing(req, res, next) {
   try {
-    const inbound = await inboundService.triggerGrossWeighing(req.params.id, req.user.userId);
+    const inbound = await inboundService.triggerNextWeighing(req.params.id, req.body, req.user.userId);
     res.json({ data: inbound });
   } catch (err) {
     if (err.statusCode) return res.status(err.statusCode).json({ error: err.message });
@@ -69,20 +69,10 @@ async function triggerGross(req, res, next) {
   }
 }
 
-async function triggerTare(req, res, next) {
+async function registerParcel(req, res, next) {
   try {
-    const inbound = await inboundService.triggerTareWeighing(req.params.id, req.user.userId);
-    res.json({ data: inbound });
-  } catch (err) {
-    if (err.statusCode) return res.status(err.statusCode).json({ error: err.message });
-    next(err);
-  }
-}
-
-async function manualWeighing(req, res, next) {
-  try {
-    const inbound = await inboundService.manualWeighing(req.params.id, req.body, req.user.userId);
-    res.json({ data: inbound });
+    const asset = await inboundService.registerParcel(req.params.id, req.body, req.user.userId);
+    res.status(201).json({ data: asset });
   } catch (err) {
     if (err.statusCode) return res.status(err.statusCode).json({ error: err.message });
     next(err);
@@ -121,8 +111,40 @@ async function lookupAsset(req, res, next) {
   } catch (err) { next(err); }
 }
 
+async function setIncident(req, res) {
+  try {
+    const { incident_category, notes } = req.body;
+    if (!incident_category) {
+      return res.status(400).json({ error: 'incident_category is required' });
+    }
+    const result = await inboundService.setIncidentCategory(req.params.id, incident_category, notes, req.user.id);
+    res.json(result);
+  } catch (err) {
+    res.status(err.statusCode || 500).json({ error: err.message });
+  }
+}
+
+async function confirmWeighing(req, res) {
+  try {
+    const result = await inboundService.confirmWeighingTicket(req.params.id, req.params.sequence, req.user.id);
+    res.json(result);
+  } catch (err) {
+    res.status(err.statusCode || 500).json({ error: err.message });
+  }
+}
+
+async function getAmendments(req, res) {
+  try {
+    const result = await inboundService.getWeighingAmendments(req.params.id, req.params.sequence);
+    res.json(result);
+  } catch (err) {
+    res.status(err.statusCode || 500).json({ error: err.message });
+  }
+}
+
 module.exports = {
   listAll, list, getById, create, updateStatus, setWasteStream,
-  triggerGross, triggerTare, manualWeighing, overrideWeight,
+  triggerNextWeighing, registerParcel, overrideWeight,
   downloadTicket, lookupAsset,
+  setIncident, confirmWeighing, getAmendments,
 };

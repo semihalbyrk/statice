@@ -18,10 +18,21 @@ router.get('/:id', ctrl.getById);
 router.post('/', requireRole(['GATE_OPERATOR', 'ADMIN']), ctrl.create);
 router.patch('/:id/status', requireRole(['GATE_OPERATOR', 'ADMIN']), ctrl.updateStatus);
 router.patch('/:id/waste-stream', requireRole(['GATE_OPERATOR', 'ADMIN']), ctrl.setWasteStream);
-router.post('/:id/gross-weighing', requireRole(['GATE_OPERATOR', 'ADMIN']), ctrl.triggerGross);
-router.post('/:id/tare-weighing', requireRole(['GATE_OPERATOR', 'ADMIN']), ctrl.triggerTare);
-router.post('/:id/manual-weighing', requireRole(['GATE_OPERATOR', 'ADMIN']), ctrl.manualWeighing);
+
+// Sequential weighing flow
+router.post('/:id/weighing', requireRole(['GATE_OPERATOR', 'ADMIN']), ctrl.triggerNextWeighing);
+router.post('/:id/parcels', requireRole(['GATE_OPERATOR', 'ADMIN']), ctrl.registerParcel);
 router.post('/:id/weight-override', requireRole(['ADMIN']), ctrl.overrideWeight);
+
+// Incident on inbound
+router.patch('/:id/incident', authenticateToken, requireRole(['GATE_OPERATOR', 'ADMIN']), ctrl.setIncident);
+
+// Confirm a weighing ticket (supervisor)
+router.post('/:id/weighing/:sequence/confirm', authenticateToken, requireRole(['ADMIN']), ctrl.confirmWeighing);
+
+// List amendments for a weighing
+router.get('/:id/weighing/:sequence/amendments', authenticateToken, ctrl.getAmendments);
+
 router.get('/:id/ticket/pdf', ctrl.downloadTicket);
 
 module.exports = router;

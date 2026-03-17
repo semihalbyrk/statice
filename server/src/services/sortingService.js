@@ -3,7 +3,7 @@ const { canTransition: canInboundTransition } = require('../utils/inboundStateMa
 const { writeAuditLog } = require('../utils/auditLog');
 
 const LINE_INCLUDE = {
-  asset: { select: { id: true, asset_label: true, skip_type: true, net_weight_kg: true } },
+  asset: { select: { id: true, asset_label: true, container_type: true, parcel_type: true, net_weight_kg: true } },
   category: { select: { id: true, code_cbs: true, description_en: true, description_nl: true } },
 };
 

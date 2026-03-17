@@ -82,36 +82,56 @@ async function main() {
     },
   });
 
+  // Finance Manager user (v2.2)
+  const financeHash = await bcrypt.hash('Finance123!', 10);
+  await prisma.user.upsert({
+    where: { email: 'finance@statice.nl' },
+    update: {},
+    create: {
+      email: 'finance@statice.nl',
+      password_hash: financeHash,
+      full_name: 'Finance Manager',
+      role: 'FINANCE_MANAGER',
+    },
+  });
+
   console.log('Users seeded.');
 
   // Waste Streams
   const weeeStream = await prisma.wasteStream.upsert({
     where: { code: 'WEEE' },
-    update: {},
+    update: { cbs_code: 'CBS-WEEE', weeelabex_code: 'WL-WEEE', ewc_code: '20 01 35*' },
     create: {
       code: 'WEEE',
       name_en: 'Waste Electrical and Electronic Equipment',
       name_nl: 'Afgedankte elektrische en elektronische apparatuur',
+      cbs_code: 'CBS-WEEE',
+      weeelabex_code: 'WL-WEEE',
+      ewc_code: '20 01 35*',
     },
   });
 
   await prisma.wasteStream.upsert({
     where: { code: 'PLASTIC' },
-    update: {},
+    update: { cbs_code: 'CBS-PL', ewc_code: '20 01 39' },
     create: {
       code: 'PLASTIC',
       name_en: 'Plastics',
       name_nl: 'Kunststoffen',
+      cbs_code: 'CBS-PL',
+      ewc_code: '20 01 39',
     },
   });
 
   await prisma.wasteStream.upsert({
     where: { code: 'METAL' },
-    update: {},
+    update: { cbs_code: 'CBS-MT', ewc_code: '20 01 40' },
     create: {
       code: 'METAL',
       name_en: 'Metals',
       name_nl: 'Metalen',
+      cbs_code: 'CBS-MT',
+      ewc_code: '20 01 40',
     },
   });
 
@@ -193,12 +213,21 @@ async function main() {
   // Suppliers
   await prisma.supplier.upsert({
     where: { id: 'supplier-stichting-open' },
-    update: {},
+    update: {
+      btw_number: 'NL123456789B01',
+      contact_phone: '+31 40 123 4567',
+      address: 'Stationsplein 1, 3818 LE Amersfoort',
+      pro_registration_number: 'PRO-NL-001',
+    },
     create: {
       id: 'supplier-stichting-open',
       name: 'Stichting Open',
       supplier_type: 'PRO',
       kvk_number: '87654321',
+      btw_number: 'NL123456789B01',
+      contact_phone: '+31 40 123 4567',
+      address: 'Stationsplein 1, 3818 LE Amersfoort',
+      pro_registration_number: 'PRO-NL-001',
       is_active: true,
     },
   });
@@ -208,24 +237,55 @@ async function main() {
     update: {},
     create: {
       id: 'supplier-private-individual',
-      name: 'Private Individual',
-      supplier_type: 'PRIVATE_INDIVIDUAL',
+      name: 'Ad-hoc / Walk-in',
+      supplier_type: 'AD_HOC',
       is_active: true,
     },
   });
 
   await prisma.supplier.upsert({
     where: { id: 'supplier-third-party' },
-    update: {},
+    update: {
+      btw_number: 'NL987654321B01',
+      contact_phone: '+31 20 567 8901',
+      address: 'Industrieweg 10, 1000 AA Amsterdam',
+    },
     create: {
       id: 'supplier-third-party',
-      name: 'Third Party Supplier',
-      supplier_type: 'THIRD_PARTY',
+      name: 'TechRecycle B.V.',
+      supplier_type: 'COMMERCIAL',
+      kvk_number: '55667788',
+      btw_number: 'NL987654321B01',
+      contact_phone: '+31 20 567 8901',
+      address: 'Industrieweg 10, 1000 AA Amsterdam',
       is_active: true,
     },
   });
 
   console.log('Suppliers seeded.');
+
+  // Supplier Afvalstroomnummers (for PRO supplier)
+  await prisma.supplierAfvalstroomnummer.upsert({
+    where: { supplier_id_afvalstroomnummer: { supplier_id: 'supplier-stichting-open', afvalstroomnummer: 'AFS-2026-001' } },
+    update: {},
+    create: {
+      supplier_id: 'supplier-stichting-open',
+      afvalstroomnummer: 'AFS-2026-001',
+      waste_stream_id: weeeStream.id,
+    },
+  });
+
+  await prisma.supplierAfvalstroomnummer.upsert({
+    where: { supplier_id_afvalstroomnummer: { supplier_id: 'supplier-stichting-open', afvalstroomnummer: 'AFS-2026-002' } },
+    update: {},
+    create: {
+      supplier_id: 'supplier-stichting-open',
+      afvalstroomnummer: 'AFS-2026-002',
+      waste_stream_id: weeeStream.id,
+    },
+  });
+
+  console.log('Supplier afvalstroomnummers seeded.');
 
   // System Settings (singleton)
   await prisma.systemSetting.upsert({

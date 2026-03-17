@@ -11,6 +11,8 @@ const TRANSITION_LABELS = {
   PLANNED: 'Planned',
   ACTIVE: 'Active',
   INACTIVE: 'Inactive',
+  DISPUTE: 'Dispute',
+  INVOICED: 'Invoiced',
 };
 
 export default function ClickableStatusBadge({ status, allowedTransitions = [], onTransition, disabled }) {

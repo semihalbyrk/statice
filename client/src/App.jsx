@@ -12,6 +12,7 @@ import SuppliersPage from './pages/admin/SuppliersPage';
 import WasteStreamsPage from './pages/admin/WasteStreamsPage';
 import WeighingEventPage from './pages/weighing/WeighingEventPage';
 import OrderCreatePage from './pages/orders/OrderCreatePage';
+import PlanningBoardPage from './pages/orders/PlanningBoardPage';
 import InboundsPage from './pages/inbounds/InboundsPage';
 import SortingPage from './pages/sorting/SortingPage';
 import SortingProcessListPage from './pages/sorting/SortingProcessListPage';
@@ -49,6 +50,7 @@ export default function App() {
           }
         >
           <Route path="/dashboard" element={<DashboardPage />} />
+          <Route path="/planning" element={<ProtectedRoute allowedRoles={['ADMIN', 'LOGISTICS_PLANNER', 'GATE_OPERATOR']}><PlanningBoardPage /></ProtectedRoute>} />
           <Route path="/orders" element={<ProtectedRoute allowedRoles={['ADMIN', 'LOGISTICS_PLANNER']}><OrdersPage /></ProtectedRoute>} />
           <Route path="/orders/new" element={<ProtectedRoute allowedRoles={['ADMIN', 'LOGISTICS_PLANNER']}><OrderCreatePage /></ProtectedRoute>} />
           <Route path="/orders/:id" element={<ProtectedRoute allowedRoles={['ADMIN', 'LOGISTICS_PLANNER']}><OrderDetailPage /></ProtectedRoute>} />

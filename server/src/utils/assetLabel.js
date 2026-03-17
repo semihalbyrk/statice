@@ -1,16 +1,15 @@
 const prisma = require('./prismaClient');
 
 /**
- * Generate the next asset label in format SKP-YYYYMMDD-NNN (daily counter).
+ * Generate the next parcel label in format P-NNNNN (global sequential counter).
+ * Short and universal for all parcel types.
  *
  * @param {import('@prisma/client').PrismaClient} [tx] - optional transaction client
- * @returns {Promise<string>} e.g. "SKP-20260303-001"
+ * @returns {Promise<string>} e.g. "P-00001"
  */
 async function generateAssetLabel(tx) {
   const client = tx || prisma;
-  const now = new Date();
-  const dateStr = now.toISOString().slice(0, 10).replace(/-/g, '');
-  const prefix = `SKP-${dateStr}-`;
+  const prefix = 'P-';
 
   const lastAsset = await client.asset.findFirst({
     where: { asset_label: { startsWith: prefix } },
@@ -21,15 +20,14 @@ async function generateAssetLabel(tx) {
   let nextSeq = 1;
   if (lastAsset) {
     const lastSeq = parseInt(lastAsset.asset_label.replace(prefix, ''), 10);
-    nextSeq = lastSeq + 1;
+    if (!isNaN(lastSeq)) nextSeq = lastSeq + 1;
   }
 
-  return `${prefix}${String(nextSeq).padStart(3, '0')}`;
+  return `${prefix}${String(nextSeq).padStart(5, '0')}`;
 }
 
 /**
- * Preview the next asset label without being inside a transaction.
- * Used by the UI to show what label will be assigned.
+ * Preview the next parcel label.
  *
  * @returns {Promise<string>}
  */

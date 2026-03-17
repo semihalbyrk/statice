@@ -13,13 +13,21 @@ enum Role {
   REPORTING_MANAGER
   SORTING_EMPLOYEE
   ADMIN
+  SALES
+  QC_INSPECTOR
+  LOGISTICS_COORDINATOR
+  FINANCE_USER
+  FINANCE_MANAGER
+  COMPLIANCE_OFFICER
 }
 
 enum OrderStatus {
   PLANNED
   ARRIVED
   IN_PROGRESS
+  DISPUTE
   COMPLETED
+  INVOICED
   CANCELLED
 }
 
@@ -37,9 +45,24 @@ enum SortingStatus {
 }
 
 enum SupplierType {
-  PRIVATE_INDIVIDUAL
+  AD_HOC
   PRO
-  THIRD_PARTY
+  COMMERCIAL
+}
+
+enum IncidentCategory {
+  DAMAGE
+  DISPUTE
+  SPECIAL_HANDLING
+  DRIVER_INSTRUCTION
+}
+
+enum WeightAmendmentReason {
+  CALIBRATION_ERROR
+  EQUIPMENT_MALFUNCTION
+  INCORRECT_READING
+  SUPERVISOR_CORRECTION
+  OTHER
 }
 
 enum SkipType {
@@ -48,6 +71,11 @@ enum SkipType {
   GITTERBOX
   PALLET
   OTHER
+}
+
+enum ParcelType {
+  CONTAINER
+  MATERIAL
 }
 
 model User {
@@ -67,6 +95,7 @@ model User {
   reports_generated  Report[]
   audit_logs         AuditLog[]
   notifications      Notification[]
+  weight_amendments  WeightAmendment[] @relation("WeightAmendments")
 }
 
 model Carrier {
@@ -85,16 +114,23 @@ model Carrier {
 }
 
 model Supplier {
-  id             String       @id @default(uuid())
-  name           String
-  supplier_type  SupplierType
-  kvk_number     String?
-  contact_name   String?
-  contact_email  String?
-  is_active      Boolean      @default(true)
-  created_at     DateTime     @default(now())
+  id                      String       @id @default(uuid())
+  name                    String
+  supplier_type           SupplierType
+  kvk_number              String?
+  btw_number              String?
+  iban                    String?
+  contact_name            String?
+  contact_email           String?
+  contact_phone           String?
+  address                 String?
+  vihb_number             String?
+  pro_registration_number String?
+  is_active               Boolean      @default(true)
+  created_at              DateTime     @default(now())
 
-  orders InboundOrder[]
+  orders             InboundOrder[]
+  afvalstroomnummers SupplierAfvalstroomnummer[]
 }
 
 model Vehicle {
@@ -109,17 +145,22 @@ model Vehicle {
 }
 
 model WasteStream {
-  id         String   @id @default(uuid())
-  name_en    String
-  name_nl    String
-  code       String   @unique
-  is_active  Boolean  @default(true)
-  created_at DateTime @default(now())
+  id             String   @id @default(uuid())
+  name_en        String
+  name_nl        String
+  code           String   @unique
+  cbs_code       String?
+  weeelabex_code String?
+  ewc_code       String?
+  is_active      Boolean  @default(true)
+  created_at     DateTime @default(now())
 
-  orders     InboundOrder[]
-  categories ProductCategory[]
-  inbounds   Inbound[]
-  assets     Asset[]
+  orders                     InboundOrder[]
+  categories                 ProductCategory[]
+  inbounds                   Inbound[]
+  assets                     Asset[]
+  order_waste_streams        OrderWasteStream[]
+  supplier_afvalstroomnummers SupplierAfvalstroomnummer[]
 }
 
 model ProductCategory {
@@ -135,34 +176,53 @@ model ProductCategory {
   is_active             Boolean  @default(true)
   created_at            DateTime @default(now())
 
-  waste_stream  WasteStream    @relation(fields: [waste_stream_id], references: [id])
-  sorting_lines SortingLine[]
+  waste_stream    WasteStream    @relation(fields: [waste_stream_id], references: [id])
+  sorting_lines   SortingLine[]
+  material_assets Asset[]        @relation("MaterialCategory")
 }
 
 model InboundOrder {
-  id                        String      @id @default(uuid())
-  order_number              String      @unique
+  id                        String            @id @default(uuid())
+  order_number              String            @unique
   carrier_id                String
   supplier_id               String
   planned_date              DateTime
   planned_time_window_start DateTime?
   planned_time_window_end   DateTime?
-  expected_skip_count       Int         @default(1)
+  expected_skip_count       Int               @default(1)
   waste_stream_id           String
   vehicle_plate             String?
   afvalstroomnummer         String?
   notes                     String?
-  status                    OrderStatus @default(PLANNED)
-  is_adhoc                  Boolean     @default(false)
+  status                    OrderStatus       @default(PLANNED)
+  is_adhoc                  Boolean           @default(false)
+  is_lzv                    Boolean           @default(false)
+  client_reference          String?
+  adhoc_person_name         String?
+  adhoc_id_reference        String?
+  incident_category         IncidentCategory?
+  incident_notes            String?
   created_by                String
-  created_at                DateTime    @default(now())
-  updated_at                DateTime    @updatedAt
+  created_at                DateTime          @default(now())
+  updated_at                DateTime          @updatedAt
 
-  carrier         Carrier    @relation(fields: [carrier_id], references: [id])
-  supplier        Supplier   @relation(fields: [supplier_id], references: [id])
-  waste_stream    WasteStream @relation(fields: [waste_stream_id], references: [id])
-  created_by_user User       @relation(fields: [created_by], references: [id])
+  carrier         Carrier            @relation(fields: [carrier_id], references: [id])
+  supplier        Supplier           @relation(fields: [supplier_id], references: [id])
+  waste_stream    WasteStream        @relation(fields: [waste_stream_id], references: [id])
+  created_by_user User               @relation(fields: [created_by], references: [id])
   inbounds        Inbound[]
+  waste_streams   OrderWasteStream[]
+}
+
+model OrderWasteStream {
+  id              String @id @default(uuid())
+  order_id        String
+  waste_stream_id String
+
+  order        InboundOrder @relation(fields: [order_id], references: [id])
+  waste_stream WasteStream  @relation(fields: [waste_stream_id], references: [id])
+
+  @@unique([order_id, waste_stream_id])
 }
 
 model Inbound {
@@ -177,21 +237,38 @@ model Inbound {
   gross_weight_kg Decimal?
   tare_weight_kg  Decimal?
   net_weight_kg   Decimal?
-  status          InboundStatus @default(ARRIVED)
-  confirmed_by    String?
-  confirmed_at    DateTime?
-  notes           String?
+  status            InboundStatus     @default(ARRIVED)
+  confirmed_by      String?
+  confirmed_at      DateTime?
+  notes             String?
+  incident_category IncidentCategory?
 
-  order             InboundOrder    @relation(fields: [order_id], references: [id])
-  vehicle           Vehicle         @relation(fields: [vehicle_id], references: [id])
-  waste_stream      WasteStream?    @relation(fields: [waste_stream_id], references: [id])
-  gross_ticket      PfisterTicket?  @relation("GrossTicket", fields: [gross_ticket_id], references: [id])
-  tare_ticket       PfisterTicket?  @relation("TareTicket", fields: [tare_ticket_id], references: [id])
-  confirmed_by_user User?           @relation(fields: [confirmed_by], references: [id])
+  order             InboundOrder     @relation(fields: [order_id], references: [id])
+  vehicle           Vehicle          @relation(fields: [vehicle_id], references: [id])
+  waste_stream      WasteStream?     @relation(fields: [waste_stream_id], references: [id])
+  gross_ticket      PfisterTicket?   @relation("GrossTicket", fields: [gross_ticket_id], references: [id])
+  tare_ticket       PfisterTicket?   @relation("TareTicket", fields: [tare_ticket_id], references: [id])
+  confirmed_by_user User?            @relation(fields: [confirmed_by], references: [id])
   assets            Asset[]
   sorting_session   SortingSession?
+  weighings         InboundWeighing[]
 
   @@map("WeighingEvent")
+}
+
+model InboundWeighing {
+  id                String   @id @default(uuid())
+  inbound_id        String
+  sequence          Int
+  pfister_ticket_id String   @unique
+  weight_kg         Decimal
+  is_tare           Boolean  @default(false)
+  created_at        DateTime @default(now())
+
+  inbound        Inbound       @relation(fields: [inbound_id], references: [id])
+  pfister_ticket PfisterTicket @relation(fields: [pfister_ticket_id], references: [id])
+
+  @@unique([inbound_id, sequence])
 }
 
 model PfisterTicket {
@@ -205,28 +282,35 @@ model PfisterTicket {
   is_manual_override Boolean  @default(false)
   override_reason    String?
   override_by        String?
+  is_confirmed       Boolean  @default(false)
+  confirmed_by       String?
+  confirmed_at       DateTime?
   created_at         DateTime @default(now())
 
-  gross_inbound Inbound? @relation("GrossTicket")
-  tare_inbound  Inbound? @relation("TareTicket")
+  gross_inbound    Inbound?          @relation("GrossTicket")
+  tare_inbound     Inbound?          @relation("TareTicket")
+  inbound_weighing InboundWeighing?
+  amendments       WeightAmendment[]
 }
 
 model Asset {
-  id                   String   @id @default(uuid())
-  asset_label          String   @unique
-  inbound_id           String   @map("weighing_event_id")
-  skip_type            SkipType
+  id                   String      @id @default(uuid())
+  asset_label          String      @unique
+  inbound_id           String      @map("weighing_event_id")
+  parcel_type          ParcelType  @default(CONTAINER)
+  container_type       SkipType?   @map("skip_type")
+  material_category_id String?
   waste_stream_id      String?
+  sequence             Int?
   estimated_volume_m3  Decimal?
-  gross_weight_kg      Decimal?
-  tare_weight_kg       Decimal?
   net_weight_kg        Decimal?
   notes                String?
-  created_at           DateTime @default(now())
+  created_at           DateTime    @default(now())
 
-  inbound       Inbound      @relation(fields: [inbound_id], references: [id])
-  waste_stream  WasteStream? @relation(fields: [waste_stream_id], references: [id])
-  sorting_lines SortingLine[]
+  inbound           Inbound          @relation(fields: [inbound_id], references: [id])
+  waste_stream      WasteStream?     @relation(fields: [waste_stream_id], references: [id])
+  material_category ProductCategory? @relation("MaterialCategory", fields: [material_category_id], references: [id])
+  sorting_lines     SortingLine[]
 }
 
 model SortingSession {
@@ -331,4 +415,32 @@ model Notification {
   created_at  DateTime @default(now())
 
   user User @relation(fields: [user_id], references: [id])
+}
+
+model SupplierAfvalstroomnummer {
+  id                String   @id @default(uuid())
+  supplier_id       String
+  afvalstroomnummer String
+  waste_stream_id   String?
+  is_active         Boolean  @default(true)
+  created_at        DateTime @default(now())
+
+  supplier     Supplier     @relation(fields: [supplier_id], references: [id])
+  waste_stream WasteStream? @relation(fields: [waste_stream_id], references: [id])
+
+  @@unique([supplier_id, afvalstroomnummer])
+}
+
+model WeightAmendment {
+  id                 String                @id @default(uuid())
+  pfister_ticket_id  String
+  original_weight_kg Decimal
+  amended_weight_kg  Decimal
+  reason             WeightAmendmentReason
+  reason_notes       String?
+  amended_by         String
+  created_at         DateTime              @default(now())
+
+  pfister_ticket  PfisterTicket @relation(fields: [pfister_ticket_id], references: [id])
+  amended_by_user User          @relation("WeightAmendments", fields: [amended_by], references: [id])
 }

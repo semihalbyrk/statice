@@ -8,6 +8,9 @@ const ASSET_INCLUDE = {
   waste_stream: {
     select: { id: true, name_en: true, code: true },
   },
+  material_category: {
+    select: { id: true, code_cbs: true, description_en: true },
+  },
   inbound: {
     select: { id: true, status: true, order_id: true, waste_stream_id: true },
   },
@@ -24,7 +27,7 @@ async function listAssets(inboundId) {
   return prisma.asset.findMany({
     where: { inbound_id: inboundId },
     include: ASSET_INCLUDE,
-    orderBy: { created_at: 'asc' },
+    orderBy: { sequence: 'asc' },
   });
 }
 
@@ -39,14 +42,18 @@ async function createAsset(data, userId) {
       throw err;
     }
 
-    const assetLabel = await generateAssetLabel(tx);
+    const parcelType = data.parcel_type || 'CONTAINER';
+    const assetLabel = await generateAssetLabel(tx, parcelType);
 
     const asset = await tx.asset.create({
       data: {
         asset_label: assetLabel,
         inbound_id: data.inbound_id,
-        skip_type: data.skip_type,
+        parcel_type: parcelType,
+        container_type: parcelType === 'CONTAINER' ? data.container_type : null,
+        material_category_id: data.material_category_id || null,
         waste_stream_id: data.waste_stream_id || null,
+        sequence: data.sequence || null,
         estimated_volume_m3: data.estimated_volume_m3 ? parseFloat(data.estimated_volume_m3) : null,
         notes: data.notes || null,
       },
@@ -58,7 +65,7 @@ async function createAsset(data, userId) {
       action: 'CREATE',
       entityType: 'Asset',
       entityId: asset.id,
-      after: { asset_label: asset.asset_label, inbound_id: asset.inbound_id, skip_type: asset.skip_type },
+      after: { asset_label: asset.asset_label, parcel_type: asset.parcel_type, container_type: asset.container_type },
     }, tx);
 
     return asset;
@@ -80,7 +87,9 @@ async function updateAsset(id, data, userId) {
     }
 
     const updateData = {};
-    if (data.skip_type !== undefined) updateData.skip_type = data.skip_type;
+    if (data.parcel_type !== undefined) updateData.parcel_type = data.parcel_type;
+    if (data.container_type !== undefined) updateData.container_type = data.container_type;
+    if (data.material_category_id !== undefined) updateData.material_category_id = data.material_category_id || null;
     if (data.waste_stream_id !== undefined) updateData.waste_stream_id = data.waste_stream_id || null;
     if (data.estimated_volume_m3 !== undefined) updateData.estimated_volume_m3 = data.estimated_volume_m3 != null ? parseFloat(data.estimated_volume_m3) : null;
     if (data.notes !== undefined) updateData.notes = data.notes;
@@ -96,8 +105,8 @@ async function updateAsset(id, data, userId) {
       action: 'UPDATE',
       entityType: 'Asset',
       entityId: id,
-      before: { skip_type: existing.skip_type, waste_stream_id: existing.waste_stream_id },
-      after: { skip_type: updated.skip_type, waste_stream_id: updated.waste_stream_id },
+      before: { parcel_type: existing.parcel_type, container_type: existing.container_type },
+      after: { parcel_type: updated.parcel_type, container_type: updated.container_type },
     }, tx);
 
     return updated;
@@ -125,108 +134,20 @@ async function deleteAsset(id, userId) {
       action: 'DELETE',
       entityType: 'Asset',
       entityId: id,
-      before: { asset_label: existing.asset_label, skip_type: existing.skip_type },
+      before: { asset_label: existing.asset_label, parcel_type: existing.parcel_type },
     }, tx);
 
     return existing;
   });
 }
 
-async function setAssetGrossWeight(assetId, weightKg, userId) {
-  const weight = parseFloat(weightKg);
-  if (isNaN(weight) || weight <= 0) {
-    const err = new Error('Gross weight must be a positive number');
-    err.statusCode = 400;
-    throw err;
-  }
-
-  return prisma.$transaction(async (tx) => {
-    const asset = await tx.asset.findUnique({
-      where: { id: assetId },
-      include: { inbound: { select: { id: true, status: true } } },
-    });
-    if (!asset) throw new Error('Asset not found');
-
-    if (TERMINAL_STATUSES.includes(asset.inbound.status)) {
-      const err = new Error('Cannot update weights on this inbound');
-      err.statusCode = 409;
-      throw err;
-    }
-
-    const updateData = { gross_weight_kg: weight };
-    if (asset.tare_weight_kg != null) {
-      updateData.net_weight_kg = weight - Number(asset.tare_weight_kg);
-    }
-
-    const updated = await tx.asset.update({
-      where: { id: assetId },
-      data: updateData,
-      include: ASSET_INCLUDE,
-    });
-
-    await writeAuditLog({
-      userId,
-      action: 'SET_GROSS_WEIGHT',
-      entityType: 'Asset',
-      entityId: assetId,
-      before: { gross_weight_kg: asset.gross_weight_kg ? Number(asset.gross_weight_kg) : null },
-      after: { gross_weight_kg: weight },
-    }, tx);
-
-    return updated;
-  });
-}
-
-async function setAssetTareWeight(assetId, weightKg, userId) {
-  const weight = parseFloat(weightKg);
-  if (isNaN(weight) || weight <= 0) {
-    const err = new Error('Tare weight must be a positive number');
-    err.statusCode = 400;
-    throw err;
-  }
-
-  return prisma.$transaction(async (tx) => {
-    const asset = await tx.asset.findUnique({
-      where: { id: assetId },
-      include: { inbound: { select: { id: true, status: true } } },
-    });
-    if (!asset) throw new Error('Asset not found');
-
-    if (TERMINAL_STATUSES.includes(asset.inbound.status)) {
-      const err = new Error('Cannot update weights on this inbound');
-      err.statusCode = 409;
-      throw err;
-    }
-
-    if (asset.gross_weight_kg == null) {
-      const err = new Error('Gross weight must be set before tare weight');
-      err.statusCode = 400;
-      throw err;
-    }
-
-    const grossKg = Number(asset.gross_weight_kg);
-    const netKg = grossKg - weight;
-
-    const updated = await tx.asset.update({
-      where: { id: assetId },
-      data: { tare_weight_kg: weight, net_weight_kg: netKg },
-      include: ASSET_INCLUDE,
-    });
-
-    await writeAuditLog({
-      userId,
-      action: 'SET_TARE_WEIGHT',
-      entityType: 'Asset',
-      entityId: assetId,
-      before: { tare_weight_kg: asset.tare_weight_kg ? Number(asset.tare_weight_kg) : null },
-      after: { tare_weight_kg: weight, net_weight_kg: netKg },
-    }, tx);
-
-    return updated;
+async function lookupByLabel(label) {
+  return prisma.asset.findUnique({
+    where: { asset_label: label },
+    include: ASSET_INCLUDE,
   });
 }
 
 module.exports = {
-  getAsset, listAssets, createAsset, updateAsset, deleteAsset,
-  setAssetGrossWeight, setAssetTareWeight,
+  getAsset, listAssets, createAsset, updateAsset, deleteAsset, lookupByLabel,
 };

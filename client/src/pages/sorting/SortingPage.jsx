@@ -17,7 +17,7 @@ import {
 import { format } from 'date-fns';
 import { getSortingName } from '../../utils/entityNames';
 
-const SKIP_LABELS = { OPEN_TOP: 'Open Top', CLOSED_TOP: 'Closed Top', GITTERBOX: 'Gitterbox', PALLET: 'Pallet', OTHER: 'Other' };
+const CONTAINER_TYPE_LABELS = { OPEN_TOP: 'Open Top', CLOSED_TOP: 'Closed Top', GITTERBOX: 'Gitterbox', PALLET: 'Pallet', OTHER: 'Other' };
 
 const inputClass = "w-full h-10 px-3.5 rounded-md border border-grey-300 text-sm text-grey-900 focus:border-green-500 focus:ring-[3px] focus:ring-green-500/15 outline-none transition-colors";
 const selectClass = `${inputClass} bg-white`;
@@ -72,14 +72,14 @@ export default function SortingPage() {
 
       {assets.length > 0 && (
         <>
-          <SkipTabs
+          <ParcelTabs
             assets={assets}
             lines={lines}
             activeAssetId={activeAssetId}
             onSelect={setActiveAssetId}
           />
 
-          <ActiveSkipPanel
+          <ActiveParcelPanel
             session={session}
             assets={assets}
             activeAssetId={activeAssetId}
@@ -102,7 +102,7 @@ export default function SortingPage() {
 
       {assets.length === 0 && (
         <div className="bg-white rounded-lg border border-grey-200 shadow-sm p-8 text-center text-grey-400 text-sm">
-          No skips found on this weighing event
+          No parcels found on this weighing event
         </div>
       )}
     </div>
@@ -182,7 +182,7 @@ function PageHeader({ session, order, isDraft, isAdmin, canOperate, isSubmitting
           <InfoField label="Vehicle Plate" value={session.inbound?.vehicle?.registration_plate} mono />
           <InfoField label="Recorded At" value={session.recorded_at ? format(new Date(session.recorded_at), 'dd MMM yyyy HH:mm') : '—'} />
           <InfoField label="Waste Stream" value={order?.waste_stream?.name_en} />
-          <InfoField label="Skip Count" value={String(assets.length)} />
+          <InfoField label="Parcel Count" value={String(assets.length)} />
           <InfoField label="Net Weight" value={totalNetWeight ? `${totalNetWeight.toLocaleString()} kg` : '—'} />
         </div>
       </div>
@@ -223,7 +223,7 @@ function InfoField({ label, value, children, mono = false }) {
 }
 
 function SubmitDialog({ lineCount, assets, lines, isSubmitting, onConfirm, onCancel }) {
-  const emptySkips = assets.filter((a) => !lines.some((l) => l.asset_id === a.id));
+  const emptyParcels = assets.filter((a) => !lines.some((l) => l.asset_id === a.id));
 
   return (
     <div className="app-modal-overlay">
@@ -232,9 +232,9 @@ function SubmitDialog({ lineCount, assets, lines, isSubmitting, onConfirm, onCan
           <AlertTriangle size={20} className="text-orange-500" />
           <h3 className="text-lg font-semibold text-grey-900">Submit Sorting Record</h3>
         </div>
-        {emptySkips.length > 0 && (
+        {emptyParcels.length > 0 && (
           <div className="bg-orange-50 border border-orange-200 rounded-md p-3 mb-3 text-sm text-orange-700">
-            {emptySkips.map((a) => a.asset_label).join(', ')} {emptySkips.length === 1 ? 'has' : 'have'} no material lines.
+            {emptyParcels.map((a) => a.asset_label).join(', ')} {emptyParcels.length === 1 ? 'has' : 'have'} no material lines.
           </div>
         )}
         <p className="text-sm text-grey-600 mb-5">
@@ -302,8 +302,8 @@ function ReopenDialog({ sessionId, fetchSession, onClose }) {
   );
 }
 
-/* ───── Skip Tabs ───── */
-function SkipTabs({ assets, lines, activeAssetId, onSelect }) {
+/* ───── Parcel Tabs ───── */
+function ParcelTabs({ assets, lines, activeAssetId, onSelect }) {
   return (
     <div className="flex gap-1 overflow-x-auto border-b border-grey-200 mb-4 pb-0">
       {assets.map((asset) => {
@@ -317,6 +317,12 @@ function SkipTabs({ assets, lines, activeAssetId, onSelect }) {
         if (hasLines && !isOver) dotColor = 'bg-green-500';
         if (hasLines && isOver) dotColor = 'bg-orange-500';
 
+        const parcelTag = asset.parcel_type === 'MATERIAL'
+          ? 'Material'
+          : asset.container_type
+            ? CONTAINER_TYPE_LABELS[asset.container_type] || asset.container_type
+            : null;
+
         return (
           <button
             key={asset.id}
@@ -329,6 +335,9 @@ function SkipTabs({ assets, lines, activeAssetId, onSelect }) {
           >
             <span className={`w-2 h-2 rounded-full ${dotColor}`} />
             {asset.asset_label}
+            {parcelTag && (
+              <span className="text-xs text-grey-400 ml-1">({parcelTag})</span>
+            )}
           </button>
         );
       })}
@@ -336,8 +345,8 @@ function SkipTabs({ assets, lines, activeAssetId, onSelect }) {
   );
 }
 
-/* ───── Active Skip Panel ───── */
-function ActiveSkipPanel({
+/* ───── Active Parcel Panel ───── */
+function ActiveParcelPanel({
   session, assets, activeAssetId, lines, isDraft, canOperate,
   sessionId, lineForm, setLineForm, clearLineForm,
   addLineToStore, updateLineInStore, removeLineFromStore, fetchSession,
@@ -355,14 +364,20 @@ function ActiveSkipPanel({
 
   return (
     <div>
-      {/* Skip Summary Bar */}
+      {/* Parcel Summary Bar */}
       <div className="bg-white rounded-lg border border-grey-200 shadow-sm p-4 mb-4">
         <div className="flex items-center justify-between flex-wrap gap-3 mb-3">
           <div className="flex items-center gap-3">
             <span className="text-sm font-semibold text-grey-900">{asset.asset_label}</span>
-            <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-300">
-              {SKIP_LABELS[asset.skip_type] || asset.skip_type}
-            </span>
+            {asset.parcel_type === 'MATERIAL' ? (
+              <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-300">
+                Material
+              </span>
+            ) : asset.container_type ? (
+              <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-300">
+                {CONTAINER_TYPE_LABELS[asset.container_type] || asset.container_type}
+              </span>
+            ) : null}
             {asset.waste_stream && (
               <span className="text-xs text-grey-500">{asset.waste_stream.name_en}</span>
             )}
@@ -445,7 +460,7 @@ function ActiveSkipPanel({
           </div>
         ) : (
           <div className="p-8 text-center">
-            <p className="text-sm text-grey-400 mb-3">No materials recorded for this skip yet</p>
+            <p className="text-sm text-grey-400 mb-3">No materials recorded for this parcel yet</p>
             {isDraft && canOperate && (
               <button
                 onClick={() => setLineForm({ mode: 'add', lineId: null, fields: defaultLineFields() })}

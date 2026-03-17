@@ -16,7 +16,7 @@ const REPORT_TYPES = [
   { code: 'RPT-03', name: 'Chain of Custody', icon: Link2, description: 'Full traceability per consignment' },
   { code: 'RPT-04', name: 'Inbound Weight Register', icon: Scale, description: 'Weighing events with carrier/stream subtotals' },
   { code: 'RPT-05', name: 'Waste Stream Analysis', icon: BarChart3, description: 'Breakdown by waste stream and category' },
-  { code: 'RPT-06', name: 'Skip Asset Utilisation', icon: Box, description: 'Asset usage, counts, and top containers' },
+  { code: 'RPT-06', name: 'Container Asset Utilisation', icon: Box, description: 'Asset usage, counts, and top containers' },
 ];
 
 const inputClass = 'w-full h-10 px-3.5 rounded-md border border-grey-300 text-sm text-grey-900 focus:border-green-500 focus:ring-[3px] focus:ring-green-500/15 outline-none transition-colors';
@@ -244,7 +244,7 @@ function RPT06Config({ params, onChange }) {
         </div>
       </div>
       <div>
-        <label className={labelClass}>Skip Type (optional)</label>
+        <label className={labelClass}>Container Type (optional)</label>
         <select className={selectClass} value={params.skipType || ''} onChange={(e) => onChange({ ...params, skipType: e.target.value })}>
           <option value="">All types</option>
           <option value="OPEN_TOP">Open Top</option>

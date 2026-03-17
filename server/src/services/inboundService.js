@@ -4,6 +4,8 @@ const { canTransition: canOrderTransition } = require('../utils/orderStateMachin
 const { writeAuditLog } = require('../utils/auditLog');
 const { requestWeighing } = require('./pfisterSimulator');
 const { generateInboundNumber } = require('../utils/inboundNumber');
+const { generateAssetLabel } = require('../utils/assetLabel');
+const { notifyRoles } = require('./notificationService');
 
 const TERMINAL_STATUSES = ['READY_FOR_SORTING', 'SORTED'];
 
@@ -13,6 +15,11 @@ const INBOUND_INCLUDE = {
       carrier: { select: { id: true, name: true } },
       supplier: { select: { id: true, name: true, supplier_type: true } },
       waste_stream: { select: { id: true, name_en: true, code: true } },
+      waste_streams: {
+        include: {
+          waste_stream: { select: { id: true, name_en: true, code: true } },
+        },
+      },
     },
   },
   vehicle: true,
@@ -22,16 +29,56 @@ const INBOUND_INCLUDE = {
   assets: {
     include: {
       waste_stream: { select: { id: true, name_en: true, code: true } },
+      material_category: { select: { id: true, code_cbs: true, description_en: true } },
     },
-    orderBy: { created_at: 'asc' },
+    orderBy: { sequence: 'asc' },
+  },
+  weighings: {
+    include: {
+      pfister_ticket: true,
+    },
+    orderBy: { sequence: 'asc' },
   },
   confirmed_by_user: { select: { id: true, full_name: true } },
   sorting_session: { select: { id: true, status: true } },
 };
 
 function enrichInbound(inbound) {
-  inbound.can_add_skips = !TERMINAL_STATUSES.includes(inbound.status);
+  const weighings = inbound.weighings || [];
+  const assets = inbound.assets || [];
+
+  inbound.can_add_parcels = !TERMINAL_STATUSES.includes(inbound.status);
   inbound.allowed_transitions = getAllowedTransitions(inbound.status);
+
+  // Sequential weighing computed states
+  inbound.weighing_count = weighings.length;
+  inbound.parcel_count = assets.length;
+
+  // Can trigger first weighing (gross)
+  inbound.can_weigh_first = inbound.status === 'ARRIVED' && weighings.length === 0;
+
+  // Can register a parcel (gap exists: last weighing has no corresponding parcel)
+  inbound.can_register_parcel = inbound.status === 'WEIGHED_IN' && weighings.length > assets.length;
+
+  // Can trigger next weighing (parcel registered since last weighing, counts are equal, at least 1 parcel)
+  inbound.can_weigh_next = inbound.status === 'WEIGHED_IN' && weighings.length === assets.length && assets.length >= 1;
+
+  // Can trigger tare (same as can_weigh_next)
+  inbound.can_weigh_tare = inbound.can_weigh_next;
+
+  // Current phase
+  if (inbound.status === 'ARRIVED') {
+    inbound.current_phase = 'awaiting_first_weighing';
+  } else if (inbound.can_register_parcel) {
+    inbound.current_phase = 'awaiting_parcel';
+  } else if (inbound.can_weigh_next) {
+    inbound.current_phase = 'awaiting_next_weighing';
+  } else if (['WEIGHED_OUT', 'READY_FOR_SORTING', 'SORTED'].includes(inbound.status)) {
+    inbound.current_phase = 'weighing_complete';
+  } else {
+    inbound.current_phase = 'unknown';
+  }
+
   return inbound;
 }
 
@@ -113,6 +160,7 @@ async function createInbound(data, userId) {
         order_id: data.order_id,
         vehicle_id: vehicle.id,
         waste_stream_id: data.waste_stream_id || null,
+        incident_category: data.incident_category || null,
         status: 'ARRIVED',
         notes: data.notes || null,
       },
@@ -148,6 +196,303 @@ async function createInbound(data, userId) {
   });
 }
 
+/**
+ * Unified sequential weighing function.
+ * Handles first weighing (gross), intermediate weighings, and final weighing (tare).
+ */
+async function triggerNextWeighing(inboundId, options, userId) {
+  const { is_tare = false, is_manual = false, manual_weight_kg, manual_reason } = options || {};
+
+  return prisma.$transaction(async (tx) => {
+    const inbound = await tx.inbound.findUnique({
+      where: { id: inboundId },
+      include: {
+        assets: { orderBy: { sequence: 'asc' } },
+        weighings: { orderBy: { sequence: 'asc' } },
+      },
+    });
+    if (!inbound) throw new Error('Inbound not found');
+
+    const weighings = inbound.weighings;
+    const assets = inbound.assets;
+    const nextSeq = weighings.length + 1;
+
+    // Validation
+    if (nextSeq === 1) {
+      // First weighing (gross): status must be ARRIVED
+      if (inbound.status !== 'ARRIVED') {
+        const err = new Error('Inbound must be in ARRIVED status for first weighing');
+        err.statusCode = 409;
+        throw err;
+      }
+    } else {
+      // Subsequent weighings: a parcel must have been registered since last weighing
+      // 1:1 rule: assets.length must equal weighings.length (one parcel per gap)
+      if (assets.length !== weighings.length) {
+        const err = new Error('A parcel must be registered before the next weighing');
+        err.statusCode = 400;
+        throw err;
+      }
+      if (is_tare && assets.length === 0) {
+        const err = new Error('At least one parcel must be registered before tare weighing');
+        err.statusCode = 400;
+        throw err;
+      }
+    }
+
+    // Determine weighing type and get/create ticket
+    let ticket;
+    const previousWeight = weighings.length > 0 ? Number(weighings[weighings.length - 1].weight_kg) : null;
+
+    if (is_manual) {
+      const weightKg = parseFloat(manual_weight_kg);
+      if (isNaN(weightKg) || weightKg <= 0) {
+        const err = new Error('weight_kg must be a positive number');
+        err.statusCode = 400;
+        throw err;
+      }
+      const weighingType = nextSeq === 1 ? 'GROSS' : is_tare ? 'TARE' : 'INTERMEDIATE';
+      ticket = await tx.pfisterTicket.create({
+        data: {
+          ticket_number: `MAN-${Date.now()}`,
+          weighing_type: weighingType,
+          weight_kg: weightKg,
+          unit: 'kg',
+          timestamp: new Date(),
+          raw_payload: JSON.stringify({ manual_entry: true, reason: manual_reason || 'Pfister unavailable' }),
+          is_manual_override: true,
+          override_reason: manual_reason || 'Pfister unavailable',
+          override_by: userId,
+        },
+      });
+
+      // PFI-07: Alert admins on manual weight entry
+      if (is_manual) {
+        await notifyRoles(tx, ['ADMIN'], {
+          type: 'MANUAL_WEIGHING_ALERT',
+          title: 'Manual weight entry recorded',
+          message: `Manual weight ${manual_weight_kg} kg for inbound ${inbound.inbound_number}, reason: ${manual_reason}`,
+          entityType: 'Inbound',
+          entityId: inboundId,
+        });
+      }
+    } else {
+      if (nextSeq === 1) {
+        ticket = await requestWeighing('GROSS');
+      } else if (is_tare) {
+        ticket = await requestWeighing('TARE', previousWeight);
+      } else {
+        ticket = await requestWeighing('INTERMEDIATE', previousWeight);
+      }
+    }
+
+    // Create InboundWeighing record
+    await tx.inboundWeighing.create({
+      data: {
+        inbound_id: inboundId,
+        sequence: nextSeq,
+        pfister_ticket_id: ticket.id,
+        weight_kg: ticket.weight_kg,
+        is_tare: is_tare,
+      },
+    });
+
+    // Update inbound fields
+    const updateData = {};
+
+    if (nextSeq === 1) {
+      // First weighing = gross
+      updateData.gross_ticket_id = ticket.id;
+      updateData.gross_weight_kg = ticket.weight_kg;
+      if (inbound.status === 'ARRIVED' && canTransition('ARRIVED', 'WEIGHED_IN')) {
+        updateData.status = 'WEIGHED_IN';
+      }
+    }
+
+    if (nextSeq > 1) {
+      // Calculate net weight for the previous parcel
+      const prevParcel = assets[nextSeq - 2]; // parcel at index (seq-2)
+      if (prevParcel) {
+        const prevWeighingWeight = Number(weighings[nextSeq - 2].weight_kg);
+        const currentWeight = Number(ticket.weight_kg);
+        const parcelNet = Math.round((prevWeighingWeight - currentWeight) * 100) / 100;
+
+        await tx.asset.update({
+          where: { id: prevParcel.id },
+          data: { net_weight_kg: parcelNet },
+        });
+      }
+    }
+
+    if (is_tare) {
+      updateData.tare_ticket_id = ticket.id;
+      updateData.tare_weight_kg = ticket.weight_kg;
+      updateData.net_weight_kg = Number(inbound.gross_weight_kg || updateData.gross_weight_kg || 0) - Number(ticket.weight_kg);
+      if (canTransition(inbound.status, 'WEIGHED_OUT')) {
+        updateData.status = 'WEIGHED_OUT';
+      }
+    }
+
+    const updated = await tx.inbound.update({
+      where: { id: inboundId },
+      data: updateData,
+      include: INBOUND_INCLUDE,
+    });
+
+    // Audit log
+    const weighingLabel = nextSeq === 1 ? 'FIRST_WEIGHING' : is_tare ? 'TARE_WEIGHING' : `WEIGHING_${nextSeq}`;
+    await writeAuditLog({
+      userId,
+      action: weighingLabel,
+      entityType: 'Inbound',
+      entityId: inboundId,
+      after: {
+        sequence: nextSeq,
+        weight_kg: Number(ticket.weight_kg),
+        ticket_number: ticket.ticket_number,
+        is_tare,
+        is_manual,
+        status: updated.status,
+      },
+    }, tx);
+
+    // Order transitions
+    if (nextSeq === 1 && updated.status === 'WEIGHED_IN') {
+      const order = await tx.inboundOrder.findUnique({ where: { id: inbound.order_id } });
+      if (order && order.status === 'ARRIVED' && canOrderTransition('ARRIVED', 'IN_PROGRESS')) {
+        await tx.inboundOrder.update({
+          where: { id: order.id },
+          data: { status: 'IN_PROGRESS' },
+        });
+        await writeAuditLog({
+          userId,
+          action: 'STATUS_CHANGE',
+          entityType: 'InboundOrder',
+          entityId: order.id,
+          before: { status: 'ARRIVED' },
+          after: { status: 'IN_PROGRESS', trigger: 'inbound_weighed_in' },
+        }, tx);
+      }
+    }
+
+    return enrichInbound(updated);
+  });
+}
+
+/**
+ * Register a parcel (container or material) after unloading from the vehicle.
+ */
+async function registerParcel(inboundId, data, userId) {
+  return prisma.$transaction(async (tx) => {
+    const inbound = await tx.inbound.findUnique({
+      where: { id: inboundId },
+      include: {
+        order: {
+          include: {
+            waste_streams: { select: { waste_stream_id: true } },
+          },
+        },
+        assets: { orderBy: { sequence: 'asc' } },
+        weighings: { orderBy: { sequence: 'asc' } },
+      },
+    });
+    if (!inbound) throw new Error('Inbound not found');
+
+    if (inbound.status !== 'WEIGHED_IN') {
+      const err = new Error('Inbound must be in WEIGHED_IN status to register parcels');
+      err.statusCode = 409;
+      throw err;
+    }
+
+    // 1:1 rule: can only register if weighings > assets (gap exists)
+    if (inbound.weighings.length <= inbound.assets.length) {
+      const err = new Error('A weighing must be taken before registering another parcel');
+      err.statusCode = 400;
+      throw err;
+    }
+
+    // Validate waste stream is in order's waste streams
+    const orderWsIds = inbound.order.waste_streams.map((ws) => ws.waste_stream_id);
+    if (data.waste_stream_id && !orderWsIds.includes(data.waste_stream_id)) {
+      const err = new Error('Waste stream must be one of the order\'s assigned waste streams');
+      err.statusCode = 400;
+      throw err;
+    }
+
+    // Validate parcel type fields
+    if (data.parcel_type === 'CONTAINER' && !data.container_type) {
+      const err = new Error('Container type is required for CONTAINER parcels');
+      err.statusCode = 400;
+      throw err;
+    }
+
+    // LZV enforcement (SKP-01)
+    const currentParcelCount = await tx.asset.count({ where: { inbound_id: inboundId } });
+    const maxParcels = inbound.order.is_lzv ? 3 : 2;
+    if (currentParcelCount >= maxParcels) {
+      const err = new Error(`Maximum ${maxParcels} parcels allowed for this vehicle${inbound.order.is_lzv ? ' (LZV)' : ''}. Currently ${currentParcelCount} registered.`);
+      err.statusCode = 400;
+      throw err;
+    }
+
+    const sequence = inbound.weighings.length;
+    let assetLabel;
+    let existingAsset = null;
+
+    // Check for existing container reuse
+    if (data.existing_asset_label) {
+      existingAsset = await tx.asset.findUnique({
+        where: { asset_label: data.existing_asset_label },
+      });
+      if (!existingAsset) {
+        const err = new Error(`Container with label ${data.existing_asset_label} not found`);
+        err.statusCode = 404;
+        throw err;
+      }
+      assetLabel = data.existing_asset_label;
+    } else {
+      assetLabel = await generateAssetLabel(tx, data.parcel_type || 'CONTAINER');
+    }
+
+    // Auto-fill waste stream from order if only one
+    const wasteStreamId = data.waste_stream_id || (orderWsIds.length === 1 ? orderWsIds[0] : null);
+
+    const asset = await tx.asset.create({
+      data: {
+        asset_label: assetLabel,
+        inbound_id: inboundId,
+        parcel_type: data.parcel_type || 'CONTAINER',
+        container_type: data.parcel_type === 'CONTAINER' ? data.container_type : null,
+        material_category_id: data.material_category_id || null,
+        waste_stream_id: wasteStreamId,
+        sequence,
+        estimated_volume_m3: data.estimated_volume_m3 ? parseFloat(data.estimated_volume_m3) : null,
+        notes: data.notes || null,
+      },
+      include: {
+        waste_stream: { select: { id: true, name_en: true, code: true } },
+        material_category: { select: { id: true, code_cbs: true, description_en: true } },
+      },
+    });
+
+    await writeAuditLog({
+      userId,
+      action: 'REGISTER_PARCEL',
+      entityType: 'Asset',
+      entityId: asset.id,
+      after: {
+        asset_label: asset.asset_label,
+        parcel_type: asset.parcel_type,
+        container_type: asset.container_type,
+        sequence: asset.sequence,
+        inbound_id: inboundId,
+      },
+    }, tx);
+
+    return asset;
+  });
+}
+
 async function updateInboundStatus(id, newStatus, userId) {
   return prisma.$transaction(async (tx) => {
     const inbound = await tx.inbound.findUnique({
@@ -165,16 +510,14 @@ async function updateInboundStatus(id, newStatus, userId) {
     // Validate before READY_FOR_SORTING
     if (newStatus === 'READY_FOR_SORTING') {
       if (inbound.assets.length === 0) {
-        const err = new Error('At least one skip is required');
+        const err = new Error('At least one parcel is required');
         err.statusCode = 400;
         throw err;
       }
 
-      const incompleteAssets = inbound.assets.filter(
-        (a) => a.gross_weight_kg == null || a.tare_weight_kg == null
-      );
-      if (incompleteAssets.length > 0) {
-        const err = new Error(`${incompleteAssets.length} skip(s) missing gross or tare weight`);
+      const incompleteParcels = inbound.assets.filter((a) => a.net_weight_kg == null);
+      if (incompleteParcels.length > 0) {
+        const err = new Error(`${incompleteParcels.length} parcel(s) missing net weight`);
         err.statusCode = 400;
         throw err;
       }
@@ -223,7 +566,7 @@ async function updateInboundStatus(id, newStatus, userId) {
       updated.sorting_session = { id: session.id, status: session.status };
     }
 
-    // Auto-complete order when total skips across confirmed inbounds >= expected_skip_count
+    // Auto-complete order when total parcels across confirmed inbounds >= expected_skip_count
     if (['READY_FOR_SORTING', 'SORTED'].includes(newStatus)) {
       const order = await tx.inboundOrder.findUnique({ where: { id: inbound.order_id } });
       if (order && order.status === 'IN_PROGRESS' && canOrderTransition('IN_PROGRESS', 'COMPLETED')) {
@@ -234,8 +577,8 @@ async function updateInboundStatus(id, newStatus, userId) {
           },
           include: { assets: { select: { id: true } } },
         });
-        const totalSkips = confirmedInbounds.reduce((sum, ib) => sum + ib.assets.length, 0);
-        if (totalSkips >= order.expected_skip_count) {
+        const totalParcels = confirmedInbounds.reduce((sum, ib) => sum + ib.assets.length, 0);
+        if (totalParcels >= order.expected_skip_count) {
           await tx.inboundOrder.update({
             where: { id: order.id },
             data: { status: 'COMPLETED' },
@@ -246,7 +589,7 @@ async function updateInboundStatus(id, newStatus, userId) {
             entityType: 'InboundOrder',
             entityId: order.id,
             before: { status: 'IN_PROGRESS' },
-            after: { status: 'COMPLETED', reason: `All expected skips confirmed (${totalSkips}/${order.expected_skip_count})` },
+            after: { status: 'COMPLETED', reason: `All expected parcels confirmed (${totalParcels}/${order.expected_skip_count})` },
           }, tx);
         }
       }
@@ -285,302 +628,22 @@ async function setInboundWasteStream(id, wasteStreamId, userId) {
   });
 }
 
-// Pfister gross weighing — auto-transitions ARRIVED → WEIGHED_IN
-async function triggerGrossWeighing(inboundId, userId) {
-  const existing = await prisma.inbound.findUnique({ where: { id: inboundId } });
-  if (!existing) throw new Error('Inbound not found');
-
-  if (existing.gross_ticket_id) {
-    const err = new Error('Gross weighing already recorded');
-    err.statusCode = 409;
-    throw err;
-  }
-
-  const ticket = await requestWeighing('GROSS');
-
-  return prisma.$transaction(async (tx) => {
-    const updateData = {
-      gross_ticket_id: ticket.id,
-      gross_weight_kg: ticket.weight_kg,
-    };
-
-    // Auto-transition ARRIVED → WEIGHED_IN
-    if (existing.status === 'ARRIVED' && canTransition('ARRIVED', 'WEIGHED_IN')) {
-      updateData.status = 'WEIGHED_IN';
-    }
-
-    const inbound = await tx.inbound.update({
-      where: { id: inboundId },
-      data: updateData,
-      include: INBOUND_INCLUDE,
-    });
-
-    await writeAuditLog({
-      userId,
-      action: 'GROSS_WEIGHING',
-      entityType: 'Inbound',
-      entityId: inboundId,
-      after: { gross_weight_kg: Number(ticket.weight_kg), ticket_number: ticket.ticket_number, status: inbound.status },
-    }, tx);
-
-    // Transition order ARRIVED → IN_PROGRESS when inbound gets WEIGHED_IN
-    if (inbound.status === 'WEIGHED_IN') {
-      const order = await tx.inboundOrder.findUnique({ where: { id: existing.order_id } });
-      if (order && order.status === 'ARRIVED' && canOrderTransition('ARRIVED', 'IN_PROGRESS')) {
-        await tx.inboundOrder.update({
-          where: { id: order.id },
-          data: { status: 'IN_PROGRESS' },
-        });
-        await writeAuditLog({
-          userId,
-          action: 'STATUS_CHANGE',
-          entityType: 'InboundOrder',
-          entityId: order.id,
-          before: { status: 'ARRIVED' },
-          after: { status: 'IN_PROGRESS', trigger: 'inbound_weighed_in' },
-        }, tx);
-      }
-    }
-
-    return enrichInbound(inbound);
-  });
-}
-
-// Pfister tare weighing — auto-distributes to skips, transitions WEIGHED_IN → WEIGHED_OUT
-async function triggerTareWeighing(inboundId, userId) {
-  const existing = await prisma.inbound.findUnique({
-    where: { id: inboundId },
-    include: { assets: true },
-  });
-  if (!existing) throw new Error('Inbound not found');
-
-  if (!existing.gross_ticket_id) {
-    const err = new Error('Gross weighing must be completed before tare');
-    err.statusCode = 400;
-    throw err;
-  }
-  if (existing.tare_ticket_id) {
-    const err = new Error('Tare weighing already recorded');
-    err.statusCode = 409;
-    throw err;
-  }
-
-  // Validate at least one skip with gross weight
-  const assetsWithGross = existing.assets.filter((a) => a.gross_weight_kg != null && Number(a.gross_weight_kg) > 0);
-  if (assetsWithGross.length === 0) {
-    const err = new Error('At least one skip with gross weight is required before tare');
-    err.statusCode = 400;
-    throw err;
-  }
-
-  const grossWeightKg = Number(existing.gross_weight_kg);
-  const ticket = await requestWeighing('TARE', grossWeightKg);
-  const tareWeightKg = Number(ticket.weight_kg);
-  const netWeightKg = grossWeightKg - tareWeightKg;
-
-  return prisma.$transaction(async (tx) => {
-    const updateData = {
-      tare_ticket_id: ticket.id,
-      tare_weight_kg: tareWeightKg,
-      net_weight_kg: netWeightKg,
-    };
-
-    // Auto-transition WEIGHED_IN → WEIGHED_OUT
-    if (existing.status === 'WEIGHED_IN' && canTransition('WEIGHED_IN', 'WEIGHED_OUT')) {
-      updateData.status = 'WEIGHED_OUT';
-    }
-
-    const inbound = await tx.inbound.update({
-      where: { id: inboundId },
-      data: updateData,
-      include: INBOUND_INCLUDE,
-    });
-
-    // Auto-distribute tare to skips proportionally based on gross weights
-    const totalSkipGross = assetsWithGross.reduce((sum, a) => sum + Number(a.gross_weight_kg), 0);
-    let distributedTare = 0;
-
-    for (let i = 0; i < assetsWithGross.length; i++) {
-      const asset = assetsWithGross[i];
-      const assetGross = Number(asset.gross_weight_kg);
-      let assetTare;
-
-      if (i === assetsWithGross.length - 1) {
-        // Last asset gets remainder to avoid rounding errors
-        assetTare = Math.round((tareWeightKg - distributedTare) * 100) / 100;
-      } else {
-        assetTare = Math.round((tareWeightKg * (assetGross / totalSkipGross)) * 100) / 100;
-        distributedTare += assetTare;
-      }
-
-      const assetNet = Math.round((assetGross - assetTare) * 100) / 100;
-
-      await tx.asset.update({
-        where: { id: asset.id },
-        data: {
-          tare_weight_kg: assetTare,
-          net_weight_kg: assetNet,
-        },
-      });
-    }
-
-    await writeAuditLog({
-      userId,
-      action: 'TARE_WEIGHING',
-      entityType: 'Inbound',
-      entityId: inboundId,
-      after: { tare_weight_kg: tareWeightKg, net_weight_kg: netWeightKg, ticket_number: ticket.ticket_number, status: inbound.status, assets_distributed: assetsWithGross.length },
-    }, tx);
-
-    // Re-fetch to get updated asset weights
-    const refreshed = await tx.inbound.findUnique({
-      where: { id: inboundId },
-      include: INBOUND_INCLUDE,
-    });
-
-    return enrichInbound(refreshed);
-  });
-}
-
-async function manualWeighing(inboundId, data, userId) {
-  const weightKg = parseFloat(data.weight_kg);
-  if (isNaN(weightKg) || weightKg <= 0) {
-    const err = new Error('weight_kg must be a positive number');
-    err.statusCode = 400;
-    throw err;
-  }
-
-  return prisma.$transaction(async (tx) => {
-    const inbound = await tx.inbound.findUnique({
-      where: { id: inboundId },
-      include: { assets: true },
-    });
-    if (!inbound) throw new Error('Inbound not found');
-
-    const isGross = data.weight_type === 'GROSS';
-
-    if (isGross && inbound.gross_ticket_id) {
-      const err = new Error('Gross weighing already recorded');
-      err.statusCode = 409;
-      throw err;
-    }
-    if (!isGross && inbound.tare_ticket_id) {
-      const err = new Error('Tare weighing already recorded');
-      err.statusCode = 409;
-      throw err;
-    }
-    if (!isGross && !inbound.gross_ticket_id) {
-      const err = new Error('Gross weighing must be completed before tare');
-      err.statusCode = 400;
-      throw err;
-    }
-
-    const ticket = await tx.pfisterTicket.create({
-      data: {
-        ticket_number: `MAN-${Date.now()}`,
-        weighing_type: data.weight_type,
-        weight_kg: weightKg,
-        unit: 'kg',
-        timestamp: new Date(),
-        raw_payload: JSON.stringify({ manual_entry: true, reason: data.reason || 'Pfister unavailable' }),
-        is_manual_override: true,
-        override_reason: data.reason || 'Pfister unavailable',
-        override_by: userId,
-      },
-    });
-
-    const updateData = {};
-    if (isGross) {
-      updateData.gross_ticket_id = ticket.id;
-      updateData.gross_weight_kg = weightKg;
-      // Auto-transition ARRIVED → WEIGHED_IN
-      if (inbound.status === 'ARRIVED' && canTransition('ARRIVED', 'WEIGHED_IN')) {
-        updateData.status = 'WEIGHED_IN';
-      }
-    } else {
-      updateData.tare_ticket_id = ticket.id;
-      updateData.tare_weight_kg = weightKg;
-      updateData.net_weight_kg = Number(inbound.gross_weight_kg) - weightKg;
-      // Auto-transition WEIGHED_IN → WEIGHED_OUT
-      if (inbound.status === 'WEIGHED_IN' && canTransition('WEIGHED_IN', 'WEIGHED_OUT')) {
-        updateData.status = 'WEIGHED_OUT';
-      }
-
-      // Auto-distribute tare to skips proportionally
-      const assetsWithGross = inbound.assets.filter((a) => a.gross_weight_kg != null && Number(a.gross_weight_kg) > 0);
-      if (assetsWithGross.length > 0) {
-        const totalSkipGross = assetsWithGross.reduce((sum, a) => sum + Number(a.gross_weight_kg), 0);
-        let distributedTare = 0;
-
-        for (let i = 0; i < assetsWithGross.length; i++) {
-          const asset = assetsWithGross[i];
-          const assetGross = Number(asset.gross_weight_kg);
-          let assetTare;
-          if (i === assetsWithGross.length - 1) {
-            assetTare = Math.round((weightKg - distributedTare) * 100) / 100;
-          } else {
-            assetTare = Math.round((weightKg * (assetGross / totalSkipGross)) * 100) / 100;
-            distributedTare += assetTare;
-          }
-          const assetNet = Math.round((assetGross - assetTare) * 100) / 100;
-          await tx.asset.update({
-            where: { id: asset.id },
-            data: { tare_weight_kg: assetTare, net_weight_kg: assetNet },
-          });
-        }
-      }
-    }
-
-    const updated = await tx.inbound.update({
-      where: { id: inboundId },
-      data: updateData,
-      include: INBOUND_INCLUDE,
-    });
-
-    await writeAuditLog({
-      userId,
-      action: isGross ? 'GROSS_WEIGHING' : 'TARE_WEIGHING',
-      entityType: 'Inbound',
-      entityId: inboundId,
-      after: { weight_kg: weightKg, manual: true, status: updated.status },
-    }, tx);
-
-    // Transition order ARRIVED → IN_PROGRESS when inbound gets WEIGHED_IN
-    if (isGross && updated.status === 'WEIGHED_IN') {
-      const order = await tx.inboundOrder.findUnique({ where: { id: inbound.order_id } });
-      if (order && order.status === 'ARRIVED' && canOrderTransition('ARRIVED', 'IN_PROGRESS')) {
-        await tx.inboundOrder.update({
-          where: { id: order.id },
-          data: { status: 'IN_PROGRESS' },
-        });
-        await writeAuditLog({
-          userId,
-          action: 'STATUS_CHANGE',
-          entityType: 'InboundOrder',
-          entityId: order.id,
-          before: { status: 'ARRIVED' },
-          after: { status: 'IN_PROGRESS', trigger: 'inbound_weighed_in' },
-        }, tx);
-      }
-    }
-
-    return enrichInbound(updated);
-  });
-}
-
 async function overrideWeight(inboundId, data, userId) {
   return prisma.$transaction(async (tx) => {
     const inbound = await tx.inbound.findUnique({
       where: { id: inboundId },
-      include: { gross_ticket: true, tare_ticket: true },
+      include: {
+        weighings: { orderBy: { sequence: 'asc' }, include: { pfister_ticket: true } },
+        assets: { orderBy: { sequence: 'asc' } },
+      },
     });
     if (!inbound) throw new Error('Inbound not found');
 
-    const ticketField = data.weight_type === 'GROSS' ? 'gross_ticket' : 'tare_ticket';
-    const ticket = inbound[ticketField];
-    if (!ticket) {
-      const err = new Error(`No ${data.weight_type} ticket exists to override`);
-      err.statusCode = 400;
+    const weighingSeq = parseInt(data.sequence, 10);
+    const targetWeighing = inbound.weighings.find((w) => w.sequence === weighingSeq);
+    if (!targetWeighing) {
+      const err = new Error(`Weighing with sequence ${weighingSeq} not found`);
+      err.statusCode = 404;
       throw err;
     }
 
@@ -591,10 +654,25 @@ async function overrideWeight(inboundId, data, userId) {
       throw err;
     }
 
-    const beforeWeight = Number(ticket.weight_kg);
+    const beforeWeight = Number(targetWeighing.weight_kg);
 
+    // PFI-08: If ticket is confirmed, create a versioned amendment instead of in-place edit
+    if (targetWeighing.pfister_ticket.is_confirmed) {
+      await tx.weightAmendment.create({
+        data: {
+          pfister_ticket_id: targetWeighing.pfister_ticket_id,
+          original_weight_kg: targetWeighing.pfister_ticket.weight_kg,
+          amended_weight_kg: data.new_weight_kg,
+          reason: data.reason_code || 'OTHER',
+          reason_notes: data.reason_notes || null,
+          amended_by: userId,
+        },
+      });
+    }
+
+    // Update the PfisterTicket
     await tx.pfisterTicket.update({
-      where: { id: ticket.id },
+      where: { id: targetWeighing.pfister_ticket_id },
       data: {
         weight_kg: weightKg,
         is_manual_override: true,
@@ -603,16 +681,39 @@ async function overrideWeight(inboundId, data, userId) {
       },
     });
 
-    const updateData = {};
-    if (data.weight_type === 'GROSS') {
-      updateData.gross_weight_kg = weightKg;
-      if (inbound.tare_weight_kg) {
-        updateData.net_weight_kg = weightKg - Number(inbound.tare_weight_kg);
+    // Update the InboundWeighing
+    await tx.inboundWeighing.update({
+      where: { id: targetWeighing.id },
+      data: { weight_kg: weightKg },
+    });
+
+    // Recalculate affected parcel net weights
+    const allWeighings = inbound.weighings.map((w) =>
+      w.sequence === weighingSeq ? { ...w, weight_kg: weightKg } : w
+    );
+
+    for (let i = 0; i < inbound.assets.length; i++) {
+      const asset = inbound.assets[i];
+      const wBefore = allWeighings.find((w) => w.sequence === i + 1);
+      const wAfter = allWeighings.find((w) => w.sequence === i + 2);
+      if (wBefore && wAfter) {
+        const net = Math.round((Number(wBefore.weight_kg) - Number(wAfter.weight_kg)) * 100) / 100;
+        await tx.asset.update({
+          where: { id: asset.id },
+          data: { net_weight_kg: net },
+        });
       }
-    } else {
-      updateData.tare_weight_kg = weightKg;
-      if (inbound.gross_weight_kg) {
-        updateData.net_weight_kg = Number(inbound.gross_weight_kg) - weightKg;
+    }
+
+    // Update inbound summary fields
+    const updateData = {};
+    const firstWeighing = allWeighings.find((w) => w.sequence === 1);
+    const tareWeighing = allWeighings.find((w) => w.is_tare);
+    if (firstWeighing) updateData.gross_weight_kg = Number(firstWeighing.weight_kg);
+    if (tareWeighing) {
+      updateData.tare_weight_kg = Number(tareWeighing.weight_kg);
+      if (firstWeighing) {
+        updateData.net_weight_kg = Number(firstWeighing.weight_kg) - Number(tareWeighing.weight_kg);
       }
     }
 
@@ -627,8 +728,8 @@ async function overrideWeight(inboundId, data, userId) {
       action: 'WEIGHT_OVERRIDE',
       entityType: 'Inbound',
       entityId: inboundId,
-      before: { weight_type: data.weight_type, weight_kg: beforeWeight },
-      after: { weight_type: data.weight_type, weight_kg: weightKg, reason_code: data.reason_code },
+      before: { sequence: weighingSeq, weight_kg: beforeWeight },
+      after: { sequence: weighingSeq, weight_kg: weightKg, reason_code: data.reason_code },
     }, tx);
 
     return enrichInbound(updated);
@@ -645,7 +746,110 @@ async function lookupAsset(assetLabel) {
       waste_stream: {
         select: { id: true, name_en: true, code: true },
       },
+      material_category: {
+        select: { id: true, code_cbs: true, description_en: true },
+      },
     },
+  });
+}
+
+async function setIncidentCategory(inboundId, category, notes, userId) {
+  return prisma.$transaction(async (tx) => {
+    const inbound = await tx.inbound.findUnique({
+      where: { id: inboundId },
+      include: { order: true },
+    });
+    if (!inbound) {
+      const err = new Error('Inbound not found');
+      err.statusCode = 404;
+      throw err;
+    }
+
+    const updated = await tx.inbound.update({
+      where: { id: inboundId },
+      data: {
+        incident_category: category,
+        notes: notes || inbound.notes,
+      },
+    });
+
+    // DAMAGE or DISPUTE → notify logistics planner + finance manager
+    if (category === 'DAMAGE' || category === 'DISPUTE') {
+      await notifyRoles(tx, ['LOGISTICS_PLANNER', 'FINANCE_MANAGER'], {
+        type: 'INCIDENT_ALERT',
+        title: `Incident: ${category} on inbound ${inbound.inbound_number}`,
+        message: notes || `${category} incident on inbound ${inbound.inbound_number}`,
+        entityType: 'Inbound',
+        entityId: inboundId,
+      });
+    }
+
+    await writeAuditLog({
+      userId,
+      action: 'SET_INCIDENT',
+      entityType: 'Inbound',
+      entityId: inboundId,
+      before: { incident_category: inbound.incident_category, notes: inbound.notes },
+      after: { incident_category: category, notes: notes || inbound.notes },
+    }, tx);
+
+    return updated;
+  });
+}
+
+async function confirmWeighingTicket(inboundId, sequence, userId) {
+  return prisma.$transaction(async (tx) => {
+    const weighing = await tx.inboundWeighing.findUnique({
+      where: { inbound_id_sequence: { inbound_id: inboundId, sequence: parseInt(sequence, 10) } },
+      include: { pfister_ticket: true },
+    });
+    if (!weighing) {
+      const err = new Error('Weighing not found');
+      err.statusCode = 404;
+      throw err;
+    }
+    if (weighing.pfister_ticket.is_confirmed) {
+      const err = new Error('Weighing already confirmed');
+      err.statusCode = 400;
+      throw err;
+    }
+
+    await tx.pfisterTicket.update({
+      where: { id: weighing.pfister_ticket_id },
+      data: {
+        is_confirmed: true,
+        confirmed_by: userId,
+        confirmed_at: new Date(),
+      },
+    });
+
+    await writeAuditLog({
+      userId,
+      action: 'CONFIRM_WEIGHING',
+      entityType: 'PfisterTicket',
+      entityId: weighing.pfister_ticket_id,
+      before: { is_confirmed: false },
+      after: { is_confirmed: true, confirmed_by: userId },
+    }, tx);
+
+    return { confirmed: true, sequence: weighing.sequence };
+  });
+}
+
+async function getWeighingAmendments(inboundId, sequence) {
+  const weighing = await prisma.inboundWeighing.findUnique({
+    where: { inbound_id_sequence: { inbound_id: inboundId, sequence: parseInt(sequence, 10) } },
+  });
+  if (!weighing) {
+    const err = new Error('Weighing not found');
+    err.statusCode = 404;
+    throw err;
+  }
+
+  return prisma.weightAmendment.findMany({
+    where: { pfister_ticket_id: weighing.pfister_ticket_id },
+    include: { amended_by_user: { select: { id: true, full_name: true, role: true } } },
+    orderBy: { created_at: 'desc' },
   });
 }
 
@@ -656,9 +860,11 @@ module.exports = {
   createInbound,
   updateInboundStatus,
   setInboundWasteStream,
-  triggerGrossWeighing,
-  triggerTareWeighing,
-  manualWeighing,
+  triggerNextWeighing,
+  registerParcel,
   overrideWeight,
   lookupAsset,
+  setIncidentCategory,
+  confirmWeighingTicket,
+  getWeighingAmendments,
 };

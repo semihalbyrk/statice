@@ -23,8 +23,15 @@ async function generateWeightTicket(inboundId) {
       gross_ticket: true,
       tare_ticket: true,
       assets: {
-        include: { waste_stream: true },
-        orderBy: { created_at: 'asc' },
+        include: {
+          waste_stream: { select: { id: true, name_en: true, code: true } },
+          material_category: { select: { id: true, code_cbs: true, description_en: true } },
+        },
+        orderBy: { sequence: 'asc' },
+      },
+      weighings: {
+        include: { pfister_ticket: true },
+        orderBy: { sequence: 'asc' },
       },
       confirmed_by_user: {
         select: { full_name: true },
@@ -49,6 +56,7 @@ async function generateWeightTicket(inboundId) {
     drawHeader(doc, inbound);
     drawOrderDetails(doc, inbound);
     drawPfisterSection(doc, inbound);
+    drawWeighingSequence(doc, inbound.weighings || []);
     drawAssetsTable(doc, inbound.assets || []);
     drawFooter(doc, inbound);
 
@@ -107,7 +115,11 @@ function drawOrderDetails(doc, inbound) {
     { label: 'Linked Order', value: order?.order_number || '—' },
     { label: 'Vehicle Plate', value: inbound.vehicle?.registration_plate || order?.vehicle_plate || '—' },
     { label: 'Carrier', value: order?.carrier?.name || '—' },
-    { label: 'Supplier', value: order?.supplier?.name || '—' },
+    { label: 'Supplier', value: (() => {
+      const supplierName = order?.supplier?.name || '—';
+      const supplierType = order?.supplier?.supplier_type ? ` (${order.supplier.supplier_type})` : '';
+      return supplierName + supplierType;
+    })() },
     {
       label: 'Waste Stream',
       value: inbound.waste_stream
@@ -261,6 +273,89 @@ function drawWeightCard(doc, x, y, width, item) {
     .text(subText, x + 14, y + 80, { width: width - 28 });
 }
 
+function drawWeighingSequence(doc, weighings) {
+  ensurePageSpace(doc, 120);
+
+  doc
+    .font('Helvetica-Bold')
+    .fontSize(12)
+    .fillColor('#111827')
+    .text('Weighing Sequence', PAGE_MARGIN, doc.y);
+
+  const top = doc.y + 10;
+  const columns = [
+    { key: 'seq', label: 'Seq #', width: 52 },
+    { key: 'weight', label: 'Weight (kg)', width: 100 },
+    { key: 'type', label: 'Type', width: 110 },
+    { key: 'ticket', label: 'Ticket #', width: 130 },
+    { key: 'timestamp', label: 'Timestamp', width: CONTENT_WIDTH - 52 - 100 - 110 - 130 },
+  ];
+
+  drawTableHeader(doc, top, columns);
+
+  let y = top + 28;
+
+  if (!weighings.length) {
+    doc
+      .roundedRect(PAGE_MARGIN, y, CONTENT_WIDTH, 40, 8)
+      .fill('#F9FAFB');
+    doc
+      .font('Helvetica')
+      .fontSize(10)
+      .fillColor('#6B7280')
+      .text('No weighings recorded yet.', PAGE_MARGIN + 14, y + 14, {
+        width: CONTENT_WIDTH - 28,
+        align: 'center',
+      });
+    doc.y = y + 52;
+    return;
+  }
+
+  weighings.forEach((weighing, index) => {
+    const weighingType = weighing.sequence === 1
+      ? 'Gross'
+      : weighing.is_tare
+        ? 'Tare'
+        : 'Intermediate';
+
+    const row = {
+      seq: String(weighing.sequence),
+      weight: formatWeightValue(weighing.weight_kg),
+      type: weighingType,
+      ticket: weighing.pfister_ticket?.ticket_number || '—',
+      timestamp: formatDateTime(weighing.created_at, true),
+    };
+
+    const rowHeight = getTableRowHeight(doc, row, columns);
+    if (y + rowHeight > doc.page.height - PAGE_MARGIN - 40) {
+      doc.addPage();
+      y = PAGE_MARGIN;
+      drawTableHeader(doc, y, columns);
+      y += 28;
+    }
+
+    doc
+      .roundedRect(PAGE_MARGIN, y, CONTENT_WIDTH, rowHeight, 8)
+      .fill(index % 2 === 0 ? '#FFFFFF' : '#F9FAFB');
+
+    let x = PAGE_MARGIN;
+    columns.forEach((column) => {
+      doc
+        .font(column.key === 'seq' ? 'Helvetica-Bold' : 'Helvetica')
+        .fontSize(9)
+        .fillColor('#111827')
+        .text(String(row[column.key] || '—'), x + 10, y + 10, {
+          width: column.width - 20,
+        });
+      x += column.width;
+    });
+
+    y += rowHeight + 6;
+  });
+
+  doc.y = y + 8;
+}
+
 function drawAssetsTable(doc, assets) {
   ensurePageSpace(doc, 120);
 
@@ -268,22 +363,21 @@ function drawAssetsTable(doc, assets) {
     .font('Helvetica-Bold')
     .fontSize(12)
     .fillColor('#111827')
-    .text('Skips / Assets', PAGE_MARGIN, doc.y);
+    .text('Parcels', PAGE_MARGIN, doc.y);
 
   const top = doc.y + 10;
   const columns = [
-    { key: 'asset_label', label: 'Skip Label', width: 95 },
-    { key: 'skip_type', label: 'Type', width: 68 },
-    { key: 'waste_stream', label: 'Waste Stream', width: 154 },
-    { key: 'gross', label: 'Gross', width: 64 },
-    { key: 'tare', label: 'Tare', width: 64 },
-    { key: 'net', label: 'Net', width: 66 },
+    { key: 'asset_label', label: 'Parcel Label', width: 95 },
+    { key: 'parcel_type', label: 'Type', width: 80 },
+    { key: 'type_detail', label: 'Container / Material', width: 130 },
+    { key: 'waste_stream', label: 'Waste Stream', width: 120 },
+    { key: 'net', label: 'Net Weight (kg)', width: CONTENT_WIDTH - 95 - 80 - 130 - 120 },
   ];
 
   drawTableHeader(doc, top, columns);
 
   let y = top + 28;
-  let totals = { gross: 0, tare: 0, net: 0 };
+  let totalNet = 0;
 
   if (!assets.length) {
     doc
@@ -293,7 +387,7 @@ function drawAssetsTable(doc, assets) {
       .font('Helvetica')
       .fontSize(10)
       .fillColor('#6B7280')
-      .text('No skips/assets recorded yet.', PAGE_MARGIN + 14, y + 14, {
+      .text('No parcels recorded yet.', PAGE_MARGIN + 14, y + 14, {
         width: CONTENT_WIDTH - 28,
         align: 'center',
       });
@@ -302,12 +396,17 @@ function drawAssetsTable(doc, assets) {
   }
 
   assets.forEach((asset, index) => {
+    const typeDetail = asset.parcel_type === 'CONTAINER'
+      ? formatEnumLabel(asset.container_type)
+      : asset.material_category
+        ? `${asset.material_category.code_cbs} — ${asset.material_category.description_en}`
+        : '—';
+
     const row = {
       asset_label: asset.asset_label || '—',
-      skip_type: formatSkipType(asset.skip_type),
+      parcel_type: formatEnumLabel(asset.parcel_type),
+      type_detail: typeDetail,
       waste_stream: asset.waste_stream ? `${asset.waste_stream.name_en} (${asset.waste_stream.code})` : '—',
-      gross: formatWeightValue(asset.gross_weight_kg),
-      tare: formatWeightValue(asset.tare_weight_kg),
       net: formatWeightValue(asset.net_weight_kg),
     };
 
@@ -335,9 +434,7 @@ function drawAssetsTable(doc, assets) {
       x += column.width;
     });
 
-    totals.gross += Number(asset.gross_weight_kg) || 0;
-    totals.tare += Number(asset.tare_weight_kg) || 0;
-    totals.net += Number(asset.net_weight_kg) || 0;
+    totalNet += Number(asset.net_weight_kg) || 0;
     y += rowHeight + 6;
   });
 
@@ -355,20 +452,8 @@ function drawAssetsTable(doc, assets) {
 
   let totalColumnX = PAGE_MARGIN;
   columns.forEach((column) => {
-    if (column.key === 'gross') {
-      doc.text(formatWeightValue(totals.gross), totalColumnX + 10, y + 12, {
-        width: column.width - 20,
-        align: 'right',
-      });
-    }
-    if (column.key === 'tare') {
-      doc.text(formatWeightValue(totals.tare), totalColumnX + 10, y + 12, {
-        width: column.width - 20,
-        align: 'right',
-      });
-    }
     if (column.key === 'net') {
-      doc.text(formatWeightValue(totals.net), totalColumnX + 10, y + 12, {
+      doc.text(formatWeightValue(totalNet), totalColumnX + 10, y + 12, {
         width: column.width - 20,
         align: 'right',
       });
@@ -474,9 +559,9 @@ function formatDateTime(value, withSeconds = false) {
   return `${datePart} - ${timePart}`;
 }
 
-function formatSkipType(skipType) {
-  if (!skipType) return '—';
-  return String(skipType)
+function formatEnumLabel(value) {
+  if (!value) return '—';
+  return String(value)
     .toLowerCase()
     .split('_')
     .map((part) => part.charAt(0).toUpperCase() + part.slice(1))

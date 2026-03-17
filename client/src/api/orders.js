@@ -7,3 +7,11 @@ export const updateOrder = (id, data) => api.put(`/orders/${id}`, data);
 export const cancelOrder = (id) => api.delete(`/orders/${id}`);
 export const matchPlate = (plate) => api.get('/orders/match-plate', { params: { plate } });
 export const createAdhocArrival = (data) => api.post('/orders/adhoc-arrival', data);
+
+export function getPlanningBoard(params) {
+  return api.get('/orders/planning-board', { params });
+}
+
+export function setOrderIncident(orderId, data) {
+  return api.post(`/orders/${orderId}/incident`, data);
+}

@@ -5,17 +5,20 @@ import toast from 'react-hot-toast';
 import useOrdersStore from '../../store/ordersStore';
 import useAuthStore from '../../store/authStore';
 import ClickableStatusBadge from '../../components/ui/ClickableStatusBadge';
+import SupplierTypeBadge from '../../components/ui/SupplierTypeBadge';
 import OrderFormModal from '../../components/orders/OrderFormModal';
-import { updateOrder } from '../../api/orders';
+import { updateOrder, setOrderIncident } from '../../api/orders';
 import { format } from 'date-fns';
 import Breadcrumb from '../../components/ui/Breadcrumb';
 
 const ORDER_TRANSITIONS = {
-  PLANNED: ['ARRIVED', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED'],
-  ARRIVED: ['PLANNED', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED'],
-  IN_PROGRESS: ['COMPLETED', 'CANCELLED'],
-  COMPLETED: [],
-  CANCELLED: ['PLANNED', 'ARRIVED'],
+  PLANNED: ['ARRIVED', 'CANCELLED'],
+  ARRIVED: ['IN_PROGRESS', 'DISPUTE', 'CANCELLED'],
+  IN_PROGRESS: ['COMPLETED', 'DISPUTE', 'CANCELLED'],
+  DISPUTE: ['IN_PROGRESS', 'COMPLETED', 'CANCELLED'],
+  COMPLETED: ['INVOICED'],
+  INVOICED: [],
+  CANCELLED: ['PLANNED'],
 };
 
 const ACTION_LABELS = {
@@ -34,6 +37,8 @@ export default function OrderDetailPage() {
   const [showEdit, setShowEdit] = useState(false);
   const [transitioning, setTransitioning] = useState(false);
   const [showActions, setShowActions] = useState(false);
+  const [incidentCategory, setIncidentCategory] = useState('');
+  const [incidentNotes, setIncidentNotes] = useState('');
 
   const canEdit = ['ADMIN', 'LOGISTICS_PLANNER'].includes(user?.role);
   const allowedTransitions = ORDER_TRANSITIONS[order?.status] || [];
@@ -52,6 +57,18 @@ export default function OrderDetailPage() {
       toast.error(err.response?.data?.error || 'Failed to update status');
     } finally {
       setTransitioning(false);
+    }
+  }
+
+  async function handleIncident() {
+    try {
+      await setOrderIncident(order.id, { incident_category: incidentCategory, incident_notes: incidentNotes });
+      toast.success('Incident reported');
+      setIncidentCategory('');
+      setIncidentNotes('');
+      fetchOrder(id);
+    } catch (err) {
+      toast.error(err.response?.data?.error || 'Failed to report incident');
     }
   }
 
@@ -112,11 +129,31 @@ export default function OrderDetailPage() {
           </div>
           <div className="min-w-0">
             <span className="text-xs font-medium text-grey-500 uppercase tracking-wide">Supplier</span>
-            <p className="mt-0.5 break-words text-sm font-medium text-grey-900">{order.supplier?.name}</p>
+            <div className="mt-0.5 flex items-center gap-1.5">
+              <p className="break-words text-sm font-medium text-grey-900">{order.supplier?.name}</p>
+              <SupplierTypeBadge type={order.supplier?.supplier_type} />
+            </div>
           </div>
           <div className="min-w-0">
-            <span className="text-xs font-medium text-grey-500 uppercase tracking-wide">Waste Stream</span>
-            <p className="mt-0.5 break-words text-sm font-medium text-grey-900">{order.waste_stream?.name_en}</p>
+            <span className="text-xs font-medium text-grey-500 uppercase tracking-wide">Waste Streams</span>
+            <div className="mt-0.5 flex flex-wrap gap-1.5">
+              {order.waste_streams?.length > 0 ? (
+                order.waste_streams.map((ows) => (
+                  <span
+                    key={ows.waste_stream?.id || ows.id}
+                    className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-50 text-green-700 border border-green-200"
+                  >
+                    {ows.waste_stream?.name_en || 'Unknown'}
+                  </span>
+                ))
+              ) : order.waste_stream?.name_en ? (
+                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-50 text-green-700 border border-green-200">
+                  {order.waste_stream.name_en}
+                </span>
+              ) : (
+                <p className="text-sm font-medium text-grey-900">--</p>
+              )}
+            </div>
           </div>
           <div className="min-w-0">
             <span className="text-xs font-medium text-grey-500 uppercase tracking-wide">Planned Date</span>
@@ -125,7 +162,7 @@ export default function OrderDetailPage() {
             </p>
           </div>
           <div className="min-w-0">
-            <span className="text-xs font-medium text-grey-500 uppercase tracking-wide">Expected Skips</span>
+            <span className="text-xs font-medium text-grey-500 uppercase tracking-wide">Expected Parcels</span>
             <p className="text-sm font-medium text-grey-900 mt-0.5">{order.expected_skip_count}</p>
           </div>
           <div className="min-w-0">
@@ -150,7 +187,76 @@ export default function OrderDetailPage() {
               <p className="mt-0.5 break-words text-sm text-grey-700">{order.notes}</p>
             </div>
           )}
+          {order.client_reference && (
+            <div className="min-w-0">
+              <span className="text-xs font-medium text-grey-500 uppercase tracking-wide">Client Reference</span>
+              <p className="mt-0.5 break-words text-sm font-medium text-grey-900">{order.client_reference}</p>
+            </div>
+          )}
+          {order.adhoc_person_name && (
+            <div className="min-w-0">
+              <span className="text-xs font-medium text-grey-500 uppercase tracking-wide">Contact Person</span>
+              <p className="mt-0.5 break-words text-sm font-medium text-grey-900">{order.adhoc_person_name}</p>
+            </div>
+          )}
+          {order.adhoc_id_reference && (
+            <div className="min-w-0">
+              <span className="text-xs font-medium text-grey-500 uppercase tracking-wide">ID Reference</span>
+              <p className="mt-0.5 break-words text-sm font-medium text-grey-900">{order.adhoc_id_reference}</p>
+            </div>
+          )}
+          {order.is_lzv && (
+            <div className="min-w-0">
+              <span className="text-xs font-medium text-grey-500 uppercase tracking-wide">LZV</span>
+              <span className="mt-0.5 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-50 text-purple-700 border border-purple-300">
+                LZV Vehicle
+              </span>
+            </div>
+          )}
+          {order.incident_category && (
+            <div className="min-w-0 sm:col-span-2">
+              <span className="text-xs font-medium text-grey-500 uppercase tracking-wide">Incident</span>
+              <p className="mt-0.5 text-sm font-medium text-red-600">{order.incident_category.replace(/_/g, ' ')}</p>
+              {order.incident_notes && (
+                <p className="mt-0.5 break-words text-sm text-grey-700">{order.incident_notes}</p>
+              )}
+            </div>
+          )}
         </div>
+
+        {/* Incident Section */}
+        {!['COMPLETED', 'INVOICED'].includes(order.status) && (
+          <div className="mt-4 pt-4 border-t">
+            <h4 className="text-sm font-medium text-gray-700 mb-2">Report Incident</h4>
+            <div className="flex gap-2">
+              <select
+                value={incidentCategory}
+                onChange={e => setIncidentCategory(e.target.value)}
+                className="h-10 px-3.5 rounded-md border border-grey-300 text-sm text-grey-900 bg-white focus:border-green-500 focus:ring-[3px] focus:ring-green-500/15 outline-none transition-colors"
+              >
+                <option value="">Select incident type...</option>
+                <option value="DAMAGE">Damage</option>
+                <option value="DISPUTE">Dispute</option>
+                <option value="SPECIAL_HANDLING">Special Handling</option>
+                <option value="DRIVER_INSTRUCTION">Driver Instruction</option>
+              </select>
+              <input
+                type="text"
+                placeholder="Notes..."
+                value={incidentNotes}
+                onChange={e => setIncidentNotes(e.target.value)}
+                className="flex-1 h-10 px-3.5 rounded-md border border-grey-300 text-sm text-grey-900 focus:border-green-500 focus:ring-[3px] focus:ring-green-500/15 outline-none transition-colors"
+              />
+              <button
+                onClick={handleIncident}
+                disabled={!incidentCategory}
+                className="h-10 px-4 bg-red-500 text-white rounded-md text-sm font-semibold hover:bg-red-600 disabled:opacity-50 transition-colors"
+              >
+                Report
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="bg-white rounded-lg border border-grey-200 shadow-sm overflow-hidden">

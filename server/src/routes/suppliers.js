@@ -11,4 +11,9 @@ router.post('/', requireRole(['ADMIN', 'LOGISTICS_PLANNER']), supplierController
 router.put('/:id', requireRole(['ADMIN', 'LOGISTICS_PLANNER']), supplierController.update);
 router.delete('/:id', requireRole(['ADMIN']), supplierController.remove);
 
+// Supplier afvalstroomnummer management
+router.get('/:id/afvalstroomnummers', supplierController.listAfvalstroomnummers);
+router.post('/:id/afvalstroomnummers', requireRole(['ADMIN', 'FINANCE_MANAGER']), supplierController.createAfvalstroomnummer);
+router.delete('/:id/afvalstroomnummers/:afsId', requireRole(['ADMIN', 'FINANCE_MANAGER']), supplierController.deleteAfvalstroomnummer);
+
 module.exports = router;

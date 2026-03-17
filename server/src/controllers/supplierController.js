@@ -32,7 +32,16 @@ async function list(req, res, next) {
 
 async function getById(req, res, next) {
   try {
-    const supplier = await prisma.supplier.findUnique({ where: { id: req.params.id } });
+    const supplier = await prisma.supplier.findUnique({
+      where: { id: req.params.id },
+      include: {
+        afvalstroomnummers: {
+          where: { is_active: true },
+          include: { waste_stream: { select: { id: true, name_en: true, code: true } } },
+          orderBy: { created_at: 'desc' },
+        },
+      },
+    });
     if (!supplier) {
       return res.status(404).json({ error: 'Supplier not found' });
     }
@@ -44,14 +53,14 @@ async function getById(req, res, next) {
 
 async function create(req, res, next) {
   try {
-    const { name, supplier_type, kvk_number, contact_name, contact_email } = req.body;
+    const { name, supplier_type, kvk_number, contact_name, contact_email, btw_number, iban, contact_phone, address, vihb_number, pro_registration_number } = req.body;
     if (!name || !supplier_type) {
       return res.status(400).json({ error: 'Name and supplier_type are required' });
     }
 
     const supplier = await prisma.$transaction(async (tx) => {
       const created = await tx.supplier.create({
-        data: { name, supplier_type, kvk_number, contact_name, contact_email },
+        data: { name, supplier_type, kvk_number, contact_name, contact_email, btw_number, iban, contact_phone, address, vihb_number, pro_registration_number },
       });
       await writeAuditLog({
         userId: req.user.userId,
@@ -77,12 +86,12 @@ async function update(req, res, next) {
       return res.status(404).json({ error: 'Supplier not found' });
     }
 
-    const { name, supplier_type, kvk_number, contact_name, contact_email } = req.body;
+    const { name, supplier_type, kvk_number, contact_name, contact_email, btw_number, iban, contact_phone, address, vihb_number, pro_registration_number } = req.body;
 
     const supplier = await prisma.$transaction(async (tx) => {
       const updated = await tx.supplier.update({
         where: { id },
-        data: { name, supplier_type, kvk_number, contact_name, contact_email },
+        data: { name, supplier_type, kvk_number, contact_name, contact_email, btw_number, iban, contact_phone, address, vihb_number, pro_registration_number },
       });
       await writeAuditLog({
         userId: req.user.userId,
@@ -127,4 +136,55 @@ async function remove(req, res, next) {
   }
 }
 
-module.exports = { list, getById, create, update, remove };
+async function listAfvalstroomnummers(req, res) {
+  try {
+    const records = await prisma.supplierAfvalstroomnummer.findMany({
+      where: { supplier_id: req.params.id, is_active: true },
+      include: { waste_stream: { select: { id: true, name_en: true, code: true } } },
+      orderBy: { created_at: 'desc' },
+    });
+    res.json(records);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+}
+
+async function createAfvalstroomnummer(req, res) {
+  try {
+    const { afvalstroomnummer, waste_stream_id } = req.body;
+    if (!afvalstroomnummer) {
+      return res.status(400).json({ error: 'afvalstroomnummer is required' });
+    }
+    const record = await prisma.supplierAfvalstroomnummer.create({
+      data: {
+        supplier_id: req.params.id,
+        afvalstroomnummer,
+        waste_stream_id: waste_stream_id || null,
+      },
+      include: { waste_stream: { select: { id: true, name_en: true, code: true } } },
+    });
+    res.status(201).json(record);
+  } catch (err) {
+    if (err.code === 'P2002') {
+      return res.status(409).json({ error: 'Afvalstroomnummer already registered for this supplier' });
+    }
+    res.status(500).json({ error: err.message });
+  }
+}
+
+async function deleteAfvalstroomnummer(req, res) {
+  try {
+    await prisma.supplierAfvalstroomnummer.update({
+      where: { id: req.params.afsId },
+      data: { is_active: false },
+    });
+    res.json({ deleted: true });
+  } catch (err) {
+    if (err.code === 'P2025') {
+      return res.status(404).json({ error: 'Record not found' });
+    }
+    res.status(500).json({ error: err.message });
+  }
+}
+
+module.exports = { list, getById, create, update, remove, listAfvalstroomnummers, createAfvalstroomnummer, deleteAfvalstroomnummer };

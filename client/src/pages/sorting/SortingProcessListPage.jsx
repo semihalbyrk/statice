@@ -5,8 +5,9 @@ import useSortingListStore from '../../store/sortingListStore';
 import StatusBadge from '../../components/ui/StatusBadge';
 import { format } from 'date-fns';
 import { getSortingName } from '../../utils/entityNames';
+import SupplierTypeBadge from '../../components/ui/SupplierTypeBadge';
 
-const SKIP_LABELS = { OPEN_TOP: 'Open Top', CLOSED_TOP: 'Closed Top', GITTERBOX: 'Gitterbox', PALLET: 'Pallet', OTHER: 'Other' };
+const CONTAINER_TYPE_LABELS = { OPEN_TOP: 'Open Top', CLOSED_TOP: 'Closed Top', GITTERBOX: 'Gitterbox', PALLET: 'Pallet', OTHER: 'Other' };
 const STATUSES = ['', 'PLANNED', 'SORTED'];
 
 export default function SortingProcessListPage() {
@@ -69,7 +70,7 @@ export default function SortingProcessListPage() {
               <th className="text-left px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide min-w-[120px]">Plate</th>
               <th className="text-left px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide min-w-[200px]">Waste Stream</th>
               <th className="text-left px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide min-w-[140px]"><span className="inline-flex items-center gap-1">Date <ArrowUpDown size={12} className="text-grey-400" /></span></th>
-              <th className="text-right px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide">Skips</th>
+              <th className="text-right px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide">Parcels</th>
               <th className="text-right px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide min-w-[130px]">Net Weight</th>
             </tr>
           </thead>
@@ -92,7 +93,10 @@ export default function SortingProcessListPage() {
                 const order = inbound?.order;
                 const assets = inbound?.assets || [];
                 const totalNet = assets.reduce((sum, a) => sum + (Number(a.net_weight_kg) || 0), 0);
-                const skipTypes = [...new Set(assets.map((a) => SKIP_LABELS[a.skip_type] || a.skip_type))].join(', ');
+                const containerTypes = [...new Set(assets.map((a) => {
+                  if (a.parcel_type === 'MATERIAL') return 'Material';
+                  return a.container_type ? (CONTAINER_TYPE_LABELS[a.container_type] || a.container_type) : '—';
+                }))].join(', ');
                 const wasteStreams = [...new Set(assets.map((a) => a.waste_stream?.name_en).filter(Boolean))].join(', ');
 
                 return (
@@ -109,7 +113,12 @@ export default function SortingProcessListPage() {
                       <StatusBadge status={session.status} />
                     </td>
                     <td className="px-4 py-2.5 text-sm text-grey-700">{order?.order_number || '—'}</td>
-                    <td className="px-4 py-2.5 text-grey-700">{order?.supplier?.name || '—'}</td>
+                    <td className="px-4 py-2.5 text-grey-700">
+                      <div className="flex items-center gap-1.5">
+                        {order?.supplier?.name || '—'}
+                        <SupplierTypeBadge type={order?.supplier?.supplier_type} />
+                      </div>
+                    </td>
                     <td className="px-4 py-2.5 text-grey-700">{order?.carrier?.name || '—'}</td>
                     <td className="px-4 py-2.5 font-mono text-grey-700">{inbound?.vehicle?.registration_plate || '—'}</td>
                     <td className="px-4 py-2.5 text-grey-700">{wasteStreams || order?.waste_stream?.name_en || '—'}</td>

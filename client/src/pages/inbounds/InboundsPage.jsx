@@ -5,6 +5,7 @@ import toast from 'react-hot-toast';
 import { useInboundsListStore } from '../../store/weighingStore';
 import { updateInboundStatus } from '../../api/weighingEvents';
 import ClickableStatusBadge from '../../components/ui/ClickableStatusBadge';
+import SupplierTypeBadge from '../../components/ui/SupplierTypeBadge';
 import { format } from 'date-fns';
 
 const STATUSES = ['', 'ARRIVED', 'WEIGHED_IN', 'WEIGHED_OUT', 'READY_FOR_SORTING', 'SORTED'];
@@ -88,7 +89,7 @@ export default function InboundsPage() {
               <th className="text-left px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide">Supplier</th>
               <th className="text-left px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide">Waste Stream</th>
               <th className="text-left px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide"><span className="inline-flex items-center gap-1">Arrived At <ArrowUpDown size={12} className="text-grey-400" /></span></th>
-              <th className="text-right px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide">Skips</th>
+              <th className="text-right px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide">Parcels</th>
               <th className="text-right px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide">Total Net Weight</th>
             </tr>
           </thead>
@@ -133,7 +134,12 @@ export default function InboundsPage() {
                     {inbound.vehicle?.registration_plate}
                   </td>
                   <td className="px-4 py-2.5 text-grey-700">{inbound.order?.carrier?.name}</td>
-                  <td className="px-4 py-2.5 text-grey-700">{inbound.order?.supplier?.name}</td>
+                  <td className="px-4 py-2.5 text-grey-700">
+                    <div className="flex items-center gap-1.5">
+                      <span>{inbound.order?.supplier?.name || '—'}</span>
+                      <SupplierTypeBadge type={inbound.order?.supplier?.supplier_type} />
+                    </div>
+                  </td>
                   <td className="px-4 py-2.5 text-grey-700">{inbound.order?.waste_stream?.name_en}</td>
                   <td className="px-4 py-2.5 text-grey-700">
                     {inbound.arrived_at ? format(new Date(inbound.arrived_at), 'dd MMM yyyy HH:mm') : '-'}

@@ -2,7 +2,7 @@
  * Pfister Weighbridge Simulator
  *
  * PRD §6.2 Interface Contract:
- *   requestWeighing(weighingType, grossWeightKg?) → Promise<PfisterTicket>
+ *   requestWeighing(weighingType, previousWeightKg?) → Promise<PfisterTicket>
  *
  * This module is the ONLY place Pfister integration lives.
  * Replacing this file with a real Pfister API client requires zero changes elsewhere.
@@ -10,8 +10,9 @@
  * Simulated behaviour:
  *   - 1500ms network delay
  *   - GROSS: random weight 8000–24000 kg
- *   - TARE:  random weight 6000–10000 kg, capped at grossWeightKg - 500
- *   - Ticket number: PF-YYYY-NNNNNN (yearly counter via MAX query)
+ *   - INTERMEDIATE: previousWeight minus a realistic parcel weight (500–4000 kg)
+ *   - TARE: random 4000–7000 kg, capped at previousWeight - 200
+ *   - Ticket number: PF-NNNNN (random 5-digit)
  *   - Creates PfisterTicket record in DB
  */
 
@@ -39,20 +40,24 @@ function randomWeight(min, max) {
 /**
  * Request a weighing from the Pfister weighbridge.
  *
- * @param {'GROSS' | 'TARE'} weighingType
- * @param {number} [grossWeightKg] - required for TARE to cap the result
+ * @param {'GROSS' | 'INTERMEDIATE' | 'TARE'} weighingType
+ * @param {number} [previousWeightKg] - required for INTERMEDIATE and TARE
  * @returns {Promise<object>} PfisterTicket record
  */
-async function requestWeighing(weighingType, grossWeightKg) {
+async function requestWeighing(weighingType, previousWeightKg) {
   // Simulate network/hardware delay
   await new Promise((r) => setTimeout(r, 1500));
 
   let weightKg;
   if (weighingType === 'GROSS') {
     weightKg = randomWeight(8000, 24000);
+  } else if (weighingType === 'INTERMEDIATE') {
+    if (!previousWeightKg) throw new Error('previousWeightKg required for INTERMEDIATE weighing');
+    const parcelWeight = randomWeight(500, 4000);
+    weightKg = Math.max(5000, previousWeightKg - parcelWeight);
   } else if (weighingType === 'TARE') {
-    const rawTare = randomWeight(6000, 10000);
-    const maxTare = grossWeightKg ? grossWeightKg - 500 : 10000;
+    const rawTare = randomWeight(4000, 7000);
+    const maxTare = previousWeightKg ? previousWeightKg - 200 : 7000;
     weightKg = Math.min(rawTare, maxTare);
   } else {
     throw new Error(`Invalid weighing type: ${weighingType}`);

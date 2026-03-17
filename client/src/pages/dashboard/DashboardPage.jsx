@@ -5,6 +5,7 @@ import { format } from 'date-fns';
 import useAuthStore from '../../store/authStore';
 import { getDashboardStats } from '../../api/dashboard';
 import StatusBadge from '../../components/ui/StatusBadge';
+import SupplierTypeBadge from '../../components/ui/SupplierTypeBadge';
 
 const ROLE_LABELS = {
   ADMIN: 'Admin',
@@ -147,7 +148,7 @@ export default function DashboardPage() {
                         <th className="text-left px-5 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide">Carrier</th>
                         <th className="text-left px-5 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide">Supplier</th>
                         <th className="text-left px-5 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide">Order #</th>
-                        <th className="text-left px-5 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide">Skips</th>
+                        <th className="text-left px-5 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide">Parcels</th>
                         <th className="text-left px-5 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide">Arrived At</th>
                       </tr>
                     </thead>
@@ -156,7 +157,12 @@ export default function DashboardPage() {
                         <tr key={arrival.id} className="hover:bg-grey-50 transition-colors">
                           <td className="px-5 py-3 font-medium text-grey-900">{arrival.vehicle_plate}</td>
                           <td className="px-5 py-3 text-grey-500">{arrival.carrier}</td>
-                          <td className="px-5 py-3 text-grey-500">{arrival.supplier}</td>
+                          <td className="px-5 py-3 text-grey-500">
+                            <div className="flex items-center gap-1.5">
+                              {arrival.supplier}
+                              <SupplierTypeBadge type={arrival.supplier_type} />
+                            </div>
+                          </td>
                           <td className="px-5 py-3 text-grey-900">{arrival.order_number}</td>
                           <td className="px-5 py-3 text-grey-900">{arrival.skips_registered}</td>
                           <td className="px-5 py-3 text-grey-500">{formatTime(arrival.arrived_at)}</td>

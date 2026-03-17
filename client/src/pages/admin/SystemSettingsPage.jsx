@@ -154,7 +154,7 @@ export default function SystemSettingsPage() {
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className={labelClass}>Max Skips per Event</label>
+              <label className={labelClass}>Max Parcels per Event</label>
               <input type="number" min={1} max={20} value={settings.max_skips_per_event}
                 onChange={(e) => handleChange('max_skips_per_event', parseInt(e.target.value) || 1)} className={inputClass} />
             </div>

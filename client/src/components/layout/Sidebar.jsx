@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, ClipboardList, Truck, Scale, Building2, Users, Recycle, FileBarChart,
-  UserCog, ScrollText, Settings2, Boxes, ChevronDown, ChevronRight, LogOut,
+  UserCog, ScrollText, Settings2, Boxes, ChevronDown, ChevronRight, LogOut, CalendarDays,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../../api/axios';
@@ -11,6 +11,7 @@ import useAuthStore from '../../store/authStore';
 const NAV_ITEMS = [
   { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, roles: null },
   { to: '/orders', label: 'Orders', icon: ClipboardList, roles: ['ADMIN', 'LOGISTICS_PLANNER'] },
+  { to: '/planning', label: 'Planning Board', icon: CalendarDays, roles: ['ADMIN', 'LOGISTICS_PLANNER', 'GATE_OPERATOR'] },
   { to: '/arrival', label: 'Arrival', icon: Truck, roles: ['GATE_OPERATOR', 'ADMIN'] },
   { to: '/inbounds', label: 'Inbounds', icon: Scale, roles: ['GATE_OPERATOR', 'ADMIN'] },
   { to: '/sorting', label: 'Sorting', icon: Boxes, roles: ['SORTING_EMPLOYEE', 'GATE_OPERATOR', 'ADMIN'] },
@@ -89,13 +90,13 @@ export default function Sidebar({ open, onClose }) {
         <div className="fixed inset-0 bg-black/40 z-40 lg:hidden" onClick={onClose} />
       )}
 
-      <aside className={`fixed inset-y-0 left-0 z-50 w-[258px] bg-dark-blue-900 text-white flex flex-col shrink-0 transition-transform duration-200 lg:static lg:translate-x-0 ${
+      <aside className={`fixed inset-y-0 left-0 z-50 w-[220px] bg-dark-blue-900 text-white flex flex-col shrink-0 transition-transform duration-200 lg:static lg:translate-x-0 ${
         open ? 'translate-x-0' : '-translate-x-full'
       }`}>
         <div className="h-20 flex items-center gap-3 px-4 border-b border-white/10">
           <img src="/logo-360.png" alt="360" className="h-12 w-12 shrink-0 rounded-full" />
           <div className="min-w-0 flex-1">
-            <div className="whitespace-nowrap text-[19px] font-bold tracking-tight text-white">Statice Dashboard</div>
+            <div className="whitespace-nowrap text-[17px] font-bold tracking-tight text-white">Evreka360</div>
           </div>
         </div>
 
