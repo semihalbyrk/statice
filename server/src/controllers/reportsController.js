@@ -52,6 +52,20 @@ const REPORT_TYPES = {
     xlsxGen: 'generateAssetUtilisationXLSX',
     required: ['dateFrom', 'dateTo'],
   },
+  'RPT-07': {
+    name: 'Downstream Material Statement',
+    fetcher: 'fetchDownstreamStatementData',
+    pdfGen: 'generateDownstreamStatementPDF',
+    xlsxGen: 'generateDownstreamStatementXLSX',
+    required: ['supplierId', 'materialId', 'dateFrom', 'dateTo'],
+  },
+  'RPT-DS': {
+    name: 'Downstream Entry Statement',
+    fetcher: 'fetchDownstreamEntryStatement',
+    pdfGen: 'generateDownstreamStatementPDF',
+    xlsxGen: null,
+    required: ['sessionId', 'catalogueEntryId'],
+  },
 };
 
 function timestamp() {
@@ -105,7 +119,7 @@ async function generate(req, res, next) {
     }
 
     // Generate XLSX
-    if (fmt === 'xlsx' || fmt === 'both') {
+    if ((fmt === 'xlsx' || fmt === 'both') && config.xlsxGen) {
       const filename = `${type}_${ts}_${shortId}.xlsx`;
       filePathXlsx = path.join(STORAGE_DIR, filename);
       await xlsxGen[config.xlsxGen](data, filePathXlsx, user);
@@ -188,6 +202,7 @@ async function list(req, res, next) {
 
     const where = {};
     if (req.query.type) where.type = req.query.type;
+    if (req.query.session_id) where.parameters_json = { path: ['sessionId'], equals: req.query.session_id };
 
     const [reports, total] = await Promise.all([
       prisma.report.findMany({

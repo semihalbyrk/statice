@@ -323,6 +323,362 @@ async function generateMaterialRecoveryPDF(data, filePath, user) {
   await finalizePdf(doc, stream);
 }
 
+/* ───── RPT-07: Downstream Material Statement ───── */
+
+async function generateDownstreamStatementPDF(data, filePath) {
+  // Landscape A4 to fit all 11 fraction columns
+  const LW = PAGE_HEIGHT; // 841.89 landscape width
+  const LH = PAGE_WIDTH;  // 595.28 landscape height
+  const LM = 40; // margin
+  const LCW = LW - 2 * LM; // content width ~762
+  const LBL = LH - 60; // bottom limit
+
+  const doc = new PDFDocument({ size: 'A4', layout: 'landscape', margin: LM });
+  const stream = fs.createWriteStream(filePath);
+  doc.pipe(stream);
+
+  const LIGHT_BLUE = '#D9E7F5';
+  const DARK_BLUE = '#5E99D0';
+  const CB = '#000000'; // cell border
+  const ROWS_PER_PAGE = 8;
+
+  function nlPct(v) { return (Number(v) || 0).toFixed(2).replace('.', ',') + '%'; }
+  function nlPct1(v) { return (Number(v) || 0).toFixed(1).replace('.', ',') + '%'; }
+  function nlNum(v) { return Number(v || 0).toLocaleString('nl-NL', { maximumFractionDigits: 0 }); }
+  function formatDownstreamDate(date) {
+    if (!date) return '—';
+    const d = new Date(date);
+    return `${d.getDate()}-${d.getMonth() + 1}-${d.getFullYear()}`;
+  }
+
+  function cell(x, y, w, h, text, opts = {}) {
+    if (opts.fill) { doc.save(); doc.rect(x, y, w, h).fill(opts.fill); doc.restore(); }
+    if (opts.stroke !== false) {
+      doc.rect(x, y, w, h).lineWidth(0.5).strokeColor(CB).stroke();
+    }
+    const fontSize = opts.fontSize || 9;
+    const font = opts.bold ? 'Helvetica-Bold' : 'Helvetica';
+    const paddingX = opts.paddingX ?? 3;
+    const paddingY = opts.paddingY ?? 3;
+    const width = w - (paddingX * 2);
+    const align = opts.align || 'left';
+
+    doc.font(font).fontSize(fontSize).fillColor(opts.color || TEXT_PRIMARY);
+    const textOptions = { width, align };
+    const textHeight = opts.valign === 'center'
+      ? doc.heightOfString(String(text || ''), textOptions)
+      : fontSize;
+    const textY = opts.valign === 'center'
+      ? y + Math.max(paddingY, (h - textHeight) / 2)
+      : y + paddingY;
+
+    doc.save();
+    doc.rect(x + 1, y + 1, w - 2, h - 2).clip();
+    doc.font(font).fontSize(fontSize).fillColor(opts.color || TEXT_PRIMARY)
+      .text(String(text || ''), x + paddingX, textY, {
+        width,
+        height: h - (paddingY * 2),
+        align,
+        underline: opts.underline,
+        link: opts.link,
+      });
+    doc.restore();
+  }
+
+  function drawTextHighlight(x, y, w, h, text, opts = {}) {
+    const fontSize = opts.fontSize || 9;
+    const font = opts.bold ? 'Helvetica-Bold' : 'Helvetica';
+    const paddingX = 6;
+    const highlightPadX = 3;
+    const highlightPadY = 1;
+
+    doc.font(font).fontSize(fontSize);
+    const textWidth = Math.min(doc.widthOfString(String(text || '')), w - (paddingX * 2) - (highlightPadX * 2));
+    const lineHeight = doc.currentLineHeight();
+    const highlightWidth = Math.min(w - (paddingX * 2), textWidth + (highlightPadX * 2));
+    let highlightX = x + paddingX;
+    if ((opts.align || 'center') === 'center') {
+      highlightX = x + (w - highlightWidth) / 2;
+    } else if ((opts.align || 'center') === 'right') {
+      highlightX = x + w - paddingX - highlightWidth;
+    }
+    const highlightY = y + (h - lineHeight) / 2 - highlightPadY + 1;
+
+    doc.save();
+    doc.rect(highlightX, highlightY, highlightWidth, lineHeight + (highlightPadY * 2)).fill(opts.fill || LIGHT_BLUE);
+    doc.restore();
+    doc.font(font).fontSize(fontSize).fillColor(opts.color || TEXT_PRIMARY)
+      .text(String(text || ''), x + paddingX, y + (h - lineHeight) / 2 + 1, {
+        width: w - (paddingX * 2),
+        align: opts.align || 'center',
+        lineBreak: false,
+      });
+  }
+
+  doc.save();
+  doc.rect(0, 0, LW, LH).fill('#FFFFFF');
+  doc.restore();
+
+  // === TITLE BOX ===
+  const titleH = 30;
+  doc.rect(LM, LM, LCW, titleH).lineWidth(0.5).strokeColor(CB).stroke();
+  doc.font('Helvetica-Bold').fontSize(11).fillColor(TEXT_PRIMARY)
+    .text('FORM DOWNSTREAM MONITORING PROCESSING RECEIVED WASTE OF ELECTRIC AND ELECTRONIC EQUIPMENT AND COMPONENTS',
+      LM + 6, LM + 9, { width: LCW - 12, align: 'center' });
+
+  let cy = LM + titleH + 6;
+
+  // === CONTACT + LOGO BLOCK ===
+  const contactBlockH = 74;
+  const contactBlockW = 292;
+  const contactHeaderH = 22;
+  const contactLabelW = 60;
+  const contactRowH = 14;
+  const contactValueW = contactBlockW - contactLabelW;
+  const logoX = LM + contactBlockW;
+  const logoW = LCW - contactBlockW;
+
+  doc.rect(LM, cy, LCW, contactBlockH).lineWidth(0.5).strokeColor(CB).stroke();
+  doc.moveTo(logoX, cy).lineTo(logoX, cy + contactBlockH).lineWidth(0.5).strokeColor(CB).stroke();
+  cell(LM, cy, contactBlockW, contactHeaderH, 'For further questions please contact:', {
+    fill: LIGHT_BLUE,
+    fontSize: 7.5,
+    align: 'center',
+    valign: 'center',
+  });
+
+  const contactStartY = cy + contactHeaderH;
+  cell(LM, contactStartY, contactLabelW, contactRowH, 'email', {
+    fontSize: 7.5,
+    align: 'right',
+    valign: 'center',
+  });
+  cell(LM + contactLabelW, contactStartY, contactValueW, contactRowH, 'office@statice.eu', {
+    fontSize: 7.5,
+    color: '#0000EE',
+    align: 'right',
+    valign: 'center',
+    underline: true,
+    link: 'mailto:office@statice.eu',
+  });
+  cell(LM, contactStartY + contactRowH, contactLabelW, contactRowH, 'name', {
+    fontSize: 7.5,
+    align: 'right',
+    valign: 'center',
+  });
+  cell(LM + contactLabelW, contactStartY + contactRowH, contactValueW, contactRowH, 'Rob den Mulder', {
+    fontSize: 7.5,
+    align: 'right',
+    valign: 'center',
+  });
+  cell(LM, contactStartY + (contactRowH * 2), contactLabelW, contactRowH, 'Tel:', {
+    fontSize: 7.5,
+    align: 'right',
+    valign: 'center',
+  });
+  cell(LM + contactLabelW, contactStartY + (contactRowH * 2), contactValueW, contactRowH, '+31-77-306 06 88', {
+    fontSize: 7.5,
+    align: 'right',
+    valign: 'center',
+  });
+
+  // Logo (right side, vertically centered inside the shared block)
+  try {
+    const dsLogoPath = require('path').resolve(__dirname, '../../../docs/Statice_Downstream_Report_Logo.png');
+    const fallbackLogoPath = require('path').resolve(__dirname, '../../../docs/logo-statice-elektronica-recycling.png');
+    const logoFile = require('fs').existsSync(dsLogoPath) ? dsLogoPath : require('fs').existsSync(fallbackLogoPath) ? fallbackLogoPath : null;
+    if (logoFile) {
+      const logoFitW = 260;
+      const logoFitH = 58;
+      doc.image(logoFile, logoX + ((logoW - logoFitW) / 2), cy + ((contactBlockH - logoFitH) / 2), { fit: [logoFitW, logoFitH] });
+    }
+  } catch { /* no logo */ }
+
+  cy += contactBlockH;
+
+  // === MATERIAL HEADER TABLE ===
+  const mCols = [
+    { l: 'Period', w: 60 },
+    { l: 'Sender', w: 120 },
+    { l: 'Eural\nCode', w: 55 },
+    { l: 'WEEE\nCategory', w: 60 },
+    { l: 'Material', w: 100 },
+    { l: 'Quantity\nin kg', w: 65 },
+    { l: 'Process Description', w: LCW - 60 - 120 - 55 - 60 - 100 - 65 },
+  ];
+  const mhH = 28;
+  let mx = LM;
+  for (const c of mCols) {
+    cell(mx, cy, c.w, mhH, c.l, { fill: LIGHT_BLUE, fontSize: 8.8, align: 'center', valign: 'center', paddingX: 4 });
+    mx += c.w;
+  }
+  cy += mhH;
+  const periodYear = data.period?.from ? new Date(data.period.from).getFullYear() : '—';
+  const mVals = [
+    String(periodYear),
+    data.supplier?.name || '—',
+    data.material?.eural_code || '—',
+    data.material?.weee_category || '—',
+    data.material?.name_en || '—',
+    nlNum(data.totalMaterialKg),
+    data.processDescription || '—',
+  ];
+  mx = LM;
+  const mdH = 24;
+  for (let i = 0; i < mCols.length; i++) {
+    cell(mx, cy, mCols[i].w, mdH, '', { fontSize: 10 });
+    if (i === mCols.length - 1) {
+      drawTextHighlight(mx, cy, mCols[i].w, mdH, mVals[i], { fontSize: 9.5, align: 'center' });
+    } else {
+      cell(mx, cy, mCols[i].w, mdH, mVals[i], { fontSize: 9.5, align: 'center', valign: 'center', stroke: false });
+    }
+    mx += mCols[i].w;
+  }
+  cy += mdH + 12;
+
+  // === FRACTIONS TABLE ===
+  // Column widths tuned to match reference proportions
+  const fCols = [
+    { l: 'Fractions', w: 110 },
+    { l: 'Eural\nCode', w: 52 },
+    { l: '%', w: 40 },
+    { l: 'First\nacceptant\n/\nFollowing', w: 58 },
+    { l: 'Process Description', w: 100 },
+    { l: '%\nPrepared\nfor re-use', w: 58 },
+    { l: '%\nRecycling', w: 56 },
+    { l: '% Other\nmaterial\nrecovery', w: 56 },
+    { l: '% Energy\nRecovery', w: 56 },
+    { l: '% Thermal\nDisposal', w: 56 },
+    { l: '% Landfill\nDisposal', w: LCW - 110 - 52 - 40 - 58 - 100 - 58 - 56 - 56 - 56 - 56 },
+  ];
+  const groupWidths = [fCols[0].w, fCols[1].w, fCols[2].w, fCols[3].w, fCols[4].w, fCols.slice(5).reduce((sum, col) => sum + col.w, 0)];
+  const dataAlign = ['left', 'center', 'center', 'center', 'center', 'center', 'center', 'center', 'center', 'center', 'center'];
+  const nH = 16;
+  const lhH = 52;
+  const rH = 18;
+
+  function drawFractionHeader(startY) {
+    let fx = LM;
+    const groupLabels = ['1', '2', '3', '4', '5', '6'];
+    for (let i = 0; i < groupLabels.length; i++) {
+      cell(fx, startY, groupWidths[i], nH, groupLabels[i], {
+        fill: DARK_BLUE,
+        fontSize: 9.5,
+        align: 'center',
+        valign: 'center',
+      });
+      fx += groupWidths[i];
+    }
+
+    fx = LM;
+    for (const c of fCols) {
+      cell(fx, startY + nH, c.w, lhH, c.l, {
+        fill: LIGHT_BLUE,
+        fontSize: 8,
+        align: 'center',
+        valign: 'center',
+        paddingX: 4,
+      });
+      fx += c.w;
+    }
+
+    return startY + nH + lhH;
+  }
+
+  function drawFractionRows(startY, rows) {
+    let rowY = startY;
+    for (const row of rows) {
+      const vals = [
+        row.fractionName,
+        row.euralCode || '',
+        nlPct1(row.sharePct),
+        row.acceptantDisplay || '',
+        row.processDescription || '',
+        nlPct(row.preparedForReusePct),
+        nlPct(row.recyclingPct),
+        nlPct(row.otherMaterialRecoveryPct),
+        nlPct(row.energyRecoveryPct),
+        nlPct(row.thermalDisposalPct),
+        nlPct(row.landfillDisposalPct),
+      ];
+      let fx = LM;
+      for (let i = 0; i < fCols.length; i++) {
+        cell(fx, rowY, fCols[i].w, rH, vals[i], {
+          fontSize: 8.5,
+          align: dataAlign[i],
+          valign: 'center',
+          paddingX: i === 0 ? 3 : 2,
+        });
+        fx += fCols[i].w;
+      }
+      rowY += rH;
+    }
+
+    for (let e = rows.length; e < ROWS_PER_PAGE; e++) {
+      let fx = LM;
+      for (const c of fCols) {
+        cell(fx, rowY, c.w, rH, '', { fontSize: 8 });
+        fx += c.w;
+      }
+      rowY += rH;
+    }
+
+    return rowY;
+  }
+
+  const pages = [];
+  for (let i = 0; i < data.rows.length; i += ROWS_PER_PAGE) {
+    pages.push(data.rows.slice(i, i + ROWS_PER_PAGE));
+  }
+  if (pages.length === 0) pages.push([]);
+
+  for (let pageIndex = 0; pageIndex < pages.length; pageIndex++) {
+    if (pageIndex > 0) {
+      doc.addPage();
+      cy = LM;
+    }
+    cy = drawFractionHeader(cy);
+    cy = drawFractionRows(cy, pages[pageIndex]);
+  }
+
+  // Totals row
+  cy += 8;
+  if (cy + rH > LBL) { doc.addPage(); cy = LM; }
+  const tsp = data.rows.reduce((s, r) => s + (Number(r.sharePct) || 0), 0);
+  function wavg(field) { return tsp > 0 ? data.rows.reduce((s, r) => s + (Number(r[field]) || 0) * (Number(r.sharePct) || 0), 0) / tsp : 0; }
+
+  const totals = [
+    'Total', '', nlPct1(tsp), '', '',
+    nlPct1(wavg('preparedForReusePct')), nlPct1(wavg('recyclingPct')), nlPct1(wavg('otherMaterialRecoveryPct')),
+    nlPct1(wavg('energyRecoveryPct')), nlPct1(wavg('thermalDisposalPct')), nlPct1(wavg('landfillDisposalPct')),
+  ];
+  let fx = LM;
+  for (let i = 0; i < fCols.length; i++) {
+    cell(fx, cy, fCols[i].w, rH, totals[i], { fontSize: 8.5, align: dataAlign[i], valign: 'center' });
+    fx += fCols[i].w;
+  }
+  cy += rH + 18;
+
+  // === FOOTER ===
+  if (cy + 40 > LBL) { doc.addPage(); cy = LM; }
+  doc.font('Helvetica').fontSize(10).fillColor(TEXT_PRIMARY);
+  doc.text('Completed by:', LM, cy);
+  doc.font('Helvetica').fontSize(10).text(data.confirmedBy || 'System', LM + 100, cy);
+  doc.moveTo(LM + 100, cy + 14).lineTo(LM + 280, cy + 14).lineWidth(0.5).strokeColor(CB).stroke();
+  cy += 24;
+  doc.font('Helvetica').fontSize(10).text('Date:', LM, cy);
+  doc.font('Helvetica').fontSize(10).text(formatDownstreamDate(data.confirmedAt || new Date()), LM + 100, cy);
+  doc.moveTo(LM + 100, cy + 14).lineTo(LM + 280, cy + 14).lineWidth(0.5).strokeColor(CB).stroke();
+  doc.font('Helvetica').fontSize(10).text('Signature:', LM + LCW / 2, cy);
+  doc.moveTo(LM + LCW / 2 + 70, cy + 14).lineTo(LM + LCW - 20, cy + 14).lineWidth(0.5).strokeColor(CB).stroke();
+
+  await new Promise((resolve, reject) => {
+    stream.on('finish', resolve);
+    stream.on('error', reject);
+    doc.end();
+  });
+}
+
 /* ───── RPT-03: Chain of Custody ───── */
 
 async function generateChainOfCustodyPDF(data, filePath, user) {
@@ -543,4 +899,5 @@ module.exports = {
   generateInboundWeightRegisterPDF,
   generateWasteStreamAnalysisPDF,
   generateAssetUtilisationPDF,
+  generateDownstreamStatementPDF,
 };

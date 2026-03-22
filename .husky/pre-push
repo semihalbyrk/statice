@@ -1,0 +1,40 @@
+#!/bin/bash
+# ============================================================
+# PRE-PUSH HOOK — Tüm test suite'i push öncesi çalıştırır
+# ============================================================
+# VS Code Sync veya git push yapınca tetiklenir.
+# Fail ederse push engellenir.
+# Acil durumlarda: git push --no-verify
+# ============================================================
+
+set -e
+
+ROOT="$(git rev-parse --show-toplevel)"
+FAILED=0
+
+echo "🧪 Pre-push: Running full test suite..."
+echo ""
+
+echo "── Server tests ──"
+cd "$ROOT/server"
+if ! npx vitest run --reporter=dot 2>&1 | tail -5; then
+  echo "❌ Server tests failed."
+  FAILED=1
+fi
+
+echo ""
+echo "── Client tests ──"
+cd "$ROOT/client"
+if ! npx vitest run --reporter=dot 2>&1 | tail -5; then
+  echo "❌ Client tests failed."
+  FAILED=1
+fi
+
+echo ""
+if [ "$FAILED" -eq 1 ]; then
+  echo "❌ Push aborted — fix failing tests first."
+  echo "   Emergency skip: git push --no-verify"
+  exit 1
+fi
+
+echo "✅ All tests passed. Pushing..."

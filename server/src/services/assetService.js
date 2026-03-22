@@ -11,10 +11,31 @@ const ASSET_INCLUDE = {
   material_category: {
     select: { id: true, code_cbs: true, description_en: true },
   },
+  gross_weighing: {
+    select: { id: true, sequence: true, weight_kg: true },
+  },
+  tare_weighing: {
+    select: { id: true, sequence: true, weight_kg: true },
+  },
   inbound: {
     select: { id: true, status: true, order_id: true, waste_stream_id: true },
   },
 };
+
+async function refreshOrderReceiptCounts(tx, orderId) {
+  const total = await tx.asset.count({
+    where: {
+      inbound: {
+        order_id: orderId,
+      },
+    },
+  });
+
+  await tx.inboundOrder.update({
+    where: { id: orderId },
+    data: { received_asset_count: total },
+  });
+}
 
 async function getAsset(id) {
   return prisma.asset.findUnique({
@@ -33,7 +54,10 @@ async function listAssets(inboundId) {
 
 async function createAsset(data, userId) {
   return prisma.$transaction(async (tx) => {
-    const inbound = await tx.inbound.findUnique({ where: { id: data.inbound_id } });
+    const inbound = await tx.inbound.findUnique({
+      where: { id: data.inbound_id },
+      select: { id: true, status: true, order_id: true },
+    });
     if (!inbound) throw new Error('Inbound not found');
 
     if (TERMINAL_STATUSES.includes(inbound.status)) {
@@ -68,6 +92,8 @@ async function createAsset(data, userId) {
       after: { asset_label: asset.asset_label, parcel_type: asset.parcel_type, container_type: asset.container_type },
     }, tx);
 
+    await refreshOrderReceiptCounts(tx, inbound.order_id);
+
     return asset;
   });
 }
@@ -76,7 +102,7 @@ async function updateAsset(id, data, userId) {
   return prisma.$transaction(async (tx) => {
     const existing = await tx.asset.findUnique({
       where: { id },
-      include: { inbound: { select: { status: true } } },
+      include: { inbound: { select: { status: true, order_id: true } } },
     });
     if (!existing) return null;
 
@@ -129,6 +155,8 @@ async function deleteAsset(id, userId) {
 
     await tx.asset.delete({ where: { id } });
 
+    await refreshOrderReceiptCounts(tx, existing.inbound.order_id);
+
     await writeAuditLog({
       userId,
       action: 'DELETE',
@@ -148,6 +176,14 @@ async function lookupByLabel(label) {
   });
 }
 
+async function lookupByContainerLabel(label) {
+  return prisma.asset.findFirst({
+    where: { container_label: label },
+    orderBy: { created_at: 'desc' },
+    include: ASSET_INCLUDE,
+  });
+}
+
 module.exports = {
-  getAsset, listAssets, createAsset, updateAsset, deleteAsset, lookupByLabel,
+  getAsset, listAssets, createAsset, updateAsset, deleteAsset, lookupByLabel, lookupByContainerLabel,
 };

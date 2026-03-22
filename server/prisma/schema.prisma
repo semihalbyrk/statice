@@ -65,6 +65,38 @@ enum WeightAmendmentReason {
   OTHER
 }
 
+enum MatchStrategy {
+  EXACT_SAME_DAY
+  EXACT_WINDOW
+  MANUAL
+  AD_HOC
+}
+
+enum WorkflowStageStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  COMPLETED
+}
+
+enum ProcessingRecordStatus {
+  DRAFT
+  FINALIZED
+  CONFIRMED
+  SUPERSEDED
+}
+
+enum TreatmentRoute {
+  RECYCLED
+  REUSED
+  DISPOSED
+  LANDFILL
+}
+
+enum AcceptantStage {
+  FIRST_ACCEPTANT
+  FOLLOWING
+}
+
 enum SkipType {
   OPEN_TOP
   CLOSED_TOP
@@ -161,6 +193,7 @@ model WasteStream {
   assets                     Asset[]
   order_waste_streams        OrderWasteStream[]
   supplier_afvalstroomnummers SupplierAfvalstroomnummer[]
+  materials                  MaterialMaster[]
 }
 
 model ProductCategory {
@@ -179,6 +212,7 @@ model ProductCategory {
   waste_stream    WasteStream    @relation(fields: [waste_stream_id], references: [id])
   sorting_lines   SortingLine[]
   material_assets Asset[]        @relation("MaterialCategory")
+  materials       MaterialMaster[] @relation("LegacyMaterialCategory")
 }
 
 model InboundOrder {
@@ -202,6 +236,7 @@ model InboundOrder {
   adhoc_id_reference        String?
   incident_category         IncidentCategory?
   incident_notes            String?
+  received_asset_count      Int               @default(0)
   created_by                String
   created_at                DateTime          @default(now())
   updated_at                DateTime          @updatedAt
@@ -242,6 +277,10 @@ model Inbound {
   confirmed_at      DateTime?
   notes             String?
   incident_category IncidentCategory?
+  match_strategy    MatchStrategy?
+  matched_by        String?
+  matched_at        DateTime?
+  is_manual_match   Boolean            @default(false)
 
   order             InboundOrder     @relation(fields: [order_id], references: [id])
   vehicle           Vehicle          @relation(fields: [vehicle_id], references: [id])
@@ -267,6 +306,8 @@ model InboundWeighing {
 
   inbound        Inbound       @relation(fields: [inbound_id], references: [id])
   pfister_ticket PfisterTicket @relation(fields: [pfister_ticket_id], references: [id])
+  gross_for_assets Asset[]     @relation("AssetGrossWeighing")
+  tare_for_assets  Asset[]     @relation("AssetTareWeighing")
 
   @@unique([inbound_id, sequence])
 }
@@ -298,11 +339,17 @@ model Asset {
   asset_label          String      @unique
   inbound_id           String      @map("weighing_event_id")
   parcel_type          ParcelType  @default(CONTAINER)
-  container_type       SkipType?   @map("skip_type")
-  material_category_id String?
-  waste_stream_id      String?
-  sequence             Int?
-  estimated_volume_m3  Decimal?
+  container_type           SkipType?   @map("skip_type")
+  container_label          String?
+  estimated_tare_weight_kg Decimal?
+  material_category_id     String?
+  waste_stream_id          String?
+  sequence                 Int?
+  estimated_volume_m3      Decimal?
+  gross_weighing_id    String?
+  tare_weighing_id     String?
+  gross_weight_kg      Decimal?
+  tare_weight_kg       Decimal?
   net_weight_kg        Decimal?
   notes                String?
   created_at           DateTime    @default(now())
@@ -310,7 +357,13 @@ model Asset {
   inbound           Inbound          @relation(fields: [inbound_id], references: [id])
   waste_stream      WasteStream?     @relation(fields: [waste_stream_id], references: [id])
   material_category ProductCategory? @relation("MaterialCategory", fields: [material_category_id], references: [id])
+  gross_weighing    InboundWeighing? @relation("AssetGrossWeighing", fields: [gross_weighing_id], references: [id])
+  tare_weighing     InboundWeighing? @relation("AssetTareWeighing", fields: [tare_weighing_id], references: [id])
   sorting_lines     SortingLine[]
+  catalogue_entries AssetCatalogueEntry[]
+  processing_records ProcessingRecord[]
+
+  @@index([container_label])
 }
 
 model SortingSession {
@@ -320,11 +373,15 @@ model SortingSession {
   recorded_by String
   recorded_at DateTime      @default(now())
   status      SortingStatus @default(PLANNED)
+  catalogue_status  WorkflowStageStatus @default(NOT_STARTED)
+  processing_status WorkflowStageStatus @default(NOT_STARTED)
   notes       String?
 
   inbound          Inbound     @relation(fields: [inbound_id], references: [id])
   recorded_by_user User        @relation(fields: [recorded_by], references: [id])
   sorting_lines    SortingLine[]
+  catalogue_entries AssetCatalogueEntry[]
+  processing_records ProcessingRecord[]
 }
 
 model SortingLine {
@@ -417,6 +474,17 @@ model Notification {
   user User @relation(fields: [user_id], references: [id])
 }
 
+model PfisterIngressLog {
+  id            String   @id @default(uuid())
+  source        String
+  protocol      String?
+  payload       String
+  status        String   @default("RECEIVED")
+  error_message String?
+  received_at   DateTime @default(now())
+  processed_at  DateTime?
+}
+
 model SupplierAfvalstroomnummer {
   id                String   @id @default(uuid())
   supplier_id       String
@@ -443,4 +511,209 @@ model WeightAmendment {
 
   pfister_ticket  PfisterTicket @relation(fields: [pfister_ticket_id], references: [id])
   amended_by_user User          @relation("WeightAmendments", fields: [amended_by], references: [id])
+}
+
+model MaterialMaster {
+  id                        String   @id @default(uuid())
+  code                      String   @unique
+  name_en                   String   @map("label_en")
+  name_nl                   String   @map("label_nl")
+  waste_stream_id           String
+  cbs_code                  String
+  weeelabex_group           String
+  eural_code                String
+  default_afvalstroomnummer String?
+  weee_category             String   @map("annex_iii_category")
+  legacy_category_id        String?
+  default_process_description String?
+  is_active                 Boolean  @default(true)
+  created_at                DateTime @default(now())
+  updated_at                DateTime @updatedAt
+
+  waste_stream       WasteStream                 @relation(fields: [waste_stream_id], references: [id])
+  legacy_category    ProductCategory?           @relation("LegacyMaterialCategory", fields: [legacy_category_id], references: [id])
+  catalogue_entries  AssetCatalogueEntry[]
+  processing_records ProcessingRecord[]
+  certificate_scopes ProcessorCertificateMaterialScope[]
+  fractions          MaterialFraction[]
+  reusable_items     ReusableItem[]
+
+  @@map("ProductTypeMaster")
+}
+
+model FractionMaster {
+  id                                  String   @id @default(uuid())
+  code                                String   @unique
+  name_en                             String
+  name_nl                             String
+  eural_code                          String
+  default_acceptant_stage             AcceptantStage @default(FIRST_ACCEPTANT)
+  default_process_description         String?
+  prepared_for_reuse_pct_default      Decimal  @default(0)
+  recycling_pct_default               Decimal  @default(0)
+  other_material_recovery_pct_default Decimal  @default(0)
+  energy_recovery_pct_default         Decimal  @default(0)
+  thermal_disposal_pct_default        Decimal  @default(0)
+  landfill_disposal_pct_default       Decimal  @default(0)
+  is_active                           Boolean  @default(true)
+  created_at                          DateTime @default(now())
+  updated_at                          DateTime @updatedAt
+
+  materials         MaterialFraction[]
+  processing_outcomes ProcessingOutcomeLine[]
+}
+
+model MaterialFraction {
+  id          String   @id @default(uuid())
+  material_id String
+  fraction_id String
+  sort_order  Int      @default(0)
+  is_active   Boolean  @default(true)
+  created_at  DateTime @default(now())
+
+  material MaterialMaster @relation(fields: [material_id], references: [id])
+  fraction FractionMaster @relation(fields: [fraction_id], references: [id])
+
+  @@unique([material_id, fraction_id])
+}
+
+model AssetCatalogueEntry {
+  id                     String   @id @default(uuid())
+  session_id             String
+  asset_id               String
+  material_id            String   @map("product_type_id")
+  weight_kg              Decimal
+  reuse_eligible_quantity Int     @default(0)
+  notes                  String?
+  entry_order            Int      @default(0)
+  created_at             DateTime @default(now())
+  updated_at             DateTime @updatedAt
+
+  session            SortingSession    @relation(fields: [session_id], references: [id])
+  asset              Asset             @relation(fields: [asset_id], references: [id])
+  material           MaterialMaster    @relation(fields: [material_id], references: [id])
+  processing_records ProcessingRecord[]
+  reusable_items     ReusableItem[]
+
+  @@index([session_id, asset_id])
+}
+
+model ProcessingRecord {
+  id                         String                 @id @default(uuid())
+  session_id                 String
+  asset_id                   String
+  catalogue_entry_id         String?
+  material_id                String                 @map("product_type_id")
+  material_code_snapshot     String                 @map("product_code_snapshot")
+  material_name_snapshot     String                 @map("product_label_snapshot")
+  weee_category_snapshot     String                 @map("annex_iii_category_snapshot")
+  status                     ProcessingRecordStatus @default(DRAFT)
+  version_no                 Int                    @default(1)
+  is_current                 Boolean                @default(true)
+  supersedes_id              String?
+  finalized_by               String?
+  finalized_at               DateTime?
+  confirmed_by               String?
+  confirmed_at               DateTime?
+  reason_code                String?
+  reason_notes               String?
+  balance_delta_kg           Decimal                @default(0)
+  created_at                 DateTime               @default(now())
+  updated_at                 DateTime               @updatedAt
+
+  session         SortingSession     @relation(fields: [session_id], references: [id])
+  asset           Asset              @relation(fields: [asset_id], references: [id])
+  catalogue_entry AssetCatalogueEntry? @relation(fields: [catalogue_entry_id], references: [id])
+  material        MaterialMaster     @relation(fields: [material_id], references: [id])
+  outcomes        ProcessingOutcomeLine[]
+
+  @@index([session_id, asset_id])
+}
+
+model ProcessingOutcomeLine {
+  id                    String         @id @default(uuid())
+  processing_record_id  String
+  material_fraction     String
+  fraction_id           String?
+  weight_kg             Decimal
+  treatment_route       TreatmentRoute
+  acceptant_stage       AcceptantStage @default(FIRST_ACCEPTANT)
+  process_description   String?
+  share_pct             Decimal        @default(0)
+  prepared_for_reuse_pct      Decimal  @default(0)
+  recycling_pct               Decimal  @default(0)
+  other_material_recovery_pct Decimal  @default(0)
+  energy_recovery_pct         Decimal  @default(0)
+  thermal_disposal_pct        Decimal  @default(0)
+  landfill_disposal_pct       Decimal  @default(0)
+  downstream_processor_id String?
+  transfer_date         DateTime?
+  notes                 String?
+  landfill_reason_code  String?
+  created_at            DateTime       @default(now())
+
+  processing_record  ProcessingRecord @relation(fields: [processing_record_id], references: [id])
+  fraction           FractionMaster?  @relation(fields: [fraction_id], references: [id])
+  downstream_processor Processor?     @relation(fields: [downstream_processor_id], references: [id])
+}
+
+model Processor {
+  id                          String   @id @default(uuid())
+  name                        String
+  address                     String
+  country                     String
+  environmental_permit_number String
+  is_weeelabex_listed         Boolean  @default(false)
+  is_active                   Boolean  @default(true)
+  created_at                  DateTime @default(now())
+  updated_at                  DateTime @updatedAt
+
+  certificates ProcessorCertificate[]
+  outcome_lines ProcessingOutcomeLine[]
+}
+
+model ProcessorCertificate {
+  id                 String   @id @default(uuid())
+  processor_id       String
+  certificate_number String
+  certification_body String
+  valid_from         DateTime
+  valid_to           DateTime
+  document_url       String?
+  is_active          Boolean  @default(true)
+  created_at         DateTime @default(now())
+  updated_at         DateTime @updatedAt
+
+  processor     Processor                         @relation(fields: [processor_id], references: [id])
+  materials     ProcessorCertificateMaterialScope[]
+}
+
+model ProcessorCertificateMaterialScope {
+  id              String @id @default(uuid())
+  certificate_id  String
+  material_id     String @map("product_type_id")
+
+  certificate  ProcessorCertificate @relation(fields: [certificate_id], references: [id])
+  material     MaterialMaster       @relation(fields: [material_id], references: [id])
+
+  @@unique([certificate_id, material_id])
+  @@map("ProcessorCertificateProductType")
+}
+
+model ReusableItem {
+  id                 String   @id @default(uuid())
+  catalogue_entry_id String
+  material_id        String
+  brand              String?
+  model_name         String?
+  type               String?
+  serial_number      String?
+  condition          String?
+  notes              String?
+  created_at         DateTime @default(now())
+
+  catalogue_entry AssetCatalogueEntry @relation(fields: [catalogue_entry_id], references: [id], onDelete: Cascade)
+  material        MaterialMaster      @relation(fields: [material_id], references: [id])
+
+  @@index([catalogue_entry_id])
 }

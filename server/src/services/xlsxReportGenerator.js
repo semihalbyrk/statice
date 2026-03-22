@@ -440,6 +440,60 @@ async function generateAssetUtilisationXLSX(data, filePath, user) {
   await wb.xlsx.writeFile(filePath);
 }
 
+/* ───── RPT-07: Downstream Material Statement ───── */
+
+async function generateDownstreamStatementXLSX(data, filePath, user) {
+  const wb = createWorkbook();
+  addInfoSheet(wb, { title: 'Downstream Material Statement', period: data.period, generatedBy: user?.full_name });
+
+  const headerSheet = wb.addWorksheet('Statement Header');
+  headerSheet.columns = [{ width: 26 }, { width: 48 }];
+  [
+    ['Period', `${data.period.from} - ${data.period.to}`],
+    ['Sender', data.supplier?.name || '—'],
+    ['Eural Code', data.material?.eural_code || '—'],
+    ['WEEE Category', data.material?.weee_category || '—'],
+    ['Material', data.material?.name_en || '—'],
+    ['Quantity in kg', formatWeight(data.totalMaterialKg)],
+    ['Process Description', data.processDescription || '—'],
+  ].forEach((row) => headerSheet.addRow(row));
+
+  const ws = wb.addWorksheet('Fractions');
+  ws.columns = [
+    { header: 'Fractions', key: 'fractionName', width: 24 },
+    { header: 'Eural Code', key: 'euralCode', width: 14 },
+    { header: '%', key: 'sharePct', width: 10 },
+    { header: 'First acceptant / Following', key: 'acceptantDisplay', width: 28 },
+    { header: 'Process Description', key: 'processDescription', width: 34 },
+    { header: '% Prepared for re-use', key: 'preparedForReusePct', width: 16 },
+    { header: '% Recycling', key: 'recyclingPct', width: 14 },
+    { header: '% Other material recovery', key: 'otherMaterialRecoveryPct', width: 18 },
+    { header: '% Energy Recovery', key: 'energyRecoveryPct', width: 16 },
+    { header: '% Thermal Disposal', key: 'thermalDisposalPct', width: 16 },
+    { header: '% Landfill Disposal', key: 'landfillDisposalPct', width: 16 },
+  ];
+  styleHeaderRow(ws, 1);
+  let rowNum = 2;
+  for (const row of data.rows) {
+    ws.addRow({
+      fractionName: row.fractionName,
+      euralCode: row.euralCode,
+      sharePct: formatPct(row.sharePct),
+      acceptantDisplay: row.acceptantDisplay,
+      processDescription: row.processDescription,
+      preparedForReusePct: formatPct(row.preparedForReusePct),
+      recyclingPct: formatPct(row.recyclingPct),
+      otherMaterialRecoveryPct: formatPct(row.otherMaterialRecoveryPct),
+      energyRecoveryPct: formatPct(row.energyRecoveryPct),
+      thermalDisposalPct: formatPct(row.thermalDisposalPct),
+      landfillDisposalPct: formatPct(row.landfillDisposalPct),
+    });
+    styleDataRow(ws, rowNum++);
+  }
+
+  await wb.xlsx.writeFile(filePath);
+}
+
 module.exports = {
   generateSupplierStatementXLSX,
   generateMaterialRecoveryXLSX,
@@ -447,4 +501,5 @@ module.exports = {
   generateInboundWeightRegisterXLSX,
   generateWasteStreamAnalysisXLSX,
   generateAssetUtilisationXLSX,
+  generateDownstreamStatementXLSX,
 };

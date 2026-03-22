@@ -13,6 +13,7 @@ const REPORT_TYPES = [
   { code: 'RPT-04', name: 'Inbound Weight Register' },
   { code: 'RPT-05', name: 'Waste Stream Analysis' },
   { code: 'RPT-06', name: 'Skip Asset Utilisation' },
+  { code: 'RPT-07', name: 'Downstream Material Statement' },
 ];
 
 const FREQUENCIES = ['DAILY', 'WEEKLY', 'MONTHLY'];

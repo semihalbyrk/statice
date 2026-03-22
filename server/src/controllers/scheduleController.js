@@ -3,7 +3,7 @@ const { writeAuditLog } = require('../utils/auditLog');
 
 const VALID_FREQUENCIES = ['DAILY', 'WEEKLY', 'MONTHLY'];
 const VALID_FORMATS = ['PDF', 'XLSX', 'BOTH'];
-const VALID_REPORT_TYPES = ['RPT-01', 'RPT-02', 'RPT-03', 'RPT-04', 'RPT-05', 'RPT-06'];
+const VALID_REPORT_TYPES = ['RPT-01', 'RPT-02', 'RPT-03', 'RPT-04', 'RPT-05', 'RPT-06', 'RPT-07'];
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 function computeNextRunAt(frequency, dayOfWeek, dayOfMonth, fromDate) {

@@ -1,5 +1,5 @@
 const assetService = require('../services/assetService');
-const { previewNextLabel } = require('../utils/assetLabel');
+const { previewNextLabel, previewNextContainerLabel } = require('../utils/assetLabel');
 
 async function list(req, res, next) {
   try {
@@ -66,4 +66,20 @@ async function lookupByLabel(req, res, next) {
   } catch (err) { next(err); }
 }
 
-module.exports = { list, getById, getNextLabel, create, update, remove, lookupByLabel };
+async function getNextContainerLabel(req, res, next) {
+  try {
+    const label = await previewNextContainerLabel();
+    res.json({ data: { label } });
+  } catch (err) { next(err); }
+}
+
+async function lookupByContainerLabel(req, res, next) {
+  try {
+    const { label } = req.query;
+    if (!label) return res.status(400).json({ error: 'label query param required' });
+    const asset = await assetService.lookupByContainerLabel(label);
+    res.json({ data: asset });
+  } catch (err) { next(err); }
+}
+
+module.exports = { list, getById, getNextLabel, getNextContainerLabel, create, update, remove, lookupByLabel, lookupByContainerLabel };

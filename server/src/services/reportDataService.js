@@ -606,6 +606,198 @@ async function fetchAssetUtilisationData({ dateFrom, dateTo, skipType }) {
   };
 }
 
+/* ───── RPT-07: Downstream Material Statement ───── */
+
+function formatAcceptantLabel(stage, processorName) {
+  const label = stage === 'FOLLOWING' ? 'Following' : 'First acceptant';
+  return processorName ? `${label}: ${processorName}` : label;
+}
+
+async function fetchDownstreamStatementData({ supplierId, materialId, dateFrom, dateTo }) {
+  const [supplier, material, records] = await Promise.all([
+    prisma.supplier.findUniqueOrThrow({ where: { id: supplierId } }),
+    prisma.materialMaster.findUniqueOrThrow({ where: { id: materialId } }),
+    prisma.processingRecord.findMany({
+      where: {
+        is_current: true,
+        status: 'CONFIRMED',
+        material_id: materialId,
+        asset: {
+          inbound: {
+            order: {
+              supplier_id: supplierId,
+              planned_date: { gte: new Date(dateFrom), lte: new Date(dateTo) },
+            },
+          },
+        },
+      },
+      include: {
+        asset: {
+          include: {
+            inbound: {
+              include: {
+                order: {
+                  include: {
+                    supplier: true,
+                  },
+                },
+              },
+            },
+          },
+        },
+        outcomes: {
+          include: {
+            fraction: true,
+            downstream_processor: true,
+          },
+        },
+      },
+      orderBy: { created_at: 'asc' },
+    }),
+  ]);
+
+  const totalMaterialKg = Math.round(records.reduce((sum, record) => {
+    const netWeight = Number(record.asset?.net_weight_kg || 0);
+    return sum + netWeight;
+  }, 0) * 100) / 100;
+
+  const rowMap = new Map();
+  for (const record of records) {
+    for (const outcome of record.outcomes) {
+      const fractionName = outcome.fraction?.name_en || outcome.material_fraction;
+      const key = [
+        outcome.fraction_id || fractionName,
+        outcome.acceptant_stage,
+        outcome.downstream_processor_id || '',
+        outcome.process_description || '',
+        outcome.prepared_for_reuse_pct,
+        outcome.recycling_pct,
+        outcome.other_material_recovery_pct,
+        outcome.energy_recovery_pct,
+        outcome.thermal_disposal_pct,
+        outcome.landfill_disposal_pct,
+      ].join('::');
+
+      const current = rowMap.get(key) || {
+        fractionName,
+        euralCode: outcome.fraction?.eural_code || '—',
+        processorName: outcome.downstream_processor?.name || '',
+        acceptantStage: outcome.acceptant_stage,
+        processDescription: outcome.process_description || material.default_process_description || '—',
+        preparedForReusePct: Number(outcome.prepared_for_reuse_pct || 0),
+        recyclingPct: Number(outcome.recycling_pct || 0),
+        otherMaterialRecoveryPct: Number(outcome.other_material_recovery_pct || 0),
+        energyRecoveryPct: Number(outcome.energy_recovery_pct || 0),
+        thermalDisposalPct: Number(outcome.thermal_disposal_pct || 0),
+        landfillDisposalPct: Number(outcome.landfill_disposal_pct || 0),
+        quantityKg: 0,
+      };
+
+      current.quantityKg += Number(outcome.weight_kg || 0);
+      rowMap.set(key, current);
+    }
+  }
+
+  const rows = [...rowMap.values()]
+    .map((row) => ({
+      ...row,
+      quantityKg: Math.round(row.quantityKg * 100) / 100,
+      sharePct: totalMaterialKg > 0 ? Math.round((row.quantityKg / totalMaterialKg) * 10000) / 100 : 0,
+      acceptantDisplay: formatAcceptantLabel(row.acceptantStage, row.processorName),
+    }))
+    .sort((a, b) => a.fractionName.localeCompare(b.fractionName));
+
+  return decimalToNumber({
+    supplier,
+    material,
+    period: { from: dateFrom, to: dateTo },
+    totalMaterialKg,
+    processDescription: material.default_process_description || rows.map((row) => row.processDescription).filter(Boolean)[0] || '—',
+    rows,
+  });
+}
+
+/**
+ * RPT-DS: Downstream Statement for a single catalogue entry within a process session.
+ * Used from the Process detail "Reports" tab — one report per material.
+ */
+async function fetchDownstreamEntryStatement({ sessionId, catalogueEntryId }) {
+  const entry = await prisma.assetCatalogueEntry.findUniqueOrThrow({
+    where: { id: catalogueEntryId },
+    include: {
+      material: true,
+      asset: {
+        include: {
+          inbound: {
+            include: {
+              order: { include: { supplier: true } },
+            },
+          },
+        },
+      },
+      processing_records: {
+        where: { is_current: true },
+        include: {
+          outcomes: { include: { fraction: true, downstream_processor: true } },
+        },
+      },
+    },
+  });
+
+  if (entry.session_id !== sessionId) {
+    throw new Error('Catalogue entry does not belong to this session');
+  }
+
+  const material = entry.material;
+  const supplier = entry.asset.inbound.order.supplier;
+  const order = entry.asset.inbound.order;
+  const totalMaterialKg = Number(entry.weight_kg || 0);
+
+  const record = entry.processing_records[0];
+  const outcomes = record?.outcomes || [];
+
+  const rows = outcomes.map((outcome) => {
+    const weightKg = Number(outcome.weight_kg || 0);
+    return {
+      fractionName: outcome.fraction?.name_en || outcome.material_fraction || '—',
+      euralCode: outcome.fraction?.eural_code || '—',
+      sharePct: totalMaterialKg > 0 ? Math.round((weightKg / totalMaterialKg) * 10000) / 100 : 0,
+      acceptantStage: outcome.acceptant_stage || 'FIRST_ACCEPTANT',
+      acceptantDisplay: formatAcceptantLabel(outcome.acceptant_stage),
+      processDescription: outcome.process_description || material.default_process_description || '—',
+      preparedForReusePct: Number(outcome.prepared_for_reuse_pct || 0),
+      recyclingPct: Number(outcome.recycling_pct || 0),
+      otherMaterialRecoveryPct: Number(outcome.other_material_recovery_pct || 0),
+      energyRecoveryPct: Number(outcome.energy_recovery_pct || 0),
+      thermalDisposalPct: Number(outcome.thermal_disposal_pct || 0),
+      landfillDisposalPct: Number(outcome.landfill_disposal_pct || 0),
+      quantityKg: Math.round(weightKg * 100) / 100,
+    };
+  }).sort((a, b) => a.fractionName.localeCompare(b.fractionName));
+
+  // Fetch confirming user name if available
+  const confirmUserId = record?.confirmed_by || record?.finalized_by;
+  let confirmedBy = 'System';
+  if (confirmUserId) {
+    const confirmUser = await prisma.user.findUnique({ where: { id: confirmUserId }, select: { full_name: true } });
+    if (confirmUser) confirmedBy = confirmUser.full_name;
+  }
+  const confirmedAt = record?.confirmed_at || record?.finalized_at || new Date();
+
+  return decimalToNumber({
+    supplier,
+    material,
+    period: { from: order.planned_date, to: order.planned_date },
+    totalMaterialKg,
+    processDescription: material.default_process_description || rows.map((r) => r.processDescription).filter(Boolean)[0] || '—',
+    rows,
+    confirmedBy,
+    confirmedAt,
+    catalogueEntryId,
+    sessionId,
+  });
+}
+
 module.exports = {
   fetchSupplierStatementData,
   fetchMaterialRecoveryData,
@@ -613,4 +805,6 @@ module.exports = {
   fetchInboundWeightRegisterData,
   fetchWasteStreamAnalysisData,
   fetchAssetUtilisationData,
+  fetchDownstreamStatementData,
+  fetchDownstreamEntryStatement,
 };

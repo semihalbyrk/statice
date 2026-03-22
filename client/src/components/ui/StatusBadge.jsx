@@ -15,6 +15,14 @@ const STATUS_CONFIG = {
   // Order lifecycle statuses
   DISPUTE: { label: 'Dispute', className: 'bg-red-25 text-red-700 border-red-300' },
   INVOICED: { label: 'Invoiced', className: 'bg-purple-25 text-purple-700 border-purple-300' },
+  NOT_STARTED: { label: 'Not Started', className: 'bg-grey-50 text-grey-700 border-grey-300' },
+  FINALIZED: { label: 'Finalized', className: 'bg-orange-25 text-orange-700 border-orange-300' },
+  CONFIRMED: { label: 'Confirmed', className: 'bg-green-25 text-green-700 border-green-400' },
+  SUPERSEDED: { label: 'Superseded', className: 'bg-grey-100 text-grey-600 border-grey-300' },
+  RECYCLED: { label: 'Recycled', className: 'bg-blue-25 text-blue-700 border-blue-300' },
+  REUSED: { label: 'Reused', className: 'bg-green-25 text-green-700 border-green-300' },
+  DISPOSED: { label: 'Disposed', className: 'bg-red-25 text-red-700 border-red-300' },
+  LANDFILL: { label: 'Landfill', className: 'bg-orange-25 text-orange-700 border-orange-300' },
 };
 
 export default function StatusBadge({ status }) {

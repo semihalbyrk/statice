@@ -14,6 +14,9 @@ const suppliersRoutes = require('./routes/suppliers');
 const inboundsRoutes = require('./routes/weighingEvents');
 const assetsRoutes = require('./routes/assets');
 const sortingRoutes = require('./routes/sorting');
+const catalogueRoutes = require('./routes/catalogue');
+const processingRoutes = require('./routes/processing');
+const processorsRoutes = require('./routes/processors');
 const reportsRoutes = require('./routes/reports');
 const adminRoutes = require('./routes/admin');
 const dashboardRoutes = require('./routes/dashboard');
@@ -50,6 +53,9 @@ app.use('/api/suppliers', suppliersRoutes);
 app.use('/api/inbounds', inboundsRoutes);
 app.use('/api/assets', assetsRoutes);
 app.use('/api/sorting', sortingRoutes);
+app.use('/api/catalogue', catalogueRoutes);
+app.use('/api/processing', processingRoutes);
+app.use('/api/processors', processorsRoutes);
 app.use('/api/reports', reportsRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/dashboard', dashboardRoutes);
@@ -60,10 +66,14 @@ const errorHandler = require('./middleware/errorHandler');
 app.use(errorHandler);
 
 const PORT = process.env.PORT || 3001;
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+if (require.main === module) {
+  app.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
 
-  // Initialize report scheduler (hourly cron)
-  const { initScheduler } = require('./services/reportScheduler');
-  initScheduler();
-});
+    // Initialize report scheduler (hourly cron)
+    const { initScheduler } = require('./services/reportScheduler');
+    initScheduler();
+  });
+}
+
+module.exports = app;

@@ -3,8 +3,8 @@ import { Plus, Pencil, Trash2, Search } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { getSuppliers, createSupplier, updateSupplier, deleteSupplier } from '../../api/suppliers';
 
-const SUPPLIER_TYPES = ['PRIVATE_INDIVIDUAL', 'PRO', 'THIRD_PARTY'];
-const TYPE_LABELS = { PRIVATE_INDIVIDUAL: 'Private', PRO: 'PRO', THIRD_PARTY: 'Third Party' };
+const SUPPLIER_TYPES = ['AD_HOC', 'PRO', 'COMMERCIAL'];
+const TYPE_LABELS = { AD_HOC: 'Ad-hoc', PRO: 'PRO', COMMERCIAL: 'Commercial' };
 
 const inputClass = "w-full h-10 px-3.5 rounded-md border border-grey-300 text-sm text-grey-900 focus:border-green-500 focus:ring-[3px] focus:ring-green-500/15 outline-none transition-colors";
 const selectClass = `${inputClass} bg-white`;
@@ -17,6 +17,11 @@ function SupplierFormModal({ supplier, onClose, onSuccess }) {
     kvk_number: supplier?.kvk_number || '',
     contact_name: supplier?.contact_name || '',
     contact_email: supplier?.contact_email || '',
+    contact_phone: supplier?.contact_phone || '',
+    address: supplier?.address || '',
+    btw_number: supplier?.btw_number || '',
+    vihb_number: supplier?.vihb_number || '',
+    pro_registration_number: supplier?.pro_registration_number || '',
   });
   const [submitting, setSubmitting] = useState(false);
 
@@ -76,6 +81,28 @@ function SupplierFormModal({ supplier, onClose, onSuccess }) {
             <label className="block text-sm font-medium text-grey-700 mb-1.5">Contact Email</label>
             <input name="contact_email" type="email" value={form.contact_email} onChange={handleChange} className={inputClass} />
           </div>
+          <div>
+            <label className="block text-sm font-medium text-grey-700 mb-1.5">Contact Phone</label>
+            <input name="contact_phone" value={form.contact_phone} onChange={handleChange} className={inputClass} />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-grey-700 mb-1.5">Address</label>
+            <input name="address" value={form.address} onChange={handleChange} className={inputClass} />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-grey-700 mb-1.5">BTW Number</label>
+            <input name="btw_number" value={form.btw_number} onChange={handleChange} className={inputClass} />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-grey-700 mb-1.5">VIHB Number</label>
+            <input name="vihb_number" value={form.vihb_number} onChange={handleChange} className={inputClass} />
+          </div>
+          {form.supplier_type === 'PRO' && (
+            <div>
+              <label className="block text-sm font-medium text-grey-700 mb-1.5">PRO Registration Number</label>
+              <input name="pro_registration_number" value={form.pro_registration_number} onChange={handleChange} className={inputClass} />
+            </div>
+          )}
           <div className="flex justify-end gap-3 pt-2">
             <button type="button" onClick={onClose}
               className="h-9 px-4 bg-white text-grey-700 border border-grey-300 rounded-md text-sm font-semibold hover:bg-grey-50 transition-colors">Cancel</button>

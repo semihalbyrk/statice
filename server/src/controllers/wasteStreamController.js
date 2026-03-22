@@ -27,13 +27,22 @@ async function listWasteStreams(req, res, next) {
 
 async function createWasteStream(req, res, next) {
   try {
-    const { name_en, name_nl, code } = req.body;
+    const { name_en, name_nl, code, cbs_code, weeelabex_code, ewc_code } = req.body;
     if (!name_en || !name_nl || !code) {
       return res.status(400).json({ error: 'name_en, name_nl, and code are required' });
     }
 
     const stream = await prisma.$transaction(async (tx) => {
-      const created = await tx.wasteStream.create({ data: { name_en, name_nl, code } });
+      const created = await tx.wasteStream.create({
+        data: {
+          name_en,
+          name_nl,
+          code,
+          cbs_code: cbs_code || null,
+          weeelabex_code: weeelabex_code || null,
+          ewc_code: ewc_code || null,
+        },
+      });
       await writeAuditLog({
         userId: req.user.userId,
         action: 'CREATE',
@@ -58,12 +67,20 @@ async function updateWasteStream(req, res, next) {
       return res.status(404).json({ error: 'Waste stream not found' });
     }
 
-    const { name_en, name_nl, code, is_active } = req.body;
+    const { name_en, name_nl, code, cbs_code, weeelabex_code, ewc_code, is_active } = req.body;
 
     const stream = await prisma.$transaction(async (tx) => {
       const updated = await tx.wasteStream.update({
         where: { id },
-        data: { name_en, name_nl, code, is_active },
+        data: {
+          name_en,
+          name_nl,
+          code,
+          cbs_code,
+          weeelabex_code,
+          ewc_code,
+          is_active,
+        },
       });
       await writeAuditLog({
         userId: req.user.userId,

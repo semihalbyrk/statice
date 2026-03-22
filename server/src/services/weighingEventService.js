@@ -322,7 +322,7 @@ async function confirmWeighingEvent(eventId, userId) {
         weighing_event_id: eventId,
         order_id: event.order_id,
         recorded_by: userId,
-        status: 'DRAFT',
+        status: 'PLANNED',
       },
     });
 
@@ -334,30 +334,6 @@ async function confirmWeighingEvent(eventId, userId) {
       before: { status: 'TARE_COMPLETE' },
       after: { status: 'CONFIRMED', sorting_session_id: session.id },
     }, tx);
-
-    // Check if order should be completed — count all confirmed events vs expected_skip_count
-    const order = await tx.inboundOrder.findUnique({ where: { id: event.order_id } });
-    if (order && order.status === 'IN_PROGRESS') {
-      const confirmedEvents = await tx.weighingEvent.findMany({
-        where: { order_id: event.order_id, status: 'CONFIRMED' },
-        include: { assets: true },
-      });
-      const totalAssets = confirmedEvents.reduce((sum, e) => sum + e.assets.length, 0);
-      if (totalAssets >= order.expected_skip_count) {
-        await tx.inboundOrder.update({
-          where: { id: order.id },
-          data: { status: 'COMPLETED' },
-        });
-        await writeAuditLog({
-          userId,
-          action: 'STATUS_CHANGE',
-          entityType: 'InboundOrder',
-          entityId: order.id,
-          before: { status: 'IN_PROGRESS' },
-          after: { status: 'COMPLETED', reason: 'All expected skips confirmed' },
-        }, tx);
-      }
-    }
 
     updated.can_add_skips = false;
     updated.sorting_session = { id: session.id, status: session.status };

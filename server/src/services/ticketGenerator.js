@@ -3,7 +3,7 @@ const path = require('path');
 const PDFDocument = require('pdfkit');
 const prisma = require('../utils/prismaClient');
 
-const PAGE_MARGIN = 42;
+const PAGE_MARGIN = 50;
 const CONTENT_WIDTH = 595.28 - PAGE_MARGIN * 2;
 const LOGO_PATH = path.resolve(__dirname, '../../../docs/logo-statice-elektronica-recycling.png');
 
@@ -162,7 +162,7 @@ function drawOrderDetails(doc, inbound) {
       drawDetailBlock(doc, rightX, cursorY, columnWidth, right.label, right.value);
     }
 
-    cursorY += rowHeight + 10;
+    cursorY += rowHeight + 16;
   }
 
   doc
@@ -196,6 +196,7 @@ function drawDetailBlock(doc, x, y, width, label, value) {
 }
 
 function drawPfisterSection(doc, inbound) {
+  doc.y += 12;
   ensurePageSpace(doc, 152);
 
   const sectionTop = doc.y;
@@ -274,6 +275,7 @@ function drawWeightCard(doc, x, y, width, item) {
 }
 
 function drawWeighingSequence(doc, weighings) {
+  doc.y += 10;
   ensurePageSpace(doc, 120);
 
   doc
@@ -282,7 +284,7 @@ function drawWeighingSequence(doc, weighings) {
     .fillColor('#111827')
     .text('Weighing Sequence', PAGE_MARGIN, doc.y);
 
-  const top = doc.y + 10;
+  const top = doc.y + 14;
   const columns = [
     { key: 'seq', label: 'Seq #', width: 52 },
     { key: 'weight', label: 'Weight (kg)', width: 100 },
@@ -357,6 +359,7 @@ function drawWeighingSequence(doc, weighings) {
 }
 
 function drawAssetsTable(doc, assets) {
+  doc.y += 10;
   ensurePageSpace(doc, 120);
 
   doc
@@ -365,13 +368,12 @@ function drawAssetsTable(doc, assets) {
     .fillColor('#111827')
     .text('Parcels', PAGE_MARGIN, doc.y);
 
-  const top = doc.y + 10;
+  const top = doc.y + 14;
   const columns = [
-    { key: 'asset_label', label: 'Parcel Label', width: 95 },
-    { key: 'parcel_type', label: 'Type', width: 80 },
-    { key: 'type_detail', label: 'Container / Material', width: 130 },
-    { key: 'waste_stream', label: 'Waste Stream', width: 120 },
-    { key: 'net', label: 'Net Weight (kg)', width: CONTENT_WIDTH - 95 - 80 - 130 - 120 },
+    { key: 'asset_label', label: 'Parcel ID', width: 100 },
+    { key: 'container_label', label: 'Container ID', width: 110 },
+    { key: 'waste_stream', label: 'Waste Stream', width: CONTENT_WIDTH - 100 - 110 - 110 },
+    { key: 'net', label: 'Net Weight (kg)', width: 110 },
   ];
 
   drawTableHeader(doc, top, columns);
@@ -396,16 +398,9 @@ function drawAssetsTable(doc, assets) {
   }
 
   assets.forEach((asset, index) => {
-    const typeDetail = asset.parcel_type === 'CONTAINER'
-      ? formatEnumLabel(asset.container_type)
-      : asset.material_category
-        ? `${asset.material_category.code_cbs} — ${asset.material_category.description_en}`
-        : '—';
-
     const row = {
       asset_label: asset.asset_label || '—',
-      parcel_type: formatEnumLabel(asset.parcel_type),
-      type_detail: typeDetail,
+      container_label: asset.container_label || '—',
       waste_stream: asset.waste_stream ? `${asset.waste_stream.name_en} (${asset.waste_stream.code})` : '—',
       net: formatWeightValue(asset.net_weight_kg),
     };

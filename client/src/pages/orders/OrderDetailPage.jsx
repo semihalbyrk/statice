@@ -136,24 +136,11 @@ export default function OrderDetailPage() {
           </div>
           <div className="min-w-0">
             <span className="text-xs font-medium text-grey-500 uppercase tracking-wide">Waste Streams</span>
-            <div className="mt-0.5 flex flex-wrap gap-1.5">
-              {order.waste_streams?.length > 0 ? (
-                order.waste_streams.map((ows) => (
-                  <span
-                    key={ows.waste_stream?.id || ows.id}
-                    className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-50 text-green-700 border border-green-200"
-                  >
-                    {ows.waste_stream?.name_en || 'Unknown'}
-                  </span>
-                ))
-              ) : order.waste_stream?.name_en ? (
-                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-50 text-green-700 border border-green-200">
-                  {order.waste_stream.name_en}
-                </span>
-              ) : (
-                <p className="text-sm font-medium text-grey-900">--</p>
-              )}
-            </div>
+            <p className="mt-0.5 text-sm font-medium text-grey-900">
+              {order.waste_streams?.length > 0
+                ? order.waste_streams.map((ows) => ows.waste_stream?.name_en || 'Unknown').join(', ')
+                : order.waste_stream?.name_en || '—'}
+            </p>
           </div>
           <div className="min-w-0">
             <span className="text-xs font-medium text-grey-500 uppercase tracking-wide">Planned Date</span>
@@ -207,10 +194,8 @@ export default function OrderDetailPage() {
           )}
           {order.is_lzv && (
             <div className="min-w-0">
-              <span className="text-xs font-medium text-grey-500 uppercase tracking-wide">LZV</span>
-              <span className="mt-0.5 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-50 text-purple-700 border border-purple-300">
-                LZV Vehicle
-              </span>
+              <span className="text-xs font-medium text-grey-500 uppercase tracking-wide">Vehicle Type</span>
+              <p className="mt-0.5 text-sm font-medium text-grey-900">LZV</p>
             </div>
           )}
           {order.incident_category && (

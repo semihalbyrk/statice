@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { X, ChevronDown, Check, CheckCircle, AlertCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
 import useMasterDataStore from '../../store/masterDataStore';
-import { createOrder, updateOrder } from '../../api/orders';
+import { createOrder, updateOrder, createAdhocArrival } from '../../api/orders';
 import { getSupplierAfvalstroomnummers } from '../../api/suppliers';
 
 function deriveInitialWasteStreamIds(order) {
@@ -15,15 +15,18 @@ function deriveInitialWasteStreamIds(order) {
   return [];
 }
 
-export default function OrderFormModal({ order, onClose, onSuccess }) {
+export default function OrderFormModal({ order, onClose, onSuccess, mode = 'standard' }) {
   const { carriers, suppliers, wasteStreams } = useMasterDataStore();
-  const isEdit = !!order;
+  const isEdit = !!order?.id;
+  const isAdhoc = mode === 'adhoc';
 
   const [form, setForm] = useState({
     carrier_id: order?.carrier_id || '',
     supplier_id: order?.supplier_id || '',
     waste_stream_ids: deriveInitialWasteStreamIds(order),
-    planned_date: order?.planned_date ? new Date(order.planned_date).toISOString().split('T')[0] : '',
+    planned_date: order?.planned_date
+      ? new Date(order.planned_date).toISOString().split('T')[0]
+      : isAdhoc ? new Date().toISOString().split('T')[0] : '',
     expected_skip_count: order?.expected_skip_count || 1,
     vehicle_plate: order?.vehicle_plate || '',
     afvalstroomnummer: order?.afvalstroomnummer || '',
@@ -32,6 +35,8 @@ export default function OrderFormModal({ order, onClose, onSuccess }) {
     notes: order?.notes || '',
     is_lzv: order?.is_lzv || false,
     client_reference: order?.client_reference || '',
+    adhoc_person_name: order?.adhoc_person_name || '',
+    adhoc_id_reference: order?.adhoc_id_reference || '',
   });
   const [submitting, setSubmitting] = useState(false);
   const [wsDropdownOpen, setWsDropdownOpen] = useState(false);
@@ -83,7 +88,15 @@ export default function OrderFormModal({ order, onClose, onSuccess }) {
     }
     setSubmitting(true);
     try {
-      if (isEdit) {
+      if (isAdhoc) {
+        await createAdhocArrival({
+          ...form,
+          waste_stream_id: form.waste_stream_ids[0],
+          waste_stream_ids: form.waste_stream_ids,
+          vehicle_plate: form.vehicle_plate,
+        });
+        toast.success('Ad-hoc order created');
+      } else if (isEdit) {
         await updateOrder(order.id, form);
         toast.success('Order updated');
       } else {
@@ -101,19 +114,20 @@ export default function OrderFormModal({ order, onClose, onSuccess }) {
   const inputClass = "w-full h-10 px-3.5 rounded-md border border-grey-300 text-sm text-grey-900 focus:border-green-500 focus:ring-[3px] focus:ring-green-500/15 outline-none transition-colors";
   const selectClass = `${inputClass} bg-white`;
 
+  const title = isAdhoc ? 'Ad-hoc Order' : isEdit ? 'Edit Order' : 'New Order';
+  const submitLabel = submitting ? 'Saving...' : isAdhoc ? 'Create Ad-hoc Order' : isEdit ? 'Update Order' : 'Create Order';
+
   return (
     <div className="app-modal-overlay">
-      <div className="app-modal-panel max-w-lg">
-        <div className="flex items-center justify-between px-5 py-3 border-b border-grey-200">
-          <h2 className="text-lg font-semibold text-grey-900">
-            {isEdit ? 'Edit Order' : 'New Order'}
-          </h2>
+      <div className="app-modal-panel max-w-lg max-h-[90vh] flex flex-col">
+        <div className="flex items-center justify-between px-5 py-3 border-b border-grey-200 shrink-0">
+          <h2 className="text-lg font-semibold text-grey-900">{title}</h2>
           <button onClick={onClose} className="p-1 rounded-md hover:bg-grey-50 transition-colors">
             <X size={18} className="text-grey-400" />
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="px-5 py-4 space-y-4">
+        <form onSubmit={handleSubmit} className="px-5 py-4 space-y-4 overflow-y-auto flex-1">
           <div>
             <label className="block text-sm font-medium text-grey-700 mb-1.5">Carrier <span className="text-red-500">*</span></label>
             <select name="carrier_id" value={form.carrier_id} onChange={handleChange} required className={selectClass}>
@@ -192,7 +206,8 @@ export default function OrderFormModal({ order, onClose, onSuccess }) {
               value={form.vehicle_plate}
               onChange={(e) => setForm((p) => ({ ...p, vehicle_plate: e.target.value.toUpperCase() }))}
               placeholder="AB-123-CD"
-              className={`${inputClass} font-mono tracking-wider`}
+              readOnly={isAdhoc && !!order?.vehicle_plate}
+              className={`${inputClass} font-mono tracking-wider ${isAdhoc && order?.vehicle_plate ? 'bg-grey-100 text-grey-500 cursor-not-allowed' : ''}`}
             />
           </div>
 
@@ -240,6 +255,20 @@ export default function OrderFormModal({ order, onClose, onSuccess }) {
             </div>
           )}
 
+          {/* Ad-hoc specific fields */}
+          {isAdhoc && (
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-grey-700 mb-1.5">Contact Person</label>
+                <input type="text" value={form.adhoc_person_name} onChange={(e) => setForm(prev => ({ ...prev, adhoc_person_name: e.target.value }))} className={inputClass} placeholder="Name of person delivering" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-grey-700 mb-1.5">ID Reference</label>
+                <input type="text" value={form.adhoc_id_reference} onChange={(e) => setForm(prev => ({ ...prev, adhoc_id_reference: e.target.value }))} className={inputClass} placeholder="ID or reference number" />
+              </div>
+            </div>
+          )}
+
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-grey-700 mb-1.5">Time Window Start</label>
@@ -276,7 +305,7 @@ export default function OrderFormModal({ order, onClose, onSuccess }) {
               disabled={submitting}
               className="h-9 px-4 bg-green-500 text-white rounded-md text-sm font-semibold hover:bg-green-700 disabled:opacity-50 transition-colors"
             >
-              {submitting ? 'Saving...' : isEdit ? 'Update Order' : 'Create Order'}
+              {submitLabel}
             </button>
           </div>
         </form>

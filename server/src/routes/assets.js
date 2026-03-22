@@ -7,7 +7,9 @@ router.use(authenticateToken);
 
 // Static routes must come before /:id
 router.get('/next-label', requireRole(['GATE_OPERATOR', 'ADMIN']), ctrl.getNextLabel);
+router.get('/next-container-label', requireRole(['GATE_OPERATOR', 'ADMIN']), ctrl.getNextContainerLabel);
 router.get('/lookup', requireRole(['GATE_OPERATOR', 'ADMIN']), ctrl.lookupByLabel);
+router.get('/lookup-container', requireRole(['GATE_OPERATOR', 'ADMIN']), ctrl.lookupByContainerLabel);
 
 router.get('/', ctrl.list);
 router.get('/:id', ctrl.getById);

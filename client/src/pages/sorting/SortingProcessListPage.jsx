@@ -32,7 +32,7 @@ export default function SortingProcessListPage() {
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-xl font-semibold text-grey-900">Sorting Process</h1>
+        <h1 className="text-xl font-semibold text-grey-900">Process</h1>
       </div>
 
       <div className="flex items-center gap-3 mb-4">
@@ -40,7 +40,7 @@ export default function SortingProcessListPage() {
           <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-grey-400" />
           <input
             type="text"
-            placeholder="Search by sorting name..."
+            placeholder="Search by process name..."
             value={searchInput}
             onChange={(e) => setSearchInput(e.target.value)}
             className="w-full h-10 pl-9 pr-3 rounded-md border border-grey-300 text-sm text-grey-900 placeholder:text-grey-400 focus:border-green-500 focus:ring-[3px] focus:ring-green-500/15 outline-none transition-colors"
@@ -62,8 +62,10 @@ export default function SortingProcessListPage() {
         <table className="w-full min-w-[1180px] text-sm">
           <thead>
             <tr className="bg-grey-50 border-b border-grey-200">
-              <th className="text-left px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide min-w-[180px]"><span className="inline-flex items-center gap-1">Sorting Name <ArrowUpDown size={12} className="text-grey-400" /></span></th>
+              <th className="text-left px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide min-w-[180px]"><span className="inline-flex items-center gap-1">Process Name <ArrowUpDown size={12} className="text-grey-400" /></span></th>
               <th className="text-left px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide"><span className="inline-flex items-center gap-1">Status <ArrowUpDown size={12} className="text-grey-400" /></span></th>
+              <th className="text-left px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide">Shredding</th>
+              <th className="text-left px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide">Sorting</th>
               <th className="text-left px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide min-w-[150px]">Linked Order</th>
               <th className="text-left px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide min-w-[160px]">Supplier</th>
               <th className="text-left px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide min-w-[160px]">Carrier</th>
@@ -77,14 +79,14 @@ export default function SortingProcessListPage() {
           <tbody>
             {loading ? (
               <tr>
-                <td colSpan={10} className="px-4 py-8 text-center text-grey-400">
+                <td colSpan={12} className="px-4 py-8 text-center text-grey-400">
                   Loading...
                 </td>
               </tr>
             ) : sessions.length === 0 ? (
               <tr>
-                <td colSpan={10} className="px-4 py-8 text-center text-grey-400">
-                  No sorting sessions found
+                <td colSpan={12} className="px-4 py-8 text-center text-grey-400">
+                  No process sessions found
                 </td>
               </tr>
             ) : (
@@ -111,6 +113,12 @@ export default function SortingProcessListPage() {
                     </td>
                     <td className="px-4 py-2.5">
                       <StatusBadge status={session.status} />
+                    </td>
+                    <td className="px-4 py-2.5">
+                      <StatusBadge status={session.catalogue_status} />
+                    </td>
+                    <td className="px-4 py-2.5">
+                      <StatusBadge status={session.processing_status} />
                     </td>
                     <td className="px-4 py-2.5 text-sm text-grey-700">{order?.order_number || '—'}</td>
                     <td className="px-4 py-2.5 text-grey-700">

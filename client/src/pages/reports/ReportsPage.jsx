@@ -17,6 +17,7 @@ const REPORT_TYPES = [
   { code: 'RPT-04', name: 'Inbound Weight Register', icon: Scale, description: 'Weighing events with carrier/stream subtotals' },
   { code: 'RPT-05', name: 'Waste Stream Analysis', icon: BarChart3, description: 'Breakdown by waste stream and category' },
   { code: 'RPT-06', name: 'Container Asset Utilisation', icon: Box, description: 'Asset usage, counts, and top containers' },
+  { code: 'RPT-07', name: 'Downstream Material Statement', icon: FileText, description: 'Material and fraction level downstream declaration' },
 ];
 
 const inputClass = 'w-full h-10 px-3.5 rounded-md border border-grey-300 text-sm text-grey-900 focus:border-green-500 focus:ring-[3px] focus:ring-green-500/15 outline-none transition-colors';
@@ -261,6 +262,39 @@ function RPT06Config({ params, onChange }) {
   );
 }
 
+function RPT07Config({ params, onChange, suppliers, materials }) {
+  return (
+    <div className="space-y-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label className={labelClass}>Supplier *</label>
+          <select className={selectClass} value={params.supplierId || ''} onChange={(e) => onChange({ ...params, supplierId: e.target.value })}>
+            <option value="">Select supplier...</option>
+            {suppliers.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+          </select>
+        </div>
+        <div>
+          <label className={labelClass}>Material *</label>
+          <select className={selectClass} value={params.materialId || ''} onChange={(e) => onChange({ ...params, materialId: e.target.value })}>
+            <option value="">Select material...</option>
+            {materials.map((material) => <option key={material.id} value={material.id}>{material.code} — {material.name_en}</option>)}
+          </select>
+        </div>
+      </div>
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <label className={labelClass}>Date From *</label>
+          <input type="date" className={inputClass} value={params.dateFrom || ''} onChange={(e) => onChange({ ...params, dateFrom: e.target.value })} />
+        </div>
+        <div>
+          <label className={labelClass}>Date To *</label>
+          <input type="date" className={inputClass} value={params.dateTo || ''} onChange={(e) => onChange({ ...params, dateTo: e.target.value })} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ---- Generate Buttons ----
 function GenerateButtons({ generating, onGenerate }) {
   return (
@@ -383,7 +417,7 @@ export default function ReportsPage() {
   const user = useAuthStore((s) => s.user);
   const { selectedType, setSelectedType, reports, totalCount, loading, generating, generatedReport, clearGenerated, fetchReports, deleteReport: deleteReportAction } = useReportsStore();
   const generateReport = useReportsStore((s) => s.generateReport);
-  const { suppliers, carriers, wasteStreams, productCategories, loadAll } = useMasterDataStore();
+  const { suppliers, carriers, wasteStreams, productCategories, materials, loadAll } = useMasterDataStore();
 
   const [params, setParams] = useState({ dateFrom: monthAgo(), dateTo: today() });
 
@@ -442,6 +476,7 @@ export default function ReportsPage() {
       case 'RPT-04': return <RPT04Config params={params} onChange={setParams} carriers={carriers} wasteStreams={wasteStreams} />;
       case 'RPT-05': return <RPT05Config params={params} onChange={setParams} wasteStreams={wasteStreams} />;
       case 'RPT-06': return <RPT06Config params={params} onChange={setParams} />;
+      case 'RPT-07': return <RPT07Config params={params} onChange={setParams} suppliers={suppliers} materials={materials} />;
       default: return null;
     }
   })();

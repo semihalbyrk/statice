@@ -1,6 +1,11 @@
 const prisma = require('../utils/prismaClient');
 const { canTransition: canInboundTransition } = require('../utils/inboundStateMachine');
 const { writeAuditLog } = require('../utils/auditLog');
+const {
+  CATALOGUE_ENTRY_INCLUDE,
+  PROCESSING_RECORD_INCLUDE,
+  sumOutcomeWeight,
+} = require('./sortingWorkflowService');
 
 const LINE_INCLUDE = {
   asset: { select: { id: true, asset_label: true, container_type: true, parcel_type: true, net_weight_kg: true } },
@@ -30,6 +35,21 @@ const SESSION_INCLUDE = {
   sorting_lines: {
     include: LINE_INCLUDE,
   },
+  catalogue_entries: {
+    include: CATALOGUE_ENTRY_INCLUDE,
+    orderBy: [
+      { asset: { asset_label: 'asc' } },
+      { entry_order: 'asc' },
+    ],
+  },
+  processing_records: {
+    where: { is_current: true },
+    include: PROCESSING_RECORD_INCLUDE,
+    orderBy: [
+      { asset: { asset_label: 'asc' } },
+      { created_at: 'asc' },
+    ],
+  },
 };
 
 function createError(message, statusCode) {
@@ -43,17 +63,32 @@ function addAllocationFields(session) {
 
   const lines = session.sorting_lines || [];
   const assets = session.inbound.assets;
+  const catalogueEntries = session.catalogue_entries || [];
+  const processingRecords = session.processing_records || [];
 
   for (const asset of assets) {
     const assetLines = lines.filter((l) => l.asset_id === asset.id);
     const totalAllocated = assetLines.reduce((sum, l) => sum + Number(l.net_weight_kg), 0);
     const netWeight = Number(asset.net_weight_kg) || 0;
+    const assetCatalogueEntries = catalogueEntries.filter((entry) => entry.asset_id === asset.id);
+    const assetProcessingRecords = processingRecords.filter((record) => record.asset_id === asset.id);
+    const processingAllocated = assetProcessingRecords.reduce((sum, record) => sum + sumOutcomeWeight(record.outcomes), 0);
 
     asset.total_allocated_kg = Math.round(totalAllocated * 100) / 100;
     asset.unallocated_kg = Math.round((netWeight - totalAllocated) * 100) / 100;
     asset.allocation_pct = netWeight > 0 ? Math.round((totalAllocated / netWeight) * 10000) / 100 : 0;
     asset.is_over_allocated = totalAllocated > netWeight;
+    asset.catalogue_entries = assetCatalogueEntries;
+    asset.processing_records = assetProcessingRecords;
+    asset.processing_allocated_kg = Math.round(processingAllocated * 100) / 100;
+    asset.processing_balance_kg = Math.round((processingAllocated - netWeight) * 100) / 100;
+    asset.processing_is_balanced = Math.abs(asset.processing_balance_kg) <= 1;
   }
+
+  session.catalogue_entry_count = catalogueEntries.length;
+  session.processing_record_count = processingRecords.length;
+  session.processing_outcome_count = processingRecords.reduce((sum, record) => sum + (record.outcomes?.length || 0), 0);
+  session.processing_total_weight_kg = processingRecords.reduce((sum, record) => sum + sumOutcomeWeight(record.outcomes), 0);
 
   return session;
 }

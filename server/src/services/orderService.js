@@ -4,7 +4,7 @@ const { canTransition } = require('../utils/orderStateMachine');
 const { writeAuditLog } = require('../utils/auditLog');
 const { notifyRoles } = require('./notificationService');
 
-const VALID_ORDER_STATUSES = ['PLANNED', 'ARRIVED', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED'];
+const VALID_ORDER_STATUSES = ['PLANNED', 'ARRIVED', 'IN_PROGRESS', 'DISPUTE', 'COMPLETED', 'INVOICED', 'CANCELLED'];
 
 const ORDER_INCLUDE = {
   carrier: { select: { id: true, name: true } },
@@ -17,6 +17,60 @@ const ORDER_INCLUDE = {
   },
   created_by_user: { select: { id: true, full_name: true } },
 };
+
+function enrichOrder(order) {
+  if (!order) return order;
+
+  const expected = order.expected_asset_count ?? order.expected_skip_count ?? 0;
+  const received = order.received_asset_count ?? 0;
+
+  return {
+    ...order,
+    expected_asset_count: expected,
+    received_asset_count: received,
+    remaining_asset_count: Math.max(expected - received, 0),
+    is_partial_delivery: received > 0 && received < expected,
+  };
+}
+
+function startOfToday() {
+  const date = new Date();
+  date.setHours(0, 0, 0, 0);
+  return date;
+}
+
+function endOfToday() {
+  const date = new Date();
+  date.setHours(23, 59, 59, 999);
+  return date;
+}
+
+function daysBetween(a, b) {
+  const first = new Date(a);
+  first.setHours(0, 0, 0, 0);
+  const second = new Date(b);
+  second.setHours(0, 0, 0, 0);
+  return Math.round((first.getTime() - second.getTime()) / (24 * 60 * 60 * 1000));
+}
+
+function serializeMatchCandidate(order, matchStrategy, options = {}) {
+  const dayDelta = Math.abs(daysBetween(order.planned_date, new Date()));
+  return {
+    ...enrichOrder(order),
+    match_strategy: matchStrategy,
+    match_label: options.matchLabel || matchStrategy.replace(/_/g, ' '),
+    day_delta: dayDelta,
+    is_plate_match: options.isPlateMatch !== false,
+    is_manual_override: matchStrategy === 'MANUAL',
+    match_score: options.matchScore ?? (
+      matchStrategy === 'EXACT_SAME_DAY'
+        ? 100
+        : matchStrategy === 'EXACT_WINDOW'
+          ? 80 - dayDelta
+          : 40 - dayDelta
+    ),
+  };
+}
 
 async function syncOrderWasteStreams(tx, orderId, wasteStreamIds) {
   await tx.orderWasteStream.deleteMany({ where: { order_id: orderId } });
@@ -57,11 +111,11 @@ async function listOrders({ status, search, carrier_id, page = 1, limit = 20, da
     prisma.inboundOrder.count({ where }),
   ]);
 
-  return { data: orders, total, page: pageNum, limit: limitNum };
+  return { data: orders.map(enrichOrder), total, page: pageNum, limit: limitNum };
 }
 
 async function getOrder(id) {
-  return prisma.inboundOrder.findUnique({
+  const order = await prisma.inboundOrder.findUnique({
     where: { id },
     include: {
       ...ORDER_INCLUDE,
@@ -74,6 +128,7 @@ async function getOrder(id) {
       },
     },
   });
+  return enrichOrder(order);
 }
 
 async function createOrder(data, userId) {
@@ -141,7 +196,7 @@ async function createOrder(data, userId) {
       after: full,
     }, tx);
 
-    return full;
+    return enrichOrder(full);
   });
 }
 
@@ -195,7 +250,7 @@ async function updateOrder(id, data, userId) {
       after: updated,
     }, tx);
 
-    return updated;
+    return enrichOrder(updated);
   });
 }
 
@@ -223,7 +278,7 @@ async function cancelOrder(id, userId) {
       after: updated,
     }, tx);
 
-    return updated;
+    return enrichOrder(updated);
   });
 }
 
@@ -273,7 +328,7 @@ async function setIncident(orderId, incidentCategory, incidentNotes, userId) {
       after: { incident_category: updateData.incident_category, incident_notes: updateData.incident_notes, status: updateData.status || order.status },
     }, tx);
 
-    return updated;
+    return enrichOrder(updated);
   });
 }
 
@@ -315,7 +370,7 @@ async function getPlanningBoard({ date, carrier_id, supplier_id, supplier_type, 
     ],
   });
 
-  return orders.map((o) => ({
+  return orders.map((o) => enrichOrder({
     ...o,
     inbound_count: o.inbounds.length,
     total_net_weight_kg: o.inbounds.reduce((sum, i) => sum + (i.net_weight_kg ? Number(i.net_weight_kg) : 0), 0),
@@ -332,16 +387,62 @@ async function matchPlate(plate) {
   to.setDate(to.getDate() + 7);
   to.setHours(23, 59, 59, 999);
 
-  return prisma.inboundOrder.findMany({
-    where: {
-      status: { in: ['PLANNED', 'ARRIVED', 'IN_PROGRESS'] },
-      vehicle_plate: { equals: plate, mode: 'insensitive' },
-      planned_date: { gte: from, lte: to },
-    },
-    include: ORDER_INCLUDE,
-    orderBy: { planned_date: 'asc' },
-    take: 10,
-  });
+  const activeStatuses = ['PLANNED', 'ARRIVED', 'IN_PROGRESS', 'DISPUTE'];
+  const [plateMatches, manualOverridePool] = await Promise.all([
+    prisma.inboundOrder.findMany({
+      where: {
+        status: { in: activeStatuses },
+        vehicle_plate: { equals: plate, mode: 'insensitive' },
+        planned_date: { gte: from, lte: to },
+      },
+      include: ORDER_INCLUDE,
+      orderBy: { planned_date: 'asc' },
+      take: 20,
+    }),
+    prisma.inboundOrder.findMany({
+      where: {
+        status: { in: activeStatuses },
+        planned_date: { gte: from, lte: to },
+      },
+      include: ORDER_INCLUDE,
+      orderBy: [
+        { planned_date: 'asc' },
+        { order_number: 'asc' },
+      ],
+      take: 30,
+    }),
+  ]);
+
+  const todayStart = startOfToday();
+  const todayEnd = endOfToday();
+  const exactSameDay = plateMatches
+    .filter((order) => {
+      const plannedDate = new Date(order.planned_date);
+      return plannedDate >= todayStart && plannedDate <= todayEnd;
+    })
+    .map((order) => serializeMatchCandidate(order, 'EXACT_SAME_DAY', { matchLabel: 'Exact plate + same day' }));
+
+  const exactWindow = plateMatches
+    .filter((order) => !exactSameDay.some((candidate) => candidate.id === order.id))
+    .map((order) => serializeMatchCandidate(order, 'EXACT_WINDOW', { matchLabel: 'Exact plate within +/- 7 days' }));
+
+  const manualOverrideCandidates = manualOverridePool
+    .filter((order) => !plateMatches.some((candidate) => candidate.id === order.id))
+    .slice(0, 10)
+    .map((order) => serializeMatchCandidate(order, 'MANUAL', {
+      matchLabel: 'Manual override candidate',
+      isPlateMatch: false,
+      matchScore: 20 - Math.abs(daysBetween(order.planned_date, new Date())),
+    }));
+
+  return {
+    plate,
+    exact_same_day: exactSameDay,
+    exact_window: exactWindow,
+    manual_override_candidates: manualOverrideCandidates,
+    ranked_candidates: [...exactSameDay, ...exactWindow, ...manualOverrideCandidates],
+    can_create_adhoc: true,
+  };
 }
 
 async function createAdhocArrival(data, userId) {
@@ -427,7 +528,7 @@ async function createAdhocArrival(data, userId) {
       // notification is non-critical
     }
 
-    return full;
+    return enrichOrder(full);
   });
 }
 

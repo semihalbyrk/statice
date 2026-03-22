@@ -117,8 +117,8 @@ async function setIncident(req, res) {
     if (!incident_category) {
       return res.status(400).json({ error: 'incident_category is required' });
     }
-    const result = await inboundService.setIncidentCategory(req.params.id, incident_category, notes, req.user.id);
-    res.json(result);
+    const result = await inboundService.setIncidentCategory(req.params.id, incident_category, notes, req.user.userId);
+    res.json({ data: result });
   } catch (err) {
     res.status(err.statusCode || 500).json({ error: err.message });
   }
@@ -126,8 +126,8 @@ async function setIncident(req, res) {
 
 async function confirmWeighing(req, res) {
   try {
-    const result = await inboundService.confirmWeighingTicket(req.params.id, req.params.sequence, req.user.id);
-    res.json(result);
+    const result = await inboundService.confirmWeighingTicket(req.params.id, req.params.sequence, req.user.userId);
+    res.json({ data: result });
   } catch (err) {
     res.status(err.statusCode || 500).json({ error: err.message });
   }

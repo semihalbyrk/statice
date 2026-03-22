@@ -79,9 +79,6 @@ export default function PlanningBoardPage() {
     fetchBoard();
   }, [fetchBoard]);
 
-  const grouped = groupByTimeWindow(orders);
-  const groupKeys = Object.keys(grouped);
-
   return (
     <div>
       {/* Header */}
@@ -180,100 +177,101 @@ export default function PlanningBoardPage() {
           <p className="text-sm text-grey-400">No deliveries planned for this date</p>
         </div>
       ) : (
-        <div className="space-y-6">
-          {groupKeys.map((timeKey) => (
-            <div key={timeKey}>
-              <div className="flex items-center gap-2 mb-3">
-                <span className="text-xs font-semibold text-grey-500 uppercase tracking-wide">{timeKey}</span>
-                <span className="text-xs text-grey-400">({grouped[timeKey].length})</span>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
-                {grouped[timeKey].map((order) => {
-                  const wasteStreamLabel = order.waste_streams?.length > 0
-                    ? order.waste_streams.map((ows) => ows.waste_stream?.name_en).filter(Boolean).join(', ')
-                    : order.waste_stream?.name_en;
+        <div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+            {orders.map((order) => {
+              const wasteStreamLabel = order.waste_streams?.length > 0
+                ? order.waste_streams.map((ows) => ows.waste_stream?.name_en).filter(Boolean).join(', ')
+                : order.waste_stream?.name_en;
+              const timeWindow = formatTimeWindow(order);
 
-                  return (
-                    <div
-                      key={order.id}
-                      onClick={() => navigate(`/orders/${order.id}`)}
-                      className="bg-white rounded-lg border border-grey-200 shadow-sm p-4 cursor-pointer hover:border-green-400 hover:shadow-md transition-all"
-                    >
-                      {/* Card Header */}
-                      <div className="flex items-center justify-between mb-3">
-                        <span className="text-green-500 font-semibold text-sm hover:underline">
-                          {order.order_number}
+              return (
+                <div
+                  key={order.id}
+                  onClick={() => navigate(`/orders/${order.id}`)}
+                  className="bg-white rounded-lg border border-grey-200 shadow-sm p-4 cursor-pointer hover:border-green-400 hover:shadow-md transition-all"
+                >
+                  {/* Card Header */}
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="text-green-500 font-semibold text-sm hover:underline">
+                      {order.order_number}
+                    </span>
+                    <div className="flex items-center gap-1.5">
+                      {order.is_lzv && (
+                        <span className="inline-flex h-6 items-center px-2 rounded-md bg-purple-25 text-purple-700 border border-purple-300 text-[11px] font-semibold uppercase">
+                          LZV
                         </span>
-                        <div className="flex items-center gap-1.5">
-                          {order.is_lzv && (
-                            <span className="inline-flex h-6 items-center px-2 rounded-md bg-purple-25 text-purple-700 border border-purple-300 text-[11px] font-semibold uppercase">
-                              LZV
-                            </span>
-                          )}
-                          {order.incident_category && (
-                            <span className="inline-flex h-6 items-center gap-1 px-2 rounded-md bg-red-25 text-red-700 border border-red-300 text-[11px] font-semibold">
-                              <AlertTriangle size={12} />
-                              Incident
-                            </span>
-                          )}
-                          <StatusBadge status={order.status} />
-                        </div>
-                      </div>
+                      )}
+                      {order.incident_category && (
+                        <span className="inline-flex h-6 items-center gap-1 px-2 rounded-md bg-red-25 text-red-700 border border-red-300 text-[11px] font-semibold">
+                          <AlertTriangle size={12} />
+                          Incident
+                        </span>
+                      )}
+                      <StatusBadge status={order.status} />
+                    </div>
+                  </div>
 
-                      {/* Card Body */}
-                      <div className="space-y-2 text-sm">
-                        <div className="flex items-center justify-between">
-                          <span className="text-grey-500">Carrier</span>
-                          <span className="text-grey-900 font-medium">{order.carrier?.name || '—'}</span>
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <span className="text-grey-500">Supplier</span>
-                          <div className="flex items-center gap-1.5">
-                            <span className="text-grey-900 font-medium">{order.supplier?.name || '—'}</span>
-                            <SupplierTypeBadge type={order.supplier?.supplier_type} />
-                          </div>
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <span className="text-grey-500">Waste Stream</span>
-                          <span className="text-grey-900 text-right max-w-[60%] truncate">{wasteStreamLabel || '—'}</span>
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <span className="text-grey-500">Expected Parcels</span>
-                          <span className="text-grey-900 font-medium">{order.expected_skip_count ?? '—'}</span>
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <span className="text-grey-500">Inbounds</span>
-                          <span className="text-grey-900 font-medium">
-                            {order.inbound_count} / {order.expected_skip_count ?? '?'}
-                          </span>
-                        </div>
-                        {order.total_net_weight_kg > 0 && (
-                          <div className="flex items-center justify-between">
-                            <span className="text-grey-500">Total Net Weight</span>
-                            <span className="text-grey-900 font-medium">
-                              {Number(order.total_net_weight_kg).toLocaleString('nl-NL', { maximumFractionDigits: 0 })} kg
-                            </span>
-                          </div>
-                        )}
-                        {order.vehicle_plate && (
-                          <div className="flex items-center justify-between">
-                            <span className="text-grey-500">Vehicle</span>
-                            <div className="flex items-center gap-1.5">
-                              <TruckIcon size={14} className="text-grey-400" />
-                              <span className="font-mono text-grey-900">{order.vehicle_plate}</span>
-                            </div>
-                          </div>
-                        )}
+                  {/* Card Body */}
+                  <div className="space-y-2 text-sm">
+                    {timeWindow && (
+                      <div className="flex items-center justify-between">
+                        <span className="text-grey-500">Time Window</span>
+                        <span className="text-xs px-2 py-0.5 rounded-full bg-blue-25 text-blue-700 border border-blue-200 font-medium">
+                          {timeWindow}
+                        </span>
+                      </div>
+                    )}
+                    <div className="flex items-center justify-between">
+                      <span className="text-grey-500">Carrier</span>
+                      <span className="text-grey-900 font-medium">{order.carrier?.name || '—'}</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-grey-500">Supplier</span>
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-grey-900 font-medium">{order.supplier?.name || '—'}</span>
+                        <SupplierTypeBadge type={order.supplier?.supplier_type} />
                       </div>
                     </div>
-                  );
-                })}
-              </div>
-            </div>
-          ))}
+                    <div className="flex items-center justify-between">
+                      <span className="text-grey-500">Waste Stream</span>
+                      <span className="text-grey-900 text-right max-w-[60%] truncate">{wasteStreamLabel || '—'}</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-grey-500">Expected Parcels</span>
+                      <span className="text-grey-900 font-medium">{order.expected_skip_count ?? '—'}</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-grey-500">Inbounds</span>
+                      <span className="text-grey-900 font-medium">
+                        {order.inbound_count} / {order.expected_skip_count ?? '?'}
+                      </span>
+                    </div>
+                    {order.total_net_weight_kg > 0 && (
+                      <div className="flex items-center justify-between">
+                        <span className="text-grey-500">Total Net Weight</span>
+                        <span className="text-grey-900 font-medium">
+                          {Number(order.total_net_weight_kg).toLocaleString('nl-NL', { maximumFractionDigits: 0 })} kg
+                        </span>
+                      </div>
+                    )}
+                    {order.vehicle_plate && (
+                      <div className="flex items-center justify-between">
+                        <span className="text-grey-500">Vehicle</span>
+                        <div className="flex items-center gap-1.5">
+                          <TruckIcon size={14} className="text-grey-400" />
+                          <span className="font-mono text-grey-900">{order.vehicle_plate}</span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
 
           {/* Summary footer */}
-          <div className="text-xs text-grey-400 text-right pt-2">
+          <div className="text-xs text-grey-400 text-right pt-4">
             {orders.length} delivery{orders.length !== 1 ? 'ies' : 'y'} for {format(selectedDate, 'dd MMM yyyy')}
           </div>
         </div>

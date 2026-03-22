@@ -14,7 +14,7 @@ const NAV_ITEMS = [
   { to: '/planning', label: 'Planning Board', icon: CalendarDays, roles: ['ADMIN', 'LOGISTICS_PLANNER', 'GATE_OPERATOR'] },
   { to: '/arrival', label: 'Arrival', icon: Truck, roles: ['GATE_OPERATOR', 'ADMIN'] },
   { to: '/inbounds', label: 'Inbounds', icon: Scale, roles: ['GATE_OPERATOR', 'ADMIN'] },
-  { to: '/sorting', label: 'Sorting', icon: Boxes, roles: ['SORTING_EMPLOYEE', 'GATE_OPERATOR', 'ADMIN'] },
+  { to: '/sorting', label: 'Process', icon: Boxes, roles: ['SORTING_EMPLOYEE', 'GATE_OPERATOR', 'ADMIN'] },
   { to: '/reports', label: 'Reports', icon: FileBarChart, roles: ['REPORTING_MANAGER', 'ADMIN'] },
 ];
 
@@ -23,6 +23,8 @@ const ADMIN_ITEMS = [
   { to: '/admin/carriers', label: 'Carriers', icon: Building2 },
   { to: '/admin/suppliers', label: 'Suppliers', icon: Users },
   { to: '/admin/waste-streams', label: 'Waste Streams', icon: Recycle },
+  { to: '/admin/product-types', label: 'Materials & Fractions', icon: Recycle },
+  { to: '/admin/processors', label: 'Processors', icon: Building2 },
   { to: '/admin/audit-log', label: 'Audit Log', icon: ScrollText },
   { to: '/admin/settings', label: 'Settings', icon: Settings2 },
 ];
@@ -33,6 +35,10 @@ const ROLE_LABELS = {
   GATE_OPERATOR: 'Gate Operator',
   REPORTING_MANAGER: 'Reporting Manager',
   SORTING_EMPLOYEE: 'Sorting Employee',
+  COMPLIANCE_OFFICER: 'Compliance Officer',
+  LOGISTICS_COORDINATOR: 'Logistics Coordinator',
+  FINANCE_MANAGER: 'Finance Manager',
+  FINANCE_USER: 'Finance User',
 };
 
 function SidebarLink({ to, label, icon: Icon, onClick }) {

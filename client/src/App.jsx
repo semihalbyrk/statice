@@ -10,6 +10,8 @@ import ArrivalPage from './pages/arrival/ArrivalPage';
 import CarriersPage from './pages/admin/CarriersPage';
 import SuppliersPage from './pages/admin/SuppliersPage';
 import WasteStreamsPage from './pages/admin/WasteStreamsPage';
+import ProductTypesPage from './pages/admin/ProductTypesPage';
+import ProcessorsPage from './pages/admin/ProcessorsPage';
 import WeighingEventPage from './pages/weighing/WeighingEventPage';
 import OrderCreatePage from './pages/orders/OrderCreatePage';
 import PlanningBoardPage from './pages/orders/PlanningBoardPage';
@@ -66,6 +68,8 @@ export default function App() {
           <Route path="/admin/carriers" element={<ProtectedRoute allowedRoles={['ADMIN']}><CarriersPage /></ProtectedRoute>} />
           <Route path="/admin/suppliers" element={<ProtectedRoute allowedRoles={['ADMIN']}><SuppliersPage /></ProtectedRoute>} />
           <Route path="/admin/waste-streams" element={<ProtectedRoute allowedRoles={['ADMIN']}><WasteStreamsPage /></ProtectedRoute>} />
+          <Route path="/admin/product-types" element={<ProtectedRoute allowedRoles={['ADMIN']}><ProductTypesPage /></ProtectedRoute>} />
+          <Route path="/admin/processors" element={<ProtectedRoute allowedRoles={['ADMIN']}><ProcessorsPage /></ProtectedRoute>} />
           <Route path="/admin/audit-log" element={<ProtectedRoute allowedRoles={['ADMIN']}><AuditLogPage /></ProtectedRoute>} />
           <Route path="/admin/settings" element={<ProtectedRoute allowedRoles={['ADMIN']}><SystemSettingsPage /></ProtectedRoute>} />
         </Route>

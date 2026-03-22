@@ -16,12 +16,13 @@ import {
   confirmWeighing,
   getWeighingAmendments,
 } from '../../api/weighingEvents';
-import { deleteAsset, lookupAssetByLabel, getNextLabel } from '../../api/assets';
+import { deleteAsset, getNextContainerLabel, lookupContainerByLabel } from '../../api/assets';
 import { format } from 'date-fns';
 import Breadcrumb from '../../components/ui/Breadcrumb';
 
 const CONTAINER_TYPES = ['OPEN_TOP', 'CLOSED_TOP', 'GITTERBOX', 'PALLET', 'OTHER'];
 const CONTAINER_TYPE_LABELS = { OPEN_TOP: 'Open Top', CLOSED_TOP: 'Closed Top', GITTERBOX: 'Gitterbox', PALLET: 'Pallet', OTHER: 'Other' };
+const CONTAINER_TARE_WEIGHTS = { OPEN_TOP: 300, CLOSED_TOP: 350, GITTERBOX: 85, PALLET: 25, OTHER: 0 };
 
 const inputClass = "w-full h-10 px-3.5 rounded-md border border-grey-300 text-sm text-grey-900 focus:border-green-500 focus:ring-[3px] focus:ring-green-500/15 outline-none transition-colors";
 const selectClass = `${inputClass} bg-white`;
@@ -40,6 +41,40 @@ const PROGRESS_STEPS = [
 
 function formatDateTime(value, pattern = 'dd MMM yyyy HH:mm') {
   return value ? format(new Date(value), pattern) : '—';
+}
+
+function printAssetLabel(asset) {
+  const printWindow = window.open('', '_blank', 'width=420,height=320');
+  if (!printWindow) return;
+
+  printWindow.document.write(`
+    <html>
+      <head>
+        <title>${asset.asset_label}</title>
+        <style>
+          body { font-family: monospace; padding: 24px; margin: 0; }
+          .label { border: 2px solid #111827; border-radius: 12px; padding: 24px; }
+          .title { font-size: 14px; letter-spacing: 0.2em; color: #6b7280; margin-bottom: 12px; }
+          .code { font-size: 34px; font-weight: 700; letter-spacing: 0.08em; margin-bottom: 12px; }
+          .meta { font-size: 14px; color: #374151; line-height: 1.6; }
+        </style>
+      </head>
+      <body>
+        <div class="label">
+          <div class="title">STATICE ASSET LABEL</div>
+          <div class="code">${asset.asset_label}</div>
+          <div class="meta">
+            <div>Type: ${asset.parcel_type === 'CONTAINER' ? (CONTAINER_TYPE_LABELS[asset.container_type] || asset.container_type || 'Container') : 'Material'}</div>
+            <div>Waste Stream: ${asset.waste_stream?.name_en || '—'}</div>
+            <div>Gross/Tare Pair: ${asset.gross_weight_kg != null ? Number(asset.gross_weight_kg).toLocaleString() : '—'} / ${asset.tare_weight_kg != null ? Number(asset.tare_weight_kg).toLocaleString() : '—'} kg</div>
+          </div>
+        </div>
+      </body>
+    </html>
+  `);
+  printWindow.document.close();
+  printWindow.focus();
+  setTimeout(() => printWindow.print(), 150);
 }
 
 export default function InboundDetailPage() {
@@ -136,7 +171,7 @@ export default function InboundDetailPage() {
             onTransition={handleStatusChange}
           />
           {inbound.order?.is_lzv && (
-            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-yellow-100 text-yellow-800 ml-2">LZV</span>
+            <span className="text-sm font-medium text-grey-700 ml-2">LZV Vehicle</span>
           )}
           {inbound.incident_category && (
             <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-800">
@@ -152,7 +187,7 @@ export default function InboundDetailPage() {
       {/* Info Card */}
       <div className="bg-white rounded-lg border border-grey-200 shadow-sm p-4 mb-4">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-          <div className="grid flex-1 grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-y-3 gap-x-6">
+          <div className="grid flex-1 grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-y-3 gap-x-6 min-w-0">
             <InfoField label="Carrier" value={order?.carrier?.name} />
             <InfoField label="Supplier">
               <div className="flex items-center gap-1.5 mt-0.5">
@@ -165,15 +200,7 @@ export default function InboundDetailPage() {
                 {inbound.vehicle?.registration_plate || '—'}
               </span>
             </InfoField>
-            <InfoField label="Waste Stream(s)">
-              <div className="flex flex-wrap gap-1 mt-0.5">
-                {orderWasteStreams.map((ws) => (
-                  <span key={ws.id} className="text-xs px-2 py-0.5 rounded-full bg-grey-100 text-grey-700 border border-grey-200">
-                    {ws.name_en} ({ws.code})
-                  </span>
-                ))}
-              </div>
-            </InfoField>
+            <InfoField label="Waste Stream(s)" value={orderWasteStreams.map((ws) => `${ws.name_en} (${ws.code})`).join(', ') || '—'} />
             <InfoField label="Arrived At" value={formatDateTime(inbound.arrived_at)} />
             {inbound.notes && <InfoField className="sm:col-span-2 xl:col-span-5" label="Notes" value={inbound.notes} />}
           </div>
@@ -295,9 +322,9 @@ function ProgressBar({ status }) {
 /* ───── Info Field ───── */
 function InfoField({ label, value, children, className = '' }) {
   return (
-    <div className={className}>
+    <div className={`min-w-0 overflow-hidden ${className}`}>
       <span className="text-xs font-medium text-grey-500 uppercase tracking-wide">{label}</span>
-      {children ? <div className="mt-0.5">{children}</div> : <p className="text-sm font-medium text-grey-900 mt-0.5">{value ?? '—'}</p>}
+      {children ? <div className="mt-0.5 min-w-0">{children}</div> : <p className="text-sm font-medium text-grey-900 mt-0.5 break-words">{value ?? '—'}</p>}
     </div>
   );
 }
@@ -396,7 +423,10 @@ function WeighingFlowSection({ inbound, inboundId, weighings, assets, orderWaste
           </div>
           <p className="text-2xl font-mono font-bold text-green-700 tracking-wider">{registeredParcel.asset_label}</p>
           <p className="text-xs text-green-600 mt-1">Write this ID on the cargo packaging for tracking</p>
-          <button onClick={() => setRegisteredParcel(null)} className="mt-2 text-xs text-green-700 underline">Dismiss</button>
+          <div className="mt-3 flex gap-3">
+            <button onClick={() => printAssetLabel(registeredParcel)} className="text-xs font-semibold text-green-700 underline">Print Label</button>
+            <button onClick={() => setRegisteredParcel(null)} className="text-xs text-green-700 underline">Dismiss</button>
+          </div>
         </div>
       )}
 
@@ -469,14 +499,6 @@ function WeighingTimeline({ weighings, assets, user, onConfirmWeighing }) {
                 <span className="text-base font-semibold text-green-800">{typeLabel}</span>
                 <span className="text-base font-bold text-green-900 tabular-nums">{Number(w.weight_kg).toLocaleString()} kg</span>
                 {ticket?.is_manual_override && <span className="text-[10px] text-orange-600 font-medium">(manual)</span>}
-                {user?.role === 'ADMIN' && !ticket?.is_confirmed && (
-                  <button
-                    onClick={() => onConfirmWeighing(w.sequence)}
-                    className="text-xs px-2 py-0.5 bg-green-600 text-white rounded hover:bg-green-700"
-                  >
-                    Confirm
-                  </button>
-                )}
                 {ticket?.is_confirmed && (
                   <span className="text-xs text-green-600" title="Confirmed">&#x1f512;</span>
                 )}
@@ -513,11 +535,11 @@ function WeighingTimeline({ weighings, assets, user, onConfirmWeighing }) {
 
 /* ───── Parcel Registration Form ───── */
 function ParcelRegistrationForm({ inboundId, orderWasteStreams, onSuccess }) {
-  const [parcelType, setParcelType] = useState('CONTAINER');
-  const [containerMode, setContainerMode] = useState('new'); // 'new' or 'existing'
+  const [registrationMode, setRegistrationMode] = useState('new_container'); // 'new_container' | 'existing_container' | 'no_container'
   const [form, setForm] = useState({
+    container_label: '',
     container_type: '',
-    existing_asset_label: '',
+    estimated_tare_weight_kg: '',
     waste_stream_id: orderWasteStreams.length === 1 ? orderWasteStreams[0].id : '',
     estimated_volume_m3: '',
     notes: '',
@@ -525,19 +547,35 @@ function ParcelRegistrationForm({ inboundId, orderWasteStreams, onSuccess }) {
   const [lookupResult, setLookupResult] = useState(null);
   const [lookupLoading, setLookupLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [nextLabel, setNextLabel] = useState(null);
 
-  // Fetch preview label on mount
+  // Fetch next container label when switching to new_container mode
   useEffect(() => {
-    getNextLabel().then(({ data }) => setNextLabel(data.data.label)).catch(() => {});
-  }, []);
+    if (registrationMode === 'new_container') {
+      getNextContainerLabel().then(({ data }) => {
+        setForm((p) => ({ ...p, container_label: data.data.label }));
+      }).catch(() => {});
+    }
+  }, [registrationMode]);
+
+  const isExisting = registrationMode === 'existing_container';
+  const isContainer = registrationMode !== 'no_container';
 
   const handleLookup = useCallback(async (label) => {
     if (!label || label.length < 3) { setLookupResult(null); return; }
     setLookupLoading(true);
     try {
-      const { data } = await lookupAssetByLabel(label);
-      setLookupResult(data.data);
+      const { data } = await lookupContainerByLabel(label);
+      if (data.data) {
+        setLookupResult(data.data);
+        setForm((p) => ({
+          ...p,
+          container_type: data.data.container_type || '',
+          estimated_volume_m3: data.data.estimated_volume_m3 ? String(data.data.estimated_volume_m3) : '',
+          estimated_tare_weight_kg: data.data.estimated_tare_weight_kg ? String(data.data.estimated_tare_weight_kg) : '',
+        }));
+      } else {
+        setLookupResult(null);
+      }
     } catch {
       setLookupResult(null);
     } finally {
@@ -545,36 +583,76 @@ function ParcelRegistrationForm({ inboundId, orderWasteStreams, onSuccess }) {
     }
   }, []);
 
-  async function handleSubmit(e) {
-    e.preventDefault();
+  function handleContainerTypeChange(val) {
+    const tare = CONTAINER_TARE_WEIGHTS[val] != null ? String(CONTAINER_TARE_WEIGHTS[val]) : '';
+    setForm((p) => ({ ...p, container_type: val, estimated_tare_weight_kg: tare }));
+  }
+
+  function handleModeChange(mode) {
+    setRegistrationMode(mode);
+    setLookupResult(null);
+    setForm((p) => ({
+      ...p,
+      container_label: '',
+      container_type: '',
+      estimated_tare_weight_kg: '',
+      estimated_volume_m3: '',
+    }));
+  }
+
+  function resetForm() {
+    setLookupResult(null);
+    setForm({
+      container_label: '',
+      container_type: '',
+      estimated_tare_weight_kg: '',
+      waste_stream_id: orderWasteStreams.length === 1 ? orderWasteStreams[0].id : '',
+      estimated_volume_m3: '',
+      notes: '',
+    });
+    // Refresh container label for next registration
+    if (registrationMode === 'new_container') {
+      getNextContainerLabel().then(({ data }) => {
+        setForm((p) => ({ ...p, container_label: data.data.label }));
+      }).catch(() => {});
+    }
+  }
+
+  function buildPayload() {
+    const payload = {
+      parcel_type: isContainer ? 'CONTAINER' : 'MATERIAL',
+      waste_stream_id: form.waste_stream_id || null,
+      estimated_volume_m3: form.estimated_volume_m3 ? Number(form.estimated_volume_m3) : null,
+      estimated_tare_weight_kg: form.estimated_tare_weight_kg ? Number(form.estimated_tare_weight_kg) : null,
+      notes: form.notes || null,
+    };
+    if (registrationMode === 'new_container') {
+      payload.container_type = form.container_type;
+      payload.container_label = form.container_label || null;
+    } else if (registrationMode === 'existing_container') {
+      payload.container_type = form.container_type;
+      payload.existing_container_label = form.container_label || null;
+    }
+    return payload;
+  }
+
+  async function handleContinue() {
+    if (isContainer && registrationMode === 'new_container' && !form.container_type) return;
+    if (isContainer && registrationMode === 'existing_container' && !lookupResult) return;
     setSubmitting(true);
     try {
-      const payload = {
-        parcel_type: parcelType,
-        waste_stream_id: form.waste_stream_id || null,
-        estimated_volume_m3: form.estimated_volume_m3 ? Number(form.estimated_volume_m3) : null,
-        notes: form.notes || null,
-      };
-      if (parcelType === 'CONTAINER') {
-        payload.container_type = form.container_type;
-        if (containerMode === 'existing' && form.existing_asset_label) {
-          payload.existing_asset_label = form.existing_asset_label;
-        }
-      }
+      const payload = buildPayload();
       const { data } = await registerParcelApi(inboundId, payload);
       toast.success('Parcel registered');
+      // Trigger next weighing (non-tare)
+      try {
+        await triggerNextWeighing(inboundId, { is_tare: false });
+        toast.success('Next weighing complete');
+      } catch (err) {
+        toast.error(err.response?.data?.error || 'Weighing failed — register manually');
+      }
       onSuccess(data.data);
-      // Reset form and refresh preview label
-      setForm({
-        container_type: '',
-        existing_asset_label: '',
-        waste_stream_id: orderWasteStreams.length === 1 ? orderWasteStreams[0].id : '',
-        estimated_volume_m3: '',
-        notes: '',
-      });
-      setLookupResult(null);
-      setContainerMode('new');
-      getNextLabel().then(({ data: d }) => setNextLabel(d.data.label)).catch(() => {});
+      resetForm();
     } catch (err) {
       toast.error(err.response?.data?.error || 'Failed to register parcel');
     } finally {
@@ -582,157 +660,187 @@ function ParcelRegistrationForm({ inboundId, orderWasteStreams, onSuccess }) {
     }
   }
 
+  async function handleFinalize() {
+    if (isContainer && registrationMode === 'new_container' && !form.container_type) return;
+    if (isContainer && registrationMode === 'existing_container' && !lookupResult) return;
+    setSubmitting(true);
+    try {
+      const payload = buildPayload();
+      const { data } = await registerParcelApi(inboundId, payload);
+      toast.success('Parcel registered');
+      // Trigger tare weighing to finalize
+      try {
+        await triggerNextWeighing(inboundId, { is_tare: true });
+        toast.success('Tare weighing complete — weighing finalized');
+      } catch (err) {
+        toast.error(err.response?.data?.error || 'Tare weighing failed — trigger manually');
+      }
+      onSuccess(data.data);
+    } catch (err) {
+      toast.error(err.response?.data?.error || 'Failed to register parcel');
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  const continueDisabled = submitting || (isContainer && registrationMode === 'new_container' && !form.container_type) || (isContainer && registrationMode === 'existing_container' && !lookupResult);
+  const finalizeDisabled = continueDisabled;
+
   return (
     <div className="bg-grey-50 rounded-lg border border-grey-200 p-4">
-      <div className="flex items-center justify-between mb-3">
-        <h3 className="text-sm font-semibold text-grey-900">Register Unloaded Cargo</h3>
-        {nextLabel && (
-          <span className="text-xs text-grey-500">Parcel ID: <strong className="font-mono text-grey-900">{nextLabel}</strong></span>
-        )}
+      <h3 className="text-sm font-semibold text-grey-900 mb-3">Register Unloaded Cargo</h3>
+
+      {/* 3-option radio */}
+      <div className="flex gap-4 mb-4">
+        {[
+          { value: 'new_container', icon: <Box size={14} />, label: 'New Container' },
+          { value: 'existing_container', icon: <Box size={14} />, label: 'Existing Container' },
+          { value: 'no_container', icon: <Package size={14} />, label: 'No Container' },
+        ].map((opt) => (
+          <label key={opt.value} className="flex items-center gap-2 text-sm text-grey-700 cursor-pointer">
+            <input
+              type="radio"
+              name="registrationMode"
+              value={opt.value}
+              checked={registrationMode === opt.value}
+              onChange={() => handleModeChange(opt.value)}
+              className="accent-green-500"
+            />
+            <span className="flex items-center gap-1.5">
+              {opt.icon} {opt.label}
+            </span>
+          </label>
+        ))}
       </div>
 
-      {/* Type Toggle */}
-      <div className="flex gap-2 mb-4">
-        <button
-          type="button"
-          onClick={() => setParcelType('CONTAINER')}
-          className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-            parcelType === 'CONTAINER'
-              ? 'bg-green-500 text-white'
-              : 'bg-white border border-grey-300 text-grey-700 hover:bg-grey-50'
-          }`}
-        >
-          <Box size={16} /> Container
-        </button>
-        <button
-          type="button"
-          onClick={() => setParcelType('MATERIAL')}
-          className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-            parcelType === 'MATERIAL'
-              ? 'bg-green-500 text-white'
-              : 'bg-white border border-grey-300 text-grey-700 hover:bg-grey-50'
-          }`}
-        >
-          <Package size={16} /> Material
-        </button>
-      </div>
-
-      <form onSubmit={handleSubmit}>
-        {parcelType === 'CONTAINER' && (
-          <>
-            {/* New / Existing toggle */}
-            <div className="flex gap-4 mb-3">
-              <label className="flex items-center gap-2 text-sm text-grey-700 cursor-pointer">
-                <input type="radio" name="containerMode" value="new" checked={containerMode === 'new'}
-                  onChange={() => setContainerMode('new')} className="accent-green-500" />
-                New Container
-              </label>
-              <label className="flex items-center gap-2 text-sm text-grey-700 cursor-pointer">
-                <input type="radio" name="containerMode" value="existing" checked={containerMode === 'existing'}
-                  onChange={() => setContainerMode('existing')} className="accent-green-500" />
-                Existing Container
-              </label>
-            </div>
-
-            {containerMode === 'existing' && (
-              <div className="mb-3">
-                <label className="block text-xs font-medium text-grey-700 mb-1">Container Label</label>
-                <input
-                  type="text"
-                  value={form.existing_asset_label}
-                  onChange={(e) => {
-                    const val = e.target.value.toUpperCase();
-                    setForm((p) => ({ ...p, existing_asset_label: val }));
-                    handleLookup(val);
-                  }}
-                  placeholder="CNT-20260317-001"
-                  className={`${inputClass} font-mono`}
-                />
-                {lookupLoading && <p className="text-xs text-grey-400 mt-1">Searching...</p>}
-                {lookupResult && (
-                  <p className="text-xs text-green-600 mt-1">Found: {lookupResult.asset_label} — {CONTAINER_TYPE_LABELS[lookupResult.container_type] || lookupResult.container_type}</p>
-                )}
-                {!lookupLoading && form.existing_asset_label.length >= 3 && !lookupResult && (
-                  <p className="text-xs text-red-500 mt-1">Container not found</p>
-                )}
-              </div>
-            )}
-
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-3">
-              <div>
-                <label className="block text-xs font-medium text-grey-700 mb-1">Container Type <span className="text-red-500">*</span></label>
-                <select value={form.container_type} onChange={(e) => setForm((p) => ({ ...p, container_type: e.target.value }))} required className={selectClass}>
-                  <option value="">Select...</option>
-                  {CONTAINER_TYPES.map((t) => <option key={t} value={t}>{CONTAINER_TYPE_LABELS[t]}</option>)}
-                </select>
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-grey-700 mb-1">Waste Stream</label>
-                {orderWasteStreams.length <= 1 ? (
-                  <div className="h-10 bg-grey-50 border border-grey-200 rounded-md px-3.5 text-sm text-grey-700 flex items-center">
-                    {orderWasteStreams[0]?.name_en || '—'}
-                  </div>
-                ) : (
-                  <select value={form.waste_stream_id} onChange={(e) => setForm((p) => ({ ...p, waste_stream_id: e.target.value }))} className={selectClass}>
-                    <option value="">Select...</option>
-                    {orderWasteStreams.map((ws) => <option key={ws.id} value={ws.id}>{ws.name_en} ({ws.code})</option>)}
-                  </select>
-                )}
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-grey-700 mb-1">Volume (m³)</label>
-                <input type="number" step="0.1" min="0" placeholder="Optional"
-                  value={form.estimated_volume_m3}
-                  onChange={(e) => setForm((p) => ({ ...p, estimated_volume_m3: e.target.value }))}
-                  className={inputClass} />
-              </div>
-            </div>
-          </>
-        )}
-
-        {parcelType === 'MATERIAL' && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
-            <div>
-              <label className="block text-xs font-medium text-grey-700 mb-1">Waste Stream</label>
-              {orderWasteStreams.length <= 1 ? (
-                <div className="h-10 bg-grey-50 border border-grey-200 rounded-md px-3.5 text-sm text-grey-700 flex items-center">
-                  {orderWasteStreams[0]?.name_en || '—'}
-                </div>
-              ) : (
-                <select value={form.waste_stream_id} onChange={(e) => setForm((p) => ({ ...p, waste_stream_id: e.target.value }))} className={selectClass}>
-                  <option value="">Select...</option>
-                  {orderWasteStreams.map((ws) => <option key={ws.id} value={ws.id}>{ws.name_en} ({ws.code})</option>)}
-                </select>
-              )}
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-grey-700 mb-1">Notes</label>
-              <input type="text" placeholder="Optional"
-                value={form.notes}
-                onChange={(e) => setForm((p) => ({ ...p, notes: e.target.value }))}
-                className={inputClass} />
-            </div>
-          </div>
-        )}
-
-        {parcelType === 'CONTAINER' && (
-          <div className="mb-3">
-            <label className="block text-xs font-medium text-grey-700 mb-1">Notes</label>
-            <input type="text" placeholder="Optional"
-              value={form.notes}
-              onChange={(e) => setForm((p) => ({ ...p, notes: e.target.value }))}
-              className={inputClass} />
-          </div>
-        )}
-
-        <div className="flex justify-end">
-          <button type="submit" disabled={submitting || (parcelType === 'CONTAINER' && !form.container_type)}
-            className="h-9 px-5 bg-green-500 text-white rounded-md font-semibold text-sm hover:bg-green-700 disabled:opacity-50 transition-colors flex items-center gap-2">
-            {submitting ? <Loader2 className="animate-spin" size={14} /> : <Plus size={14} />}
-            {submitting ? 'Registering...' : 'Register Parcel'}
-          </button>
+      {/* Container ID — New Container mode */}
+      {registrationMode === 'new_container' && (
+        <div className="mb-3">
+          <label className="block text-xs font-medium text-grey-700 mb-1">Container ID</label>
+          <input
+            type="text"
+            value={form.container_label}
+            onChange={(e) => setForm((p) => ({ ...p, container_label: e.target.value.toUpperCase() }))}
+            placeholder="CNT-00001"
+            className={`${inputClass} font-mono`}
+          />
         </div>
-      </form>
+      )}
+
+      {/* Container ID — Existing Container mode (lookup) */}
+      {registrationMode === 'existing_container' && (
+        <div className="mb-3">
+          <label className="block text-xs font-medium text-grey-700 mb-1">Container ID</label>
+          <input
+            type="text"
+            value={form.container_label}
+            onChange={(e) => {
+              const val = e.target.value.toUpperCase();
+              setForm((p) => ({ ...p, container_label: val }));
+              handleLookup(val);
+            }}
+            placeholder="CNT-00001"
+            className={`${inputClass} font-mono`}
+          />
+          {lookupLoading && <p className="text-xs text-grey-400 mt-1">Searching...</p>}
+          {lookupResult && (
+            <p className="text-xs text-green-600 mt-1">Found: {lookupResult.container_label} — {CONTAINER_TYPE_LABELS[lookupResult.container_type] || lookupResult.container_type}</p>
+          )}
+          {!lookupLoading && form.container_label.length >= 3 && !lookupResult && (
+            <p className="text-xs text-red-500 mt-1">Container not found</p>
+          )}
+        </div>
+      )}
+
+      {/* Container fields (type, tare, volume) */}
+      {isContainer && (
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-3">
+          <div>
+            <label className="block text-xs font-medium text-grey-700 mb-1">Container Type <span className="text-red-500">*</span></label>
+            <select
+              value={form.container_type}
+              onChange={(e) => handleContainerTypeChange(e.target.value)}
+              disabled={isExisting}
+              className={`${selectClass} ${isExisting ? 'bg-grey-100 text-grey-500 cursor-not-allowed' : ''}`}
+            >
+              <option value="">Select...</option>
+              {CONTAINER_TYPES.map((t) => <option key={t} value={t}>{CONTAINER_TYPE_LABELS[t]}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-grey-700 mb-1">Tare Weight (kg)</label>
+            <input
+              type="number"
+              step="1"
+              min="0"
+              placeholder="Auto"
+              value={form.estimated_tare_weight_kg}
+              onChange={(e) => setForm((p) => ({ ...p, estimated_tare_weight_kg: e.target.value }))}
+              disabled={isExisting}
+              className={`${inputClass} ${isExisting ? 'bg-grey-100 text-grey-500 cursor-not-allowed' : ''}`}
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-grey-700 mb-1">Volume (m³)</label>
+            <input
+              type="number"
+              step="0.1"
+              min="0"
+              placeholder="Optional"
+              value={form.estimated_volume_m3}
+              onChange={(e) => setForm((p) => ({ ...p, estimated_volume_m3: e.target.value }))}
+              disabled={isExisting}
+              className={`${inputClass} ${isExisting ? 'bg-grey-100 text-grey-500 cursor-not-allowed' : ''}`}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Waste Stream + Notes — all modes */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
+        <div>
+          <label className="block text-xs font-medium text-grey-700 mb-1">Waste Stream</label>
+          {orderWasteStreams.length <= 1 ? (
+            <div className="h-10 bg-grey-50 border border-grey-200 rounded-md px-3.5 text-sm text-grey-700 flex items-center">
+              {orderWasteStreams[0]?.name_en || '—'}
+            </div>
+          ) : (
+            <select value={form.waste_stream_id} onChange={(e) => setForm((p) => ({ ...p, waste_stream_id: e.target.value }))} className={selectClass}>
+              <option value="">Select...</option>
+              {orderWasteStreams.map((ws) => <option key={ws.id} value={ws.id}>{ws.name_en} ({ws.code})</option>)}
+            </select>
+          )}
+        </div>
+        <div>
+          <label className="block text-xs font-medium text-grey-700 mb-1">Notes</label>
+          <input type="text" placeholder="Optional"
+            value={form.notes}
+            onChange={(e) => setForm((p) => ({ ...p, notes: e.target.value }))}
+            className={inputClass} />
+        </div>
+      </div>
+
+      {/* Action buttons */}
+      <div className="flex justify-end gap-2">
+        <button
+          type="button"
+          onClick={handleFinalize}
+          disabled={finalizeDisabled}
+          className="h-9 px-5 border-2 border-green-500 text-green-700 rounded-md font-semibold text-sm hover:bg-green-25 disabled:opacity-50 transition-colors flex items-center gap-2"
+        >
+          {submitting ? <Loader2 className="animate-spin" size={14} /> : <Scale size={14} />}
+          Finalize Weighing
+        </button>
+        <button
+          type="button"
+          onClick={handleContinue}
+          disabled={continueDisabled}
+          className="h-9 px-5 bg-green-500 text-white rounded-md font-semibold text-sm hover:bg-green-700 disabled:opacity-50 transition-colors flex items-center gap-2"
+        >
+          {submitting ? <Loader2 className="animate-spin" size={14} /> : <Scale size={14} />}
+          Continue Next Weighing
+        </button>
+      </div>
     </div>
   );
 }
@@ -760,8 +868,10 @@ function ParcelsTable({ inbound, assets, refreshInbound }) {
         <table className="w-full text-sm">
           <thead>
             <tr className="bg-grey-50 border-b border-grey-200">
-              <th className="px-2.5 py-2 text-left text-xs font-medium text-grey-500 uppercase tracking-wide">Parcel Name</th>
-              <th className="px-2.5 py-2 text-left text-xs font-medium text-grey-500 uppercase tracking-wide">Carrier Type</th>
+              <th className="px-2.5 py-2 text-left text-xs font-medium text-grey-500 uppercase tracking-wide">Parcel ID</th>
+              <th className="px-2.5 py-2 text-left text-xs font-medium text-grey-500 uppercase tracking-wide">Container ID</th>
+              <th className="px-2.5 py-2 text-right text-xs font-medium text-grey-500 uppercase tracking-wide">Gross (kg)</th>
+              <th className="px-2.5 py-2 text-right text-xs font-medium text-grey-500 uppercase tracking-wide">Tare (kg)</th>
               <th className="px-2.5 py-2 text-right text-xs font-medium text-grey-500 uppercase tracking-wide">Net (kg)</th>
               <th className="px-2.5 py-2 w-8"></th>
             </tr>
@@ -773,8 +883,14 @@ function ParcelsTable({ inbound, assets, refreshInbound }) {
                   <span className="text-sm font-semibold text-grey-900">{asset.asset_label}</span>
                   {asset.notes && <p className="text-[11px] text-grey-400 mt-0.5 truncate max-w-[140px]">{asset.notes}</p>}
                 </td>
-                <td className="px-2.5 py-2.5 text-sm text-grey-700">
-                  {asset.container_type ? CONTAINER_TYPE_LABELS[asset.container_type] : 'Loose'}
+                <td className="px-2.5 py-2.5 text-sm font-mono text-grey-700">
+                  {asset.container_label || '—'}
+                </td>
+                <td className="px-2.5 py-2.5 text-right text-sm text-grey-700 tabular-nums">
+                  {asset.gross_weight_kg != null ? Number(asset.gross_weight_kg).toLocaleString() : '—'}
+                </td>
+                <td className="px-2.5 py-2.5 text-right text-sm text-grey-700 tabular-nums">
+                  {asset.tare_weight_kg != null ? Number(asset.tare_weight_kg).toLocaleString() : '—'}
                 </td>
                 <td className="px-2.5 py-2.5 text-right text-sm font-bold text-grey-900 tabular-nums">
                   {asset.net_weight_kg != null ? Number(asset.net_weight_kg).toLocaleString() : '—'}
@@ -805,6 +921,8 @@ function ParcelsTable({ inbound, assets, refreshInbound }) {
             <tr className="border-t border-grey-300 bg-grey-50">
               <td className="px-2.5 py-2 text-xs font-semibold text-grey-700">Total</td>
               <td className="px-2.5 py-2 text-xs text-grey-500">{assets.length} parcel(s)</td>
+              <td></td>
+              <td></td>
               <td className="px-2.5 py-2 text-right text-sm font-bold text-grey-900 tabular-nums">{totalNet ? totalNet.toLocaleString() : '—'}</td>
               <td></td>
             </tr>
@@ -858,7 +976,7 @@ function ActionsFooter({ inbound, inboundId, isTriggering, setTriggering, setInb
         </button>
       )}
 
-      {['READY_FOR_SORTING', 'SORTED'].includes(inbound.status) && (
+      {['WEIGHED_OUT', 'READY_FOR_SORTING', 'SORTED'].includes(inbound.status) && (
         <>
           <button
             onClick={handleDownloadPdf}

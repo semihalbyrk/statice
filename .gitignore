@@ -31,3 +31,4 @@ server/storage/
 
 # Claude Code
 .claude/
+.claude-memory

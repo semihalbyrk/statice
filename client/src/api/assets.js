@@ -7,3 +7,5 @@ export const createAsset = (data) => api.post('/assets', data);
 export const updateAsset = (id, data) => api.put(`/assets/${id}`, data);
 export const deleteAsset = (id) => api.delete(`/assets/${id}`);
 export const lookupAssetByLabel = (label) => api.get('/assets/lookup', { params: { label } });
+export const getNextContainerLabel = () => api.get('/assets/next-container-label');
+export const lookupContainerByLabel = (label) => api.get('/assets/lookup-container', { params: { label } });

@@ -20,6 +20,9 @@ function WasteStreamFormModal({ stream, onClose, onSuccess }) {
     name_en: stream?.name_en || '',
     name_nl: stream?.name_nl || '',
     code: stream?.code || '',
+    cbs_code: stream?.cbs_code || '',
+    weeelabex_code: stream?.weeelabex_code || '',
+    ewc_code: stream?.ewc_code || '',
   });
   const [submitting, setSubmitting] = useState(false);
 
@@ -65,6 +68,18 @@ function WasteStreamFormModal({ stream, onClose, onSuccess }) {
           <div>
             <label className="block text-sm font-medium text-grey-700 mb-1.5">Name (Dutch)</label>
             <input name="name_nl" value={form.name_nl} onChange={handleChange} required className={inputClass} />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-grey-700 mb-1.5">CBS Code</label>
+            <input name="cbs_code" value={form.cbs_code} onChange={handleChange} className={inputClass} />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-grey-700 mb-1.5">WEEELABEX Code</label>
+            <input name="weeelabex_code" value={form.weeelabex_code} onChange={handleChange} className={inputClass} />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-grey-700 mb-1.5">EWC / EURAL Code</label>
+            <input name="ewc_code" value={form.ewc_code} onChange={handleChange} className={inputClass} />
           </div>
           <div className="flex justify-end gap-3 pt-2">
             <button type="button" onClick={onClose} className="h-9 px-4 bg-white text-grey-700 border border-grey-300 rounded-md text-sm font-semibold hover:bg-grey-50 transition-colors">Cancel</button>
@@ -180,6 +195,7 @@ function PercentageInput({ name, label, value, onChange }) {
 export default function WasteStreamsPage() {
   const fetchActiveWasteStreams = useMasterDataStore((state) => state.fetchWasteStreams);
   const fetchActiveProductCategories = useMasterDataStore((state) => state.fetchProductCategories);
+  const fetchActiveProductTypes = useMasterDataStore((state) => state.fetchProductTypes);
   const [streams, setStreams] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
@@ -188,8 +204,8 @@ export default function WasteStreamsPage() {
   const [categoryModal, setCategoryModal] = useState({ open: false, category: null, wasteStreamId: '' });
 
   const syncMasterData = useCallback(async () => {
-    await Promise.all([fetchActiveWasteStreams(), fetchActiveProductCategories()]);
-  }, [fetchActiveProductCategories, fetchActiveWasteStreams]);
+    await Promise.all([fetchActiveWasteStreams(), fetchActiveProductCategories(), fetchActiveProductTypes()]);
+  }, [fetchActiveProductCategories, fetchActiveProductTypes, fetchActiveWasteStreams]);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -269,14 +285,19 @@ export default function WasteStreamsPage() {
               <button onClick={() => toggleExpand(ws.id)} className="w-full px-5 py-3 flex items-center justify-between hover:bg-grey-50 transition-colors">
                 <div className="flex items-center gap-2 min-w-0">
                   {expanded[ws.id] ? <ChevronDown size={16} className="text-grey-500" /> : <ChevronRight size={16} className="text-grey-500" />}
-                  <div className="min-w-0">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className="font-semibold text-sm text-grey-900">{ws.name_en}</span>
-                      <span className="text-xs text-grey-500">({ws.code})</span>
-                      <span className="text-xs text-grey-400">{ws.categories?.length || 0} sub categories</span>
+                    <div className="min-w-0">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="font-semibold text-sm text-grey-900">{ws.name_en}</span>
+                        <span className="text-xs text-grey-500">({ws.code})</span>
+                        <span className="text-xs text-grey-400">{ws.categories?.length || 0} sub categories</span>
+                        {(ws.cbs_code || ws.weeelabex_code || ws.ewc_code) && (
+                          <span className="text-xs text-grey-400">
+                            {[ws.cbs_code && `CBS ${ws.cbs_code}`, ws.weeelabex_code && `WLBX ${ws.weeelabex_code}`, ws.ewc_code && `EWC ${ws.ewc_code}`].filter(Boolean).join(' | ')}
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </div>
-                </div>
                 <div className="flex items-center gap-2">
                   <div onClick={(e) => e.stopPropagation()}>
                     <ClickableStatusBadge

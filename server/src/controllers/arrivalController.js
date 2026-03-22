@@ -6,8 +6,8 @@ async function matchPlate(req, res, next) {
     if (!plate || plate.length < 2) {
       return res.status(400).json({ error: 'Plate query must be at least 2 characters' });
     }
-    const orders = await orderService.matchPlate(plate);
-    return res.json({ data: orders });
+    const result = await orderService.matchPlate(plate);
+    return res.json({ data: result });
   } catch (err) {
     next(err);
   }
