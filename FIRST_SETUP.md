@@ -17,17 +17,18 @@ cd server
 npm install
 
 # 4. Create .env file (not included in repo!)
+cat > .env << 'EOF'
 DATABASE_URL=postgresql://statice:statice123@localhost:5432/statice_mrf
 JWT_SECRET=statice-jwt-secret-dev-2026
 JWT_REFRESH_SECRET=statice-refresh-secret-dev-2026
 PORT=3001
 NODE_ENV=development
 
-
 # 5. PostgreSQL DB — with Docker:
 cd ..
 docker compose up -d
-
+#    OR if you have local PG:
+#    createdb statice_mrf  (or via psql)
 
 # 6. Migration + Seed
 cd server
