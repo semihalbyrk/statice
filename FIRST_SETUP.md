@@ -2,9 +2,8 @@ Gerekli Bağımlılıklar
 Node.js (v18+) — node -v ile kontrol
 PostgreSQL (v15-16) — ya local kurulum ya da Docker
 Git — repo'yu klonlamak için
+----------------------------------------------------------------------------------
 Sıfırdan Kurulum Adımları
-
-Sıfırdan Kurulum — statice-test
 
 # 1. Klonla
 cd ~/statice-test
@@ -17,20 +16,17 @@ npm install
 cd server
 npm install
 
-# 4. .env dosyasını oluştur (repo'da gelmiyor!)
-cat > .env << 'EOF'
+# 4. .env dosyasını oluştur (repoda gelmiyor)
 DATABASE_URL=postgresql://statice:statice123@localhost:5432/statice_mrf
 JWT_SECRET=statice-jwt-secret-dev-2026
 JWT_REFRESH_SECRET=statice-refresh-secret-dev-2026
 PORT=3001
 NODE_ENV=development
-EOF
+
 
 # 5. PostgreSQL DB — Docker ile:
 cd ..
 docker compose up -d
-#    VEYA local PG varsa:
-#    createdb statice_mrf  (ya da psql ile)
 
 # 6. Migration + Seed
 cd server
