@@ -197,6 +197,124 @@ describe('PUT /api/carriers/:id', () => {
   });
 });
 
+describe('PATCH /api/carriers/:id/status', () => {
+  let toggleCarrierId;
+
+  beforeAll(async () => {
+    // Create a dedicated carrier for toggle tests
+    const token = await getToken('admin@statice.nl', 'Admin1234!');
+    const res = await request(app)
+      .post('/api/carriers')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ name: 'Koeriersdienst Van Dijk', licence_number: 'VIHB-TOGGLE-001' });
+    toggleCarrierId = res.body.id;
+    createdIds.push(toggleCarrierId);
+  });
+
+  it('returns 401 without auth token', async () => {
+    const res = await request(app)
+      .patch('/api/carriers/some-id/status')
+      .send({ is_active: false });
+
+    expect(res.status).toBe(401);
+  });
+
+  it('returns 403 for non-ADMIN roles', async () => {
+    const token = await getToken('planner@statice.nl', 'Planner123!');
+
+    const res = await request(app)
+      .patch('/api/carriers/some-id/status')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ is_active: false });
+
+    expect(res.status).toBe(403);
+  });
+
+  it('returns 400 when is_active is not a boolean', async () => {
+    const token = await getToken('admin@statice.nl', 'Admin1234!');
+
+    const res = await request(app)
+      .patch(`/api/carriers/${toggleCarrierId}/status`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({ is_active: 'ja' });
+
+    expect(res.status).toBe(400);
+    expect(res.body).toHaveProperty('error', 'is_active (boolean) is required');
+  });
+
+  it('returns 400 when is_active is missing', async () => {
+    const token = await getToken('admin@statice.nl', 'Admin1234!');
+
+    const res = await request(app)
+      .patch(`/api/carriers/${toggleCarrierId}/status`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({});
+
+    expect(res.status).toBe(400);
+    expect(res.body).toHaveProperty('error');
+  });
+
+  it('returns 404 for non-existent carrier', async () => {
+    const token = await getToken('admin@statice.nl', 'Admin1234!');
+
+    const res = await request(app)
+      .patch('/api/carriers/00000000-0000-0000-0000-000000000000/status')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ is_active: false });
+
+    expect(res.status).toBe(404);
+    expect(res.body).toHaveProperty('error', 'Carrier not found');
+  });
+
+  it('deactivates a carrier', async () => {
+    const token = await getToken('admin@statice.nl', 'Admin1234!');
+
+    const res = await request(app)
+      .patch(`/api/carriers/${toggleCarrierId}/status`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({ is_active: false });
+
+    expect(res.status).toBe(200);
+    expect(res.body.is_active).toBe(false);
+  });
+
+  it('reactivates a carrier', async () => {
+    const token = await getToken('admin@statice.nl', 'Admin1234!');
+
+    const res = await request(app)
+      .patch(`/api/carriers/${toggleCarrierId}/status`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({ is_active: true });
+
+    expect(res.status).toBe(200);
+    expect(res.body.is_active).toBe(true);
+  });
+
+  it('returns current state when already in desired state', async () => {
+    const token = await getToken('admin@statice.nl', 'Admin1234!');
+
+    // Carrier is already active from previous test
+    const res = await request(app)
+      .patch(`/api/carriers/${toggleCarrierId}/status`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({ is_active: true });
+
+    expect(res.status).toBe(200);
+    expect(res.body.is_active).toBe(true);
+  });
+
+  it('returns 403 for GATE_OPERATOR role', async () => {
+    const token = await getToken('gate@statice.nl', 'Gate1234!');
+
+    const res = await request(app)
+      .patch(`/api/carriers/${toggleCarrierId}/status`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({ is_active: false });
+
+    expect(res.status).toBe(403);
+  });
+});
+
 describe('DELETE /api/carriers/:id', () => {
   it('returns 401 without auth token', async () => {
     const res = await request(app).delete('/api/carriers/some-id');

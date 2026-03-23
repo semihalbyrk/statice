@@ -16,7 +16,8 @@ function deriveInitialWasteStreamIds(order) {
 }
 
 export default function OrderFormModal({ order, onClose, onSuccess, mode = 'standard' }) {
-  const { carriers, suppliers, wasteStreams } = useMasterDataStore();
+  const { carriers, suppliersWithContract, wasteStreams } = useMasterDataStore();
+  const suppliers = suppliersWithContract;
   const isEdit = !!order?.id;
   const isAdhoc = mode === 'adhoc';
 
@@ -175,7 +176,7 @@ export default function OrderFormModal({ order, onClose, onSuccess, mode = 'stan
                       <span className={`flex items-center justify-center w-4 h-4 rounded border flex-shrink-0 ${checked ? 'bg-green-500 border-green-500' : 'border-grey-300'}`}>
                         {checked && <Check size={12} className="text-white" strokeWidth={3} />}
                       </span>
-                      {ws.name_en} ({ws.code})
+                      {ws.name} ({ws.code})
                     </label>
                   );
                 })}
@@ -248,7 +249,7 @@ export default function OrderFormModal({ order, onClose, onSuccess, mode = 'stan
             </label>
           </div>
 
-          {selectedSupplierType === 'COMMERCIAL' && (
+          {selectedSupplierType === 'THIRD_PARTY' && (
             <div>
               <label className="block text-sm font-medium text-grey-700 mb-1.5">Client Reference</label>
               <input type="text" value={form.client_reference || ''} onChange={(e) => setForm(prev => ({ ...prev, client_reference: e.target.value }))} className={inputClass} placeholder="Client PO/reference number" />

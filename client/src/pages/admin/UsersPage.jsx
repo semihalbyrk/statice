@@ -2,15 +2,23 @@ import { useState, useEffect, useCallback } from 'react';
 import { Plus, Pencil, KeyRound, Search, X, Shield, Clock, Loader2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import useAuthStore from '../../store/authStore';
-import { getUsers, createUser, updateUser, resetUserPassword, getUserActivity } from '../../api/admin';
+import { getUsers, createUser, updateUser, resetUserPassword, getUserActivity, toggleUserStatus } from '../../api/admin';
+import ClickableStatusBadge from '../../components/ui/ClickableStatusBadge';
+import RowActionMenu from '../../components/ui/RowActionMenu';
 
-const ROLES = ['GATE_OPERATOR', 'LOGISTICS_PLANNER', 'REPORTING_MANAGER', 'ADMIN'];
-const ROLE_LABELS = { GATE_OPERATOR: 'Gate Operator', LOGISTICS_PLANNER: 'Logistics Planner', REPORTING_MANAGER: 'Reporting Manager', ADMIN: 'Admin' };
-const ROLE_COLORS = {
-  ADMIN: 'bg-purple-50 text-purple-700 border-purple-300',
-  LOGISTICS_PLANNER: 'bg-blue-50 text-blue-700 border-blue-300',
-  GATE_OPERATOR: 'bg-green-25 text-green-700 border-green-300',
-  REPORTING_MANAGER: 'bg-orange-50 text-orange-700 border-orange-300',
+const ROLES = ['GATE_OPERATOR', 'LOGISTICS_PLANNER', 'REPORTING_MANAGER', 'SORTING_EMPLOYEE', 'ADMIN', 'SALES', 'QC_INSPECTOR', 'LOGISTICS_COORDINATOR', 'FINANCE_USER', 'FINANCE_MANAGER', 'COMPLIANCE_OFFICER'];
+const ROLE_LABELS = {
+  GATE_OPERATOR: 'Gate Operator',
+  LOGISTICS_PLANNER: 'Logistics Planner',
+  REPORTING_MANAGER: 'Reporting Manager',
+  SORTING_EMPLOYEE: 'Sorting Employee',
+  ADMIN: 'Admin',
+  SALES: 'Sales',
+  QC_INSPECTOR: 'QC Inspector',
+  LOGISTICS_COORDINATOR: 'Logistics Coordinator',
+  FINANCE_USER: 'Finance User',
+  FINANCE_MANAGER: 'Finance Manager',
+  COMPLIANCE_OFFICER: 'Compliance Officer',
 };
 const PASSWORD_REGEX = /^(?=.*[A-Z])(?=.*\d).{8,}$/;
 
@@ -64,12 +72,12 @@ function CreateUserModal({ onClose, onSuccess }) {
 
   return (
     <div className="app-modal-overlay" onClick={onClose}>
-      <div className="app-modal-panel max-w-md" onClick={(e) => e.stopPropagation()}>
-        <div className="flex items-center justify-between px-5 py-3 border-b border-grey-200">
+      <div className="app-modal-panel max-w-md max-h-[90vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between px-5 py-3 border-b border-grey-200 shrink-0">
           <h2 className="text-lg font-semibold text-grey-900">New User</h2>
           <button onClick={onClose} className="text-grey-400 hover:text-grey-600"><X size={18} /></button>
         </div>
-        <form onSubmit={handleSubmit} className="px-5 py-4 space-y-4">
+        <form onSubmit={handleSubmit} className="px-5 py-4 space-y-4 flex-1 overflow-y-auto">
           <div>
             <label className={labelClass}>Full Name <span className="text-red-500">*</span></label>
             <input name="full_name" value={form.full_name} onChange={handleChange} required minLength={2} maxLength={100} className={inputClass} />
@@ -135,12 +143,12 @@ function EditUserModal({ user, currentUserId, onClose, onSuccess }) {
 
   return (
     <div className="app-modal-overlay" onClick={onClose}>
-      <div className="app-modal-panel max-w-md" onClick={(e) => e.stopPropagation()}>
-        <div className="flex items-center justify-between px-5 py-3 border-b border-grey-200">
+      <div className="app-modal-panel max-w-md max-h-[90vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between px-5 py-3 border-b border-grey-200 shrink-0">
           <h2 className="text-lg font-semibold text-grey-900">Edit User</h2>
           <button onClick={onClose} className="text-grey-400 hover:text-grey-600"><X size={18} /></button>
         </div>
-        <form onSubmit={handleSubmit} className="px-5 py-4 space-y-4">
+        <form onSubmit={handleSubmit} className="px-5 py-4 space-y-4 flex-1 overflow-y-auto">
           <div>
             <label className={labelClass}>Email</label>
             <input value={user.email} disabled className={`${inputClass} bg-grey-50 text-grey-500 cursor-not-allowed`} />
@@ -203,12 +211,12 @@ function ResetPasswordModal({ user, onClose, onSuccess }) {
 
   return (
     <div className="app-modal-overlay" onClick={onClose}>
-      <div className="app-modal-panel max-w-sm" onClick={(e) => e.stopPropagation()}>
-        <div className="flex items-center justify-between px-5 py-3 border-b border-grey-200">
+      <div className="app-modal-panel max-w-sm max-h-[90vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between px-5 py-3 border-b border-grey-200 shrink-0">
           <h2 className="text-lg font-semibold text-grey-900">Reset Password</h2>
           <button onClick={onClose} className="text-grey-400 hover:text-grey-600"><X size={18} /></button>
         </div>
-        <form onSubmit={handleSubmit} className="px-5 py-4 space-y-4">
+        <form onSubmit={handleSubmit} className="px-5 py-4 space-y-4 flex-1 overflow-y-auto">
           <p className="text-sm text-grey-600">Reset password for <strong>{user.full_name}</strong></p>
           <div>
             <label className={labelClass}>New Password</label>
@@ -335,6 +343,17 @@ export default function UsersPage() {
     fetchData();
   }
 
+  async function handleStatusTransition(userId, newStatus) {
+    const isActive = newStatus === 'ACTIVE';
+    try {
+      await toggleUserStatus(userId, isActive);
+      toast.success(isActive ? 'User activated' : 'User deactivated');
+      fetchData();
+    } catch (err) {
+      toast.error(err.response?.data?.error || 'Failed to update status');
+    }
+  }
+
   const totalPages = Math.ceil(total / 20);
 
   return (
@@ -369,16 +388,16 @@ export default function UsersPage() {
       </div>
 
       {/* Table */}
-      <div className="bg-white rounded-lg border border-grey-200 shadow-sm overflow-x-auto">
+      <div className="bg-white rounded-lg border border-grey-200 shadow-sm overflow-visible">
         <table className="w-full text-sm">
           <thead>
             <tr className="bg-grey-50 border-b border-grey-200">
               <th className="text-left px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide">Full Name</th>
+              <th className="text-left px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide">Status</th>
               <th className="text-left px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide">Email</th>
               <th className="text-left px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide">Role</th>
-              <th className="text-left px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide">Status</th>
               <th className="text-left px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide">Last Login</th>
-              <th className="text-right px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide">Actions</th>
+              <th className="w-10 px-4 py-3"></th>
             </tr>
           </thead>
           <tbody>
@@ -388,30 +407,28 @@ export default function UsersPage() {
               <tr><td colSpan={6} className="px-4 py-8 text-center text-grey-400">No users found</td></tr>
             ) : users.map((u) => (
               <tr key={u.id} className="border-b border-grey-100 hover:bg-grey-50 transition-colors">
-                <td className="px-4 py-2.5">
-                  <button onClick={() => setActivityUser(u)} className="font-medium text-grey-900 hover:text-green-600 transition-colors text-left">
+                <td className="px-4 py-3">
+                  <button onClick={() => setActivityUser(u)} className="font-medium text-green-700 hover:text-green-600 transition-colors text-left">
                     {u.full_name}
                   </button>
                 </td>
-                <td className="px-4 py-2.5 text-grey-600">{u.email}</td>
-                <td className="px-4 py-2.5">
-                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${ROLE_COLORS[u.role] || 'bg-grey-100 text-grey-600 border-grey-300'}`}>
-                    {ROLE_LABELS[u.role] || u.role}
-                  </span>
+                <td className="px-4 py-3">
+                  <ClickableStatusBadge
+                    status={u.is_active ? 'ACTIVE' : 'INACTIVE'}
+                    allowedTransitions={u.is_active ? ['INACTIVE'] : ['ACTIVE']}
+                    onTransition={(newStatus) => handleStatusTransition(u.id, newStatus)}
+                    disabled={u.id === currentUser?.id}
+                  />
                 </td>
-                <td className="px-4 py-2.5">
-                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${u.is_active ? 'bg-green-25 text-green-700 border-green-300' : 'bg-grey-100 text-grey-500 border-grey-300'}`}>
-                    {u.is_active ? 'Active' : 'Inactive'}
-                  </span>
-                </td>
-                <td className="px-4 py-2.5 text-grey-500 text-xs">{relativeTime(u.last_login_at)}</td>
-                <td className="px-4 py-2.5 text-right whitespace-nowrap">
-                  <button onClick={() => setEditUser(u)} title="Edit user"
-                    className="p-1.5 rounded-md hover:bg-grey-100 transition-colors text-grey-400 hover:text-grey-600"><Pencil size={15} /></button>
-                  <button onClick={() => setResetUser(u)} title="Reset password"
-                    className="p-1.5 rounded-md hover:bg-grey-100 transition-colors text-grey-400 hover:text-orange-600 ml-1"><KeyRound size={15} /></button>
-                  <button onClick={() => setActivityUser(u)} title="View activity"
-                    className="p-1.5 rounded-md hover:bg-grey-100 transition-colors text-grey-400 hover:text-blue-600 ml-1"><Clock size={15} /></button>
+                <td className="px-4 py-3 text-grey-600">{u.email}</td>
+                <td className="px-4 py-3 text-grey-700">{ROLE_LABELS[u.role] || u.role}</td>
+                <td className="px-4 py-3 text-grey-500 text-xs">{relativeTime(u.last_login_at)}</td>
+                <td className="px-4 py-3 text-right">
+                  <RowActionMenu actions={[
+                    { label: 'Edit', icon: Pencil, onClick: () => setEditUser(u) },
+                    { label: 'Reset Password', icon: KeyRound, onClick: () => setResetUser(u) },
+                    { label: 'View Activity', icon: Clock, onClick: () => setActivityUser(u) },
+                  ]} />
                 </td>
               </tr>
             ))}

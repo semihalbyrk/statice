@@ -86,7 +86,7 @@ describe('POST /api/suppliers', () => {
   it('returns 401 without auth token', async () => {
     const res = await request(app)
       .post('/api/suppliers')
-      .send({ name: 'Test', supplier_type: 'COMMERCIAL' });
+      .send({ name: 'Test', supplier_type: 'THIRD_PARTY' });
 
     expect(res.status).toBe(401);
   });
@@ -97,7 +97,7 @@ describe('POST /api/suppliers', () => {
     const res = await request(app)
       .post('/api/suppliers')
       .set('Authorization', `Bearer ${token}`)
-      .send({ name: 'Test', supplier_type: 'COMMERCIAL' });
+      .send({ name: 'Test', supplier_type: 'THIRD_PARTY' });
 
     expect(res.status).toBe(403);
   });
@@ -108,7 +108,7 @@ describe('POST /api/suppliers', () => {
     const res = await request(app)
       .post('/api/suppliers')
       .set('Authorization', `Bearer ${token}`)
-      .send({ supplier_type: 'COMMERCIAL' });
+      .send({ supplier_type: 'THIRD_PARTY' });
 
     expect(res.status).toBe(400);
     expect(res.body).toHaveProperty('error');
@@ -134,7 +134,7 @@ describe('POST /api/suppliers', () => {
       .set('Authorization', `Bearer ${token}`)
       .send({
         name: 'Test Supplier Admin',
-        supplier_type: 'COMMERCIAL',
+        supplier_type: 'THIRD_PARTY',
         contact_name: 'Jan de Vries',
         contact_email: 'jan@test.nl',
       });
@@ -142,7 +142,7 @@ describe('POST /api/suppliers', () => {
     expect(res.status).toBe(201);
     expect(res.body).toHaveProperty('id');
     expect(res.body.name).toBe('Test Supplier Admin');
-    expect(res.body.supplier_type).toBe('COMMERCIAL');
+    expect(res.body.supplier_type).toBe('THIRD_PARTY');
     createdIds.push(res.body.id);
   });
 
@@ -154,7 +154,7 @@ describe('POST /api/suppliers', () => {
       .set('Authorization', `Bearer ${token}`)
       .send({
         name: 'Test Supplier Planner',
-        supplier_type: 'COMMERCIAL',
+        supplier_type: 'THIRD_PARTY',
       });
 
     expect(res.status).toBe(201);
@@ -209,6 +209,179 @@ describe('PUT /api/suppliers/:id', () => {
 
     expect(res.status).toBe(200);
     expect(res.body.name).toBe('Updated Supplier Name');
+  });
+});
+
+describe('GET /api/suppliers?hasActiveContract=true', () => {
+  it('filters suppliers to only those with active contracts', async () => {
+    const token = await getToken('admin@statice.nl', 'Admin1234!');
+
+    const res = await request(app)
+      .get('/api/suppliers?hasActiveContract=true')
+      .set('Authorization', `Bearer ${token}`);
+
+    expect(res.status).toBe(200);
+    expect(Array.isArray(res.body.data)).toBe(true);
+    // Every returned supplier should have at least one active contract
+    for (const supplier of res.body.data) {
+      const contracts = await prisma.supplierContract.findMany({
+        where: { supplier_id: supplier.id, status: 'ACTIVE', is_active: true },
+      });
+      expect(contracts.length).toBeGreaterThan(0);
+    }
+  });
+
+  it('returns fewer or equal results than unfiltered query', async () => {
+    const token = await getToken('admin@statice.nl', 'Admin1234!');
+
+    const [allRes, filteredRes] = await Promise.all([
+      request(app).get('/api/suppliers?limit=100').set('Authorization', `Bearer ${token}`),
+      request(app).get('/api/suppliers?hasActiveContract=true&limit=100').set('Authorization', `Bearer ${token}`),
+    ]);
+
+    expect(allRes.status).toBe(200);
+    expect(filteredRes.status).toBe(200);
+    expect(filteredRes.body.total).toBeLessThanOrEqual(allRes.body.total);
+  });
+});
+
+describe('PATCH /api/suppliers/:id/status', () => {
+  let toggleSupplierId;
+
+  beforeAll(async () => {
+    // Create a dedicated supplier for toggle tests
+    const token = await getToken('admin@statice.nl', 'Admin1234!');
+    const res = await request(app)
+      .post('/api/suppliers')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ name: 'Toggle Test Supplier', supplier_type: 'THIRD_PARTY' });
+    toggleSupplierId = res.body.id;
+    createdIds.push(toggleSupplierId);
+  });
+
+  it('returns 401 without auth token', async () => {
+    const res = await request(app)
+      .patch('/api/suppliers/some-id/status')
+      .send({ is_active: false });
+
+    expect(res.status).toBe(401);
+  });
+
+  it('returns 403 for non-ADMIN roles', async () => {
+    const token = await getToken('planner@statice.nl', 'Planner123!');
+
+    const res = await request(app)
+      .patch('/api/suppliers/some-id/status')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ is_active: false });
+
+    expect(res.status).toBe(403);
+  });
+
+  it('returns 400 when is_active is not a boolean', async () => {
+    const token = await getToken('admin@statice.nl', 'Admin1234!');
+
+    const res = await request(app)
+      .patch(`/api/suppliers/${toggleSupplierId}/status`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({ is_active: 'yes' });
+
+    expect(res.status).toBe(400);
+    expect(res.body).toHaveProperty('error', 'is_active (boolean) is required');
+  });
+
+  it('returns 400 when is_active is missing', async () => {
+    const token = await getToken('admin@statice.nl', 'Admin1234!');
+
+    const res = await request(app)
+      .patch(`/api/suppliers/${toggleSupplierId}/status`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({});
+
+    expect(res.status).toBe(400);
+    expect(res.body).toHaveProperty('error');
+  });
+
+  it('returns 404 for non-existent supplier', async () => {
+    const token = await getToken('admin@statice.nl', 'Admin1234!');
+
+    const res = await request(app)
+      .patch('/api/suppliers/00000000-0000-0000-0000-000000000000/status')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ is_active: false });
+
+    expect(res.status).toBe(404);
+    expect(res.body).toHaveProperty('error', 'Supplier not found');
+  });
+
+  it('deactivates a supplier', async () => {
+    const token = await getToken('admin@statice.nl', 'Admin1234!');
+
+    const res = await request(app)
+      .patch(`/api/suppliers/${toggleSupplierId}/status`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({ is_active: false });
+
+    expect(res.status).toBe(200);
+    expect(res.body.is_active).toBe(false);
+  });
+
+  it('reactivates a supplier', async () => {
+    const token = await getToken('admin@statice.nl', 'Admin1234!');
+
+    const res = await request(app)
+      .patch(`/api/suppliers/${toggleSupplierId}/status`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({ is_active: true });
+
+    expect(res.status).toBe(200);
+    expect(res.body.is_active).toBe(true);
+  });
+
+  it('returns current state without changes when already in desired state', async () => {
+    const token = await getToken('admin@statice.nl', 'Admin1234!');
+
+    // Supplier is already active from previous test
+    const res = await request(app)
+      .patch(`/api/suppliers/${toggleSupplierId}/status`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({ is_active: true });
+
+    expect(res.status).toBe(200);
+    expect(res.body.is_active).toBe(true);
+  });
+
+  it('terminates active contracts on deactivation', async () => {
+    const token = await getToken('admin@statice.nl', 'Admin1234!');
+
+    // Create a contract for this supplier so we can verify termination
+    const contract = await prisma.supplierContract.create({
+      data: {
+        contract_number: `SC-TOGGLE-TEST-${Date.now()}`,
+        supplier_id: toggleSupplierId,
+        name: 'Toggle Test Contract',
+        effective_date: new Date(),
+        expiry_date: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000),
+        status: 'ACTIVE',
+      },
+    });
+
+    const res = await request(app)
+      .patch(`/api/suppliers/${toggleSupplierId}/status`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({ is_active: false });
+
+    expect(res.status).toBe(200);
+    expect(res.body.is_active).toBe(false);
+
+    // Verify the contract was terminated
+    const updatedContract = await prisma.supplierContract.findUnique({
+      where: { id: contract.id },
+    });
+    expect(updatedContract.status).toBe('INACTIVE');
+
+    // Clean up
+    await prisma.supplierContract.delete({ where: { id: contract.id } }).catch(() => {});
   });
 });
 

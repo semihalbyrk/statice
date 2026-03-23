@@ -7,6 +7,7 @@ export const createUser = (data) => api.post('/admin/users', data);
 export const updateUser = (id, data) => api.put(`/admin/users/${id}`, data);
 export const resetUserPassword = (id, data) => api.post(`/admin/users/${id}/reset-password`, data);
 export const getUserActivity = (id, params) => api.get(`/admin/users/${id}/activity`, { params });
+export const toggleUserStatus = (id, is_active) => api.patch(`/admin/users/${id}/status`, { is_active });
 
 // Audit Log
 export const getAuditLogs = (params) => api.get('/admin/audit-logs', { params });

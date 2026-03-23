@@ -14,21 +14,21 @@ const INBOUND_INCLUDE = {
     include: {
       carrier: { select: { id: true, name: true } },
       supplier: { select: { id: true, name: true, supplier_type: true } },
-      waste_stream: { select: { id: true, name_en: true, code: true } },
+      waste_stream: { select: { id: true, name: true, code: true } },
       waste_streams: {
         include: {
-          waste_stream: { select: { id: true, name_en: true, code: true } },
+          waste_stream: { select: { id: true, name: true, code: true } },
         },
       },
     },
   },
   vehicle: true,
-  waste_stream: { select: { id: true, name_en: true, code: true } },
+  waste_stream: { select: { id: true, name: true, code: true } },
   gross_ticket: true,
   tare_ticket: true,
   assets: {
     include: {
-      waste_stream: { select: { id: true, name_en: true, code: true } },
+      waste_stream: { select: { id: true, name: true, code: true } },
       material_category: { select: { id: true, code_cbs: true, description_en: true } },
       gross_weighing: { select: { id: true, sequence: true, weight_kg: true } },
       tare_weighing: { select: { id: true, sequence: true, weight_kg: true } },
@@ -612,7 +612,7 @@ async function registerParcel(inboundId, data, userId) {
         notes: data.notes || null,
       },
       include: {
-        waste_stream: { select: { id: true, name_en: true, code: true } },
+        waste_stream: { select: { id: true, name: true, code: true } },
         material_category: { select: { id: true, code_cbs: true, description_en: true } },
         gross_weighing: { select: { id: true, sequence: true, weight_kg: true } },
         tare_weighing: { select: { id: true, sequence: true, weight_kg: true } },
@@ -889,7 +889,7 @@ async function lookupAsset(assetLabel) {
         select: { id: true, order_id: true, status: true },
       },
       waste_stream: {
-        select: { id: true, name_en: true, code: true },
+        select: { id: true, name: true, code: true },
       },
       material_category: {
         select: { id: true, code_cbs: true, description_en: true },

@@ -65,7 +65,7 @@ function printAssetLabel(asset) {
           <div class="code">${asset.asset_label}</div>
           <div class="meta">
             <div>Type: ${asset.parcel_type === 'CONTAINER' ? (CONTAINER_TYPE_LABELS[asset.container_type] || asset.container_type || 'Container') : 'Material'}</div>
-            <div>Waste Stream: ${asset.waste_stream?.name_en || '—'}</div>
+            <div>Waste Stream: ${asset.waste_stream?.name || '—'}</div>
             <div>Gross/Tare Pair: ${asset.gross_weight_kg != null ? Number(asset.gross_weight_kg).toLocaleString() : '—'} / ${asset.tare_weight_kg != null ? Number(asset.tare_weight_kg).toLocaleString() : '—'} kg</div>
           </div>
         </div>
@@ -200,20 +200,21 @@ export default function InboundDetailPage() {
                 {inbound.vehicle?.registration_plate || '—'}
               </span>
             </InfoField>
-            <InfoField label="Waste Stream(s)" value={orderWasteStreams.map((ws) => `${ws.name_en} (${ws.code})`).join(', ') || '—'} />
+            <InfoField label="Waste Stream(s)" value={orderWasteStreams.map((ws) => `${ws.name} (${ws.code})`).join(', ') || '—'} />
             <InfoField label="Arrived At" value={formatDateTime(inbound.arrived_at)} />
             {inbound.notes && <InfoField className="sm:col-span-2 xl:col-span-5" label="Notes" value={inbound.notes} />}
           </div>
           {/* Incident Section */}
           {!['READY_FOR_SORTING', 'SORTED'].includes(inbound.status) && (
-            <div className="mt-3 pt-3 border-t border-gray-200">
-              <div className="flex items-center gap-2">
+            <div className="mt-4 pt-4 border-t border-grey-200">
+              <h4 className="text-sm font-medium text-grey-700 mb-2">Report Incident</h4>
+              <div className="flex gap-2">
                 <select
                   value={incidentCategory}
                   onChange={e => setIncidentCategory(e.target.value)}
-                  className="text-sm border rounded px-2 py-1"
+                  className="h-10 px-3.5 rounded-md border border-grey-300 text-sm text-grey-900 bg-white focus:border-green-500 focus:ring-[3px] focus:ring-green-500/15 outline-none transition-colors"
                 >
-                  <option value="">Report incident...</option>
+                  <option value="">Select incident type...</option>
                   <option value="DAMAGE">Damage</option>
                   <option value="DISPUTE">Dispute</option>
                   <option value="SPECIAL_HANDLING">Special Handling</option>
@@ -224,12 +225,12 @@ export default function InboundDetailPage() {
                   placeholder="Notes..."
                   value={incidentNotes}
                   onChange={e => setIncidentNotes(e.target.value)}
-                  className="text-sm border rounded px-2 py-1 flex-1"
+                  className="flex-1 h-10 px-3.5 rounded-md border border-grey-300 text-sm text-grey-900 focus:border-green-500 focus:ring-[3px] focus:ring-green-500/15 outline-none transition-colors"
                 />
                 <button
                   onClick={handleIncident}
                   disabled={!incidentCategory}
-                  className="text-sm px-3 py-1 bg-red-600 text-white rounded disabled:opacity-50 hover:bg-red-700"
+                  className="h-10 px-4 bg-red-500 text-white rounded-md text-sm font-semibold hover:bg-red-600 disabled:opacity-50 transition-colors"
                 >
                   Report
                 </button>
@@ -802,12 +803,12 @@ function ParcelRegistrationForm({ inboundId, orderWasteStreams, onSuccess }) {
           <label className="block text-xs font-medium text-grey-700 mb-1">Waste Stream</label>
           {orderWasteStreams.length <= 1 ? (
             <div className="h-10 bg-grey-50 border border-grey-200 rounded-md px-3.5 text-sm text-grey-700 flex items-center">
-              {orderWasteStreams[0]?.name_en || '—'}
+              {orderWasteStreams[0]?.name || '—'}
             </div>
           ) : (
             <select value={form.waste_stream_id} onChange={(e) => setForm((p) => ({ ...p, waste_stream_id: e.target.value }))} className={selectClass}>
               <option value="">Select...</option>
-              {orderWasteStreams.map((ws) => <option key={ws.id} value={ws.id}>{ws.name_en} ({ws.code})</option>)}
+              {orderWasteStreams.map((ws) => <option key={ws.id} value={ws.id}>{ws.name} ({ws.code})</option>)}
             </select>
           )}
         </div>

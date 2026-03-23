@@ -9,7 +9,7 @@ const EVENT_INCLUDE = {
     include: {
       carrier: { select: { id: true, name: true } },
       supplier: { select: { id: true, name: true, supplier_type: true } },
-      waste_stream: { select: { id: true, name_en: true, code: true } },
+      waste_stream: { select: { id: true, name: true, code: true } },
     },
   },
   vehicle: true,

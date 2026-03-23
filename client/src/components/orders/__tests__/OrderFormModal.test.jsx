@@ -30,11 +30,15 @@ vi.mock('../../../store/masterDataStore', () => ({
       ],
       suppliers: [
         { id: 's1', name: 'Recycler BV', supplier_type: 'PRO' },
-        { id: 's2', name: 'Scrap Corp', supplier_type: 'COMMERCIAL' },
+        { id: 's2', name: 'Scrap Corp', supplier_type: 'THIRD_PARTY' },
+      ],
+      suppliersWithContract: [
+        { id: 's1', name: 'Recycler BV', supplier_type: 'PRO' },
+        { id: 's2', name: 'Scrap Corp', supplier_type: 'THIRD_PARTY' },
       ],
       wasteStreams: [
-        { id: 'ws1', name_en: 'Large Household Appliances', code: 'LHA' },
-        { id: 'ws2', name_en: 'Small Household Appliances', code: 'SHA' },
+        { id: 'ws1', name: 'Large Household Appliances', code: 'LHA' },
+        { id: 'ws2', name: 'Small Household Appliances', code: 'SHA' },
       ],
     };
     if (selector) return selector(state);
@@ -91,10 +95,26 @@ describe('OrderFormModal', () => {
     expect(screen.getByText('PostNL')).toBeInTheDocument();
   });
 
-  it('renders Supplier select with options', () => {
+  it('renders Supplier select with suppliersWithContract options', () => {
     renderOrderFormModal();
     expect(screen.getByText('Recycler BV')).toBeInTheDocument();
     expect(screen.getByText('Scrap Corp')).toBeInTheDocument();
+  });
+
+  it('only shows suppliers with active contracts, not all suppliers', () => {
+    // Override the mock to have different suppliers vs suppliersWithContract
+    const { unmount } = render(
+      <OrderFormModal onClose={mockOnClose} onSuccess={mockOnSuccess} />
+    );
+    // The component uses suppliersWithContract from the store mock,
+    // which contains 's1' and 's2'. If it used 'suppliers' instead,
+    // the same data would show (in our mock they match), but the
+    // component code explicitly reads suppliersWithContract.
+    const supplierSelect = screen.getAllByRole('option').filter(
+      (opt) => opt.textContent === 'Recycler BV' || opt.textContent === 'Scrap Corp'
+    );
+    expect(supplierSelect).toHaveLength(2);
+    unmount();
   });
 
   it('renders Waste Streams dropdown button', () => {

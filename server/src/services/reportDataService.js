@@ -49,7 +49,7 @@ async function fetchSupplierStatementData({ supplierId, dateFrom, dateTo, catego
     },
     include: {
       carrier: { select: { id: true, name: true } },
-      waste_stream: { select: { id: true, name_en: true, code: true } },
+      waste_stream: { select: { id: true, name: true, code: true } },
       inbounds: {
         where: { status: 'COMPLETED' },
         include: {
@@ -61,7 +61,7 @@ async function fetchSupplierStatementData({ supplierId, dateFrom, dateTo, catego
               material_category: true,
               sorting_lines: {
                 include: {
-                  category: { include: { waste_stream: { select: { name_en: true, code: true } } } },
+                  category: { include: { waste_stream: { select: { name: true, code: true } } } },
                 },
               },
             },
@@ -103,7 +103,7 @@ async function fetchSupplierStatementData({ supplierId, dateFrom, dateTo, catego
         categoryId: catId,
         codeCbs: line.category.code_cbs,
         descriptionEn: line.category.description_en,
-        wasteStream: line.category.waste_stream?.name_en,
+        wasteStream: line.category.waste_stream?.name,
         lines: [],
         downstreamProcessors: new Set(),
       };
@@ -186,7 +186,7 @@ async function fetchMaterialRecoveryData({ dateFrom, dateTo, wasteStreamIds }) {
   const lines = await prisma.sortingLine.findMany({
     where: whereClause,
     include: {
-      category: { include: { waste_stream: { select: { name_en: true, code: true } } } },
+      category: { include: { waste_stream: { select: { name: true, code: true } } } },
     },
   });
 
@@ -215,7 +215,7 @@ async function fetchMaterialRecoveryData({ dateFrom, dateTo, wasteStreamIds }) {
   const priorLines = await prisma.sortingLine.findMany({
     where: priorWhereClause,
     include: {
-      category: { include: { waste_stream: { select: { name_en: true, code: true } } } },
+      category: { include: { waste_stream: { select: { name: true, code: true } } } },
     },
   });
 
@@ -240,7 +240,7 @@ function aggregateByCategory(lines) {
         categoryId: catId,
         codeCbs: line.category.code_cbs,
         descriptionEn: line.category.description_en,
-        wasteStream: line.category.waste_stream?.name_en,
+        wasteStream: line.category.waste_stream?.name,
         lines: [],
       };
     }
@@ -298,7 +298,7 @@ async function fetchChainOfCustodyData({ orderId, dateFrom, dateTo }) {
     include: {
       carrier: true,
       supplier: true,
-      waste_stream: { select: { name_en: true, code: true } },
+      waste_stream: { select: { name: true, code: true } },
       inbounds: {
         where: { status: 'COMPLETED' },
         include: {
@@ -383,7 +383,7 @@ async function fetchInboundWeightRegisterData({ dateFrom, dateTo, carrierId, was
         include: {
           carrier: { select: { id: true, name: true } },
           supplier: { select: { id: true, name: true } },
-          waste_stream: { select: { id: true, name_en: true, code: true } },
+          waste_stream: { select: { id: true, name: true, code: true } },
         },
       },
       vehicle: { select: { registration_plate: true } },
@@ -410,7 +410,7 @@ async function fetchInboundWeightRegisterData({ dateFrom, dateTo, carrierId, was
     tareTicketNumber: e.tare_ticket?.ticket_number,
     afvalstroomnummer: e.order.afvalstroomnummer,
     wasteStreamId: e.order.waste_stream.id,
-    wasteStreamName: e.order.waste_stream.name_en,
+    wasteStreamName: e.order.waste_stream.name,
     wasteStreamCode: e.order.waste_stream.code,
   }));
 
@@ -489,7 +489,7 @@ async function fetchWasteStreamAnalysisData({ dateFrom, dateTo, wasteStreamIds }
     if (!streamMap[wsId]) {
       streamMap[wsId] = {
         streamId: wsId,
-        streamName: ws.name_en,
+        streamName: ws.name,
         streamCode: ws.code,
         categoryMap: {},
       };
@@ -664,7 +664,7 @@ async function fetchDownstreamStatementData({ supplierId, materialId, dateFrom, 
   const rowMap = new Map();
   for (const record of records) {
     for (const outcome of record.outcomes) {
-      const fractionName = outcome.fraction?.name_en || outcome.material_fraction;
+      const fractionName = outcome.fraction?.name || outcome.material_fraction;
       const key = [
         outcome.fraction_id || fractionName,
         outcome.acceptant_stage,
@@ -759,7 +759,7 @@ async function fetchDownstreamEntryStatement({ sessionId, catalogueEntryId }) {
   const rows = outcomes.map((outcome) => {
     const weightKg = Number(outcome.weight_kg || 0);
     return {
-      fractionName: outcome.fraction?.name_en || outcome.material_fraction || '—',
+      fractionName: outcome.fraction?.name || outcome.material_fraction || '—',
       euralCode: outcome.fraction?.eural_code || '—',
       sharePct: totalMaterialKg > 0 ? Math.round((weightKg / totalMaterialKg) * 10000) / 100 : 0,
       acceptantStage: outcome.acceptant_stage || 'FIRST_ACCEPTANT',

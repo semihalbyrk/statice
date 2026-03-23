@@ -121,7 +121,7 @@ describe('OrdersPage', () => {
         status: 'PLANNED',
         carrier: { name: 'DHL Express' },
         supplier: { name: 'Recycler BV', supplier_type: 'PRO' },
-        waste_stream: { name_en: 'Large Household Appliances' },
+        waste_stream: { name: 'Large Household Appliances' },
         waste_streams: [],
         planned_date: '2026-03-22T00:00:00Z',
         vehicle_plate: 'AB-123-CD',

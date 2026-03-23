@@ -8,6 +8,7 @@ const mockGetWasteStreams = vi.fn();
 const mockGetProductCategories = vi.fn();
 const mockListMaterials = vi.fn();
 const mockListFractions = vi.fn();
+const mockListFees = vi.fn();
 
 vi.mock('../../api/carriers', () => ({
   getCarriers: (...args) => mockGetCarriers(...args),
@@ -23,6 +24,9 @@ vi.mock('../../api/catalogue', () => ({
   listMaterials: (...args) => mockListMaterials(...args),
   listFractions: (...args) => mockListFractions(...args),
 }));
+vi.mock('../../api/fees', () => ({
+  listFees: (...args) => mockListFees(...args),
+}));
 
 describe('masterDataStore', () => {
   beforeEach(() => {
@@ -30,11 +34,13 @@ describe('masterDataStore', () => {
     useMasterDataStore.setState({
       carriers: [],
       suppliers: [],
+      suppliersWithContract: [],
       wasteStreams: [],
       productCategories: [],
       materials: [],
       fractions: [],
       productTypes: [],
+      fees: [],
       loading: false,
     });
   });
@@ -43,6 +49,7 @@ describe('masterDataStore', () => {
     const state = useMasterDataStore.getState();
     expect(state.carriers).toEqual([]);
     expect(state.suppliers).toEqual([]);
+    expect(state.suppliersWithContract).toEqual([]);
     expect(state.wasteStreams).toEqual([]);
     expect(state.productCategories).toEqual([]);
     expect(state.materials).toEqual([]);
@@ -71,8 +78,18 @@ describe('masterDataStore', () => {
     expect(useMasterDataStore.getState().suppliers).toEqual(suppliers);
   });
 
+  it('fetchSuppliersWithContract fetches suppliers with hasActiveContract filter', async () => {
+    const suppliers = [{ id: 's1', name: 'Recycler BV' }];
+    mockGetSuppliers.mockResolvedValue({ data: { data: suppliers } });
+
+    await useMasterDataStore.getState().fetchSuppliersWithContract();
+
+    expect(mockGetSuppliers).toHaveBeenCalledWith({ limit: 100, active: 'true', hasActiveContract: 'true' });
+    expect(useMasterDataStore.getState().suppliersWithContract).toEqual(suppliers);
+  });
+
   it('fetchWasteStreams fetches and stores waste streams', async () => {
-    const streams = [{ id: 'ws1', name_en: 'LHA', code: 'LHA' }];
+    const streams = [{ id: 'ws1', name: 'LHA', code: 'LHA' }];
     mockGetWasteStreams.mockResolvedValue({ data: { data: streams } });
 
     await useMasterDataStore.getState().fetchWasteStreams();
@@ -92,8 +109,8 @@ describe('masterDataStore', () => {
   });
 
   it('fetchMaterials fetches and stores materials and fractions', async () => {
-    const materials = [{ id: 'm1', name_en: 'Copper', code: 'CU' }];
-    const fractions = [{ id: 'f1', name_en: 'Ferrous', code: 'FE' }];
+    const materials = [{ id: 'm1', name: 'Copper', code: 'CU' }];
+    const fractions = [{ id: 'f1', name: 'Ferrous', code: 'FE' }];
     mockListMaterials.mockResolvedValue({ data: { data: materials } });
     mockListFractions.mockResolvedValue({ data: { data: fractions } });
 
@@ -107,10 +124,10 @@ describe('masterDataStore', () => {
   it('loadAll fetches all data in parallel', async () => {
     const carriers = [{ id: 'c1', name: 'DHL' }];
     const suppliers = [{ id: 's1', name: 'Recycler BV' }];
-    const streams = [{ id: 'ws1', name_en: 'LHA' }];
+    const streams = [{ id: 'ws1', name: 'LHA' }];
     const categories = [{ id: 'pc1', code_cbs: 'LHA-01' }];
-    const materials = [{ id: 'm1', name_en: 'Copper' }];
-    const fractions = [{ id: 'f1', name_en: 'Ferrous' }];
+    const materials = [{ id: 'm1', name: 'Copper' }];
+    const fractions = [{ id: 'f1', name: 'Ferrous' }];
 
     mockGetCarriers.mockResolvedValue({ data: { data: carriers } });
     mockGetSuppliers.mockResolvedValue({ data: { data: suppliers } });
@@ -118,12 +135,14 @@ describe('masterDataStore', () => {
     mockGetProductCategories.mockResolvedValue({ data: { data: categories } });
     mockListMaterials.mockResolvedValue({ data: { data: materials } });
     mockListFractions.mockResolvedValue({ data: { data: fractions } });
+    mockListFees.mockResolvedValue({ data: { data: [] } });
 
     await useMasterDataStore.getState().loadAll();
 
     const state = useMasterDataStore.getState();
     expect(state.carriers).toEqual(carriers);
     expect(state.suppliers).toEqual(suppliers);
+    expect(state.suppliersWithContract).toEqual(suppliers);
     expect(state.wasteStreams).toEqual(streams);
     expect(state.productCategories).toEqual(categories);
     expect(state.materials).toEqual(materials);
@@ -138,6 +157,7 @@ describe('masterDataStore', () => {
     mockGetProductCategories.mockResolvedValue({ data: { data: [] } });
     mockListMaterials.mockResolvedValue({ data: { data: [] } });
     mockListFractions.mockResolvedValue({ data: { data: [] } });
+    mockListFees.mockResolvedValue({ data: { data: [] } });
 
     const loadPromise = useMasterDataStore.getState().loadAll();
     // loading should be true while loading
@@ -154,6 +174,7 @@ describe('masterDataStore', () => {
     mockGetProductCategories.mockResolvedValue({ data: { data: [] } });
     mockListMaterials.mockResolvedValue({ data: { data: [] } });
     mockListFractions.mockResolvedValue({ data: { data: [] } });
+    mockListFees.mockResolvedValue({ data: { data: [] } });
 
     await useMasterDataStore.getState().loadAll();
 
@@ -161,7 +182,7 @@ describe('masterDataStore', () => {
   });
 
   it('fetchProductTypes populates materials and productTypes', async () => {
-    const materials = [{ id: 'm1', name_en: 'Copper', code: 'CU' }];
+    const materials = [{ id: 'm1', name: 'Copper', code: 'CU' }];
     mockListMaterials.mockResolvedValue({ data: { data: materials } });
 
     await useMasterDataStore.getState().fetchProductTypes();

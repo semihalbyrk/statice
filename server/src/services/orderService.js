@@ -3,16 +3,20 @@ const { generateOrderNumber } = require('../utils/orderNumber');
 const { canTransition } = require('../utils/orderStateMachine');
 const { writeAuditLog } = require('../utils/auditLog');
 const { notifyRoles } = require('./notificationService');
+const { matchContractForOrder } = require('./contractService');
 
 const VALID_ORDER_STATUSES = ['PLANNED', 'ARRIVED', 'IN_PROGRESS', 'DISPUTE', 'COMPLETED', 'INVOICED', 'CANCELLED'];
 
 const ORDER_INCLUDE = {
   carrier: { select: { id: true, name: true } },
   supplier: { select: { id: true, name: true, supplier_type: true } },
-  waste_stream: { select: { id: true, name_en: true, code: true } },
+  waste_stream: { select: { id: true, name: true, code: true } },
   waste_streams: {
-    include: {
-      waste_stream: { select: { id: true, name_en: true, code: true } },
+    select: {
+      id: true,
+      waste_stream_id: true,
+      afvalstroomnummer: true,
+      waste_stream: { select: { id: true, name: true, code: true } },
     },
   },
   created_by_user: { select: { id: true, full_name: true } },
@@ -72,7 +76,7 @@ function serializeMatchCandidate(order, matchStrategy, options = {}) {
   };
 }
 
-async function syncOrderWasteStreams(tx, orderId, wasteStreamIds) {
+async function syncOrderWasteStreams(tx, orderId, wasteStreamIds, asnMap = {}) {
   await tx.orderWasteStream.deleteMany({ where: { order_id: orderId } });
   if (wasteStreamIds && wasteStreamIds.length > 0) {
     await tx.orderWasteStream.createMany({
@@ -80,6 +84,7 @@ async function syncOrderWasteStreams(tx, orderId, wasteStreamIds) {
         id: require('crypto').randomUUID(),
         order_id: orderId,
         waste_stream_id: wsId,
+        afvalstroomnummer: asnMap[wsId] || null,
       })),
     });
   }
@@ -141,8 +146,25 @@ async function createOrder(data, userId) {
       : [data.waste_stream_id];
     const primaryWsId = wasteStreamIds[0];
 
-    // PRO afvalstroomnummer validation (SUP-D02)
-    if (data.afvalstroomnummer) {
+    // Derive ASN map from contract waste streams
+    let asnMap = {};
+    let primaryAsn = data.afvalstroomnummer || null;
+
+    if (data.contract_id) {
+      // Look up contract waste streams to map waste_stream_id -> afvalstroomnummer
+      const contractWasteStreams = await tx.contractWasteStream.findMany({
+        where: { contract_id: data.contract_id },
+        select: { waste_stream_id: true, afvalstroomnummer: true },
+      });
+      for (const cws of contractWasteStreams) {
+        asnMap[cws.waste_stream_id] = cws.afvalstroomnummer;
+      }
+      // Set primary ASN from first selected waste stream
+      if (!primaryAsn && wasteStreamIds.length > 0) {
+        primaryAsn = asnMap[wasteStreamIds[0]] || null;
+      }
+    } else if (data.afvalstroomnummer) {
+      // Legacy: PRO afvalstroomnummer validation (SUP-D02)
       const supplier = await tx.supplier.findUnique({ where: { id: data.supplier_id }, select: { supplier_type: true } });
       if (supplier && supplier.supplier_type === 'PRO') {
         const validAfs = await tx.supplierAfvalstroomnummer.findFirst({
@@ -171,7 +193,7 @@ async function createOrder(data, userId) {
         planned_time_window_end: data.planned_time_window_end ? new Date(data.planned_time_window_end) : null,
         expected_skip_count: parseInt(data.expected_skip_count, 10) || 1,
         vehicle_plate: data.vehicle_plate || null,
-        afvalstroomnummer: data.afvalstroomnummer || null,
+        afvalstroomnummer: primaryAsn,
         notes: data.notes || null,
         is_lzv: data.is_lzv || false,
         client_reference: data.client_reference || null,
@@ -181,7 +203,7 @@ async function createOrder(data, userId) {
       },
     });
 
-    await syncOrderWasteStreams(tx, order.id, wasteStreamIds);
+    await syncOrderWasteStreams(tx, order.id, wasteStreamIds, asnMap);
 
     const full = await tx.inboundOrder.findUnique({
       where: { id: order.id },
@@ -203,7 +225,11 @@ async function createOrder(data, userId) {
 async function updateOrder(id, data, userId) {
   return prisma.$transaction(async (tx) => {
     const existing = await tx.inboundOrder.findUnique({ where: { id } });
-    if (!existing) return null;
+    if (!existing) {
+      const err = new Error('Order not found');
+      err.statusCode = 404;
+      throw err;
+    }
 
     if (data.status && data.status !== existing.status) {
       if (!VALID_ORDER_STATUSES.includes(data.status)) {
@@ -227,9 +253,21 @@ async function updateOrder(id, data, userId) {
     if (data.status !== undefined) updateData.status = data.status;
 
     // If waste_stream_ids provided, update primary + junction table
+    // Re-derive ASN map from contract if contract_id is available
     if (data.waste_stream_ids && data.waste_stream_ids.length > 0) {
       updateData.waste_stream_id = data.waste_stream_ids[0];
-      await syncOrderWasteStreams(tx, id, data.waste_stream_ids);
+      let asnMap = {};
+      const contractId = data.contract_id || existing.contract_id;
+      if (contractId) {
+        const cwsList = await tx.contractWasteStream.findMany({
+          where: { contract_id: contractId },
+          select: { waste_stream_id: true, afvalstroomnummer: true },
+        });
+        for (const cws of cwsList) {
+          asnMap[cws.waste_stream_id] = cws.afvalstroomnummer;
+        }
+      }
+      await syncOrderWasteStreams(tx, id, data.waste_stream_ids, asnMap);
     } else if (data.waste_stream_id !== undefined) {
       updateData.waste_stream_id = data.waste_stream_id;
       await syncOrderWasteStreams(tx, id, [data.waste_stream_id]);
@@ -250,6 +288,44 @@ async function updateOrder(id, data, userId) {
       after: updated,
     }, tx);
 
+    // Auto-match contract when order reaches COMPLETED
+    if (data.status === 'COMPLETED') {
+      try {
+        const catalogueEntries = await tx.assetCatalogueEntry.findMany({
+          where: { session: { order_id: id } },
+          select: { material_id: true },
+          distinct: ['material_id'],
+        });
+
+        for (const entry of catalogueEntries) {
+          const match = await matchContractForOrder(
+            existing.supplier_id,
+            entry.material_id,
+            new Date(),
+            tx,
+          );
+          if (match) {
+            await writeAuditLog({
+              userId,
+              action: 'CONTRACT_AUTO_MATCH',
+              entityType: 'InboundOrder',
+              entityId: id,
+              after: {
+                contract_id: match.contract.id,
+                contract_number: match.contract.contract_number,
+                material_id: entry.material_id,
+                rate_line_id: match.rate_line.id,
+                unit_rate: match.rate_line.unit_rate,
+                pricing_model: match.rate_line.pricing_model,
+              },
+            }, tx);
+          }
+        }
+      } catch (matchError) {
+        console.error('Contract auto-match error:', matchError.message);
+      }
+    }
+
     return enrichOrder(updated);
   });
 }
@@ -257,7 +333,11 @@ async function updateOrder(id, data, userId) {
 async function cancelOrder(id, userId) {
   return prisma.$transaction(async (tx) => {
     const existing = await tx.inboundOrder.findUnique({ where: { id } });
-    if (!existing) return null;
+    if (!existing) {
+      const err = new Error('Order not found');
+      err.statusCode = 404;
+      throw err;
+    }
 
     if (!canTransition(existing.status, 'CANCELLED')) {
       throw new Error(`Cannot cancel order in ${existing.status} status`);
@@ -353,8 +433,8 @@ async function getPlanningBoard({ date, carrier_id, supplier_id, supplier_type, 
     include: {
       carrier: { select: { id: true, name: true } },
       supplier: { select: { id: true, name: true, supplier_type: true } },
-      waste_stream: { select: { id: true, name_en: true, code: true } },
-      waste_streams: { include: { waste_stream: { select: { id: true, name_en: true, code: true } } } },
+      waste_stream: { select: { id: true, name: true, code: true } },
+      waste_streams: { include: { waste_stream: { select: { id: true, name: true, code: true } } } },
       inbounds: {
         select: {
           id: true,

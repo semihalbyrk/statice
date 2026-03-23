@@ -21,6 +21,8 @@ const reportsRoutes = require('./routes/reports');
 const adminRoutes = require('./routes/admin');
 const dashboardRoutes = require('./routes/dashboard');
 const notificationRoutes = require('./routes/notifications');
+const feesRoutes = require('./routes/fees');
+const contractsRoutes = require('./routes/contracts');
 
 const app = express();
 
@@ -60,6 +62,8 @@ app.use('/api/reports', reportsRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/notifications', notificationRoutes);
+app.use('/api/fees', feesRoutes);
+app.use('/api/contracts', contractsRoutes);
 
 // Global error handler
 const errorHandler = require('./middleware/errorHandler');

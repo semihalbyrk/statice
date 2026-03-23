@@ -197,4 +197,42 @@ const getActivity = asyncHandler(async (req, res) => {
   res.json({ data: entries });
 });
 
-module.exports = { list, getById, create, update, resetPassword, getActivity };
+const toggleStatus = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const { is_active } = req.body;
+  if (typeof is_active !== 'boolean') {
+    throw new AppError('is_active (boolean) is required', 400);
+  }
+
+  if (id === req.user.userId && !is_active) {
+    throw new AppError('You cannot deactivate your own account', 400);
+  }
+
+  const existing = await prisma.user.findUnique({ where: { id } });
+  if (!existing) throw new AppError('User not found', 404);
+  if (existing.is_active === is_active) {
+    const { password_hash: _, ...safeExisting } = existing;
+    return res.json(safeExisting);
+  }
+
+  const result = await prisma.$transaction(async (tx) => {
+    const updated = await tx.user.update({
+      where: { id },
+      data: { is_active },
+    });
+    await writeAuditLog({
+      userId: req.user.userId,
+      action: 'UPDATE',
+      entityType: 'User',
+      entityId: id,
+      before: { is_active: existing.is_active },
+      after: { is_active: updated.is_active },
+    }, tx);
+    return updated;
+  });
+
+  const { password_hash, ...safeUser } = result;
+  res.json(safeUser);
+});
+
+module.exports = { list, getById, create, update, resetPassword, getActivity, toggleStatus };

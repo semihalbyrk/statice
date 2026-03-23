@@ -45,9 +45,9 @@ enum SortingStatus {
 }
 
 enum SupplierType {
-  AD_HOC
+  PRIVATE_INDIVIDUAL
   PRO
-  COMMERCIAL
+  THIRD_PARTY
 }
 
 enum IncidentCategory {
@@ -97,6 +97,32 @@ enum AcceptantStage {
   FOLLOWING
 }
 
+enum ContractStatus {
+  DRAFT
+  ACTIVE
+  EXPIRED
+  INACTIVE
+}
+
+enum InvoicingFrequency {
+  PER_ORDER
+  WEEKLY
+  MONTHLY
+  QUARTERLY
+}
+
+enum PricingModel {
+  WEIGHT
+  QUANTITY
+}
+
+enum FeeRateType {
+  FIXED
+  PERCENTAGE
+  PER_KG
+  PER_HOUR
+}
+
 enum SkipType {
   OPEN_TOP
   CLOSED_TOP
@@ -128,6 +154,7 @@ model User {
   audit_logs         AuditLog[]
   notifications      Notification[]
   weight_amendments  WeightAmendment[] @relation("WeightAmendments")
+  contracts_approved SupplierContract[] @relation("ContractsApproved")
 }
 
 model Carrier {
@@ -141,8 +168,9 @@ model Carrier {
   is_active       Boolean  @default(true)
   created_at      DateTime @default(now())
 
-  orders   InboundOrder[]
-  vehicles Vehicle[]
+  orders    InboundOrder[]
+  vehicles  Vehicle[]
+  contracts SupplierContract[]
 }
 
 model Supplier {
@@ -163,6 +191,7 @@ model Supplier {
 
   orders             InboundOrder[]
   afvalstroomnummers SupplierAfvalstroomnummer[]
+  contracts          SupplierContract[]
 }
 
 model Vehicle {
@@ -178,8 +207,7 @@ model Vehicle {
 
 model WasteStream {
   id             String   @id @default(uuid())
-  name_en        String
-  name_nl        String
+  name           String
   code           String   @unique
   cbs_code       String?
   weeelabex_code String?
@@ -187,13 +215,14 @@ model WasteStream {
   is_active      Boolean  @default(true)
   created_at     DateTime @default(now())
 
-  orders                     InboundOrder[]
-  categories                 ProductCategory[]
-  inbounds                   Inbound[]
-  assets                     Asset[]
-  order_waste_streams        OrderWasteStream[]
+  orders                      InboundOrder[]
+  categories                  ProductCategory[]
+  inbounds                    Inbound[]
+  assets                      Asset[]
+  order_waste_streams         OrderWasteStream[]
   supplier_afvalstroomnummers SupplierAfvalstroomnummer[]
-  materials                  MaterialMaster[]
+  materials                   MaterialMaster[]
+  contract_waste_streams      ContractWasteStream[]
 }
 
 model ProductCategory {
@@ -250,9 +279,10 @@ model InboundOrder {
 }
 
 model OrderWasteStream {
-  id              String @id @default(uuid())
-  order_id        String
-  waste_stream_id String
+  id                String  @id @default(uuid())
+  order_id          String
+  waste_stream_id   String
+  afvalstroomnummer String?
 
   order        InboundOrder @relation(fields: [order_id], references: [id])
   waste_stream WasteStream  @relation(fields: [waste_stream_id], references: [id])
@@ -516,13 +546,11 @@ model WeightAmendment {
 model MaterialMaster {
   id                        String   @id @default(uuid())
   code                      String   @unique
-  name_en                   String   @map("label_en")
-  name_nl                   String   @map("label_nl")
+  name                      String
   waste_stream_id           String
   cbs_code                  String
   weeelabex_group           String
   eural_code                String
-  default_afvalstroomnummer String?
   weee_category             String   @map("annex_iii_category")
   legacy_category_id        String?
   default_process_description String?
@@ -537,6 +565,7 @@ model MaterialMaster {
   certificate_scopes ProcessorCertificateMaterialScope[]
   fractions          MaterialFraction[]
   reusable_items     ReusableItem[]
+  contract_rate_lines ContractRateLine[]
 
   @@map("ProductTypeMaster")
 }
@@ -544,8 +573,7 @@ model MaterialMaster {
 model FractionMaster {
   id                                  String   @id @default(uuid())
   code                                String   @unique
-  name_en                             String
-  name_nl                             String
+  name                                String
   eural_code                          String
   default_acceptant_stage             AcceptantStage @default(FIRST_ACCEPTANT)
   default_process_description         String?
@@ -716,4 +744,106 @@ model ReusableItem {
   material        MaterialMaster      @relation(fields: [material_id], references: [id])
 
   @@index([catalogue_entry_id])
+}
+
+model FeeMaster {
+  id          String      @id @default(uuid())
+  fee_type    String
+  description String
+  rate_type   FeeRateType
+  rate_value  Decimal
+  min_cap     Decimal?
+  max_cap     Decimal?
+  is_active   Boolean     @default(true)
+  created_at  DateTime    @default(now())
+  updated_at  DateTime    @updatedAt
+
+  contract_penalties ContractContaminationPenalty[]
+
+  @@index([fee_type])
+}
+
+model SupplierContract {
+  id                          String             @id @default(uuid())
+  contract_number             String             @unique
+  supplier_id                 String
+  carrier_id                  String?
+  name                        String
+  effective_date              DateTime
+  expiry_date                 DateTime?
+  status                      ContractStatus     @default(ACTIVE)
+  approved_by                 String?
+  receiver_name               String             @default("Statice B.V.")
+
+  payment_term_days           Int                @default(30)
+  invoicing_frequency         InvoicingFrequency @default(MONTHLY)
+  currency                    String             @default("EUR")
+  invoice_delivery_method     String?
+
+  contamination_tolerance_pct Decimal            @default(0)
+  requires_finance_review     Boolean            @default(false)
+
+  is_active                   Boolean            @default(true)
+  created_at                  DateTime           @default(now())
+  updated_at                  DateTime           @updatedAt
+
+  supplier                    Supplier           @relation(fields: [supplier_id], references: [id])
+  carrier                     Carrier?           @relation(fields: [carrier_id], references: [id])
+  approved_by_user            User?              @relation("ContractsApproved", fields: [approved_by], references: [id])
+  rate_lines                  ContractRateLine[]
+  contamination_penalties     ContractContaminationPenalty[]
+  contract_waste_streams      ContractWasteStream[]
+
+  @@index([supplier_id])
+  @@index([carrier_id])
+  @@index([status])
+  @@index([expiry_date])
+}
+
+model ContractRateLine {
+  id                       String       @id @default(uuid())
+  contract_id              String
+  contract_waste_stream_id String?
+  material_id              String
+  pricing_model            PricingModel
+  unit_rate                Decimal
+  btw_rate                 Decimal      @default(0)
+  valid_from               DateTime
+  valid_to                 DateTime?
+  superseded_at            DateTime?
+  created_at               DateTime     @default(now())
+
+  contract             SupplierContract     @relation(fields: [contract_id], references: [id])
+  contract_waste_stream ContractWasteStream? @relation(fields: [contract_waste_stream_id], references: [id])
+  material             MaterialMaster       @relation(fields: [material_id], references: [id])
+
+  @@index([contract_id, material_id])
+  @@index([contract_waste_stream_id])
+  @@index([valid_from, valid_to])
+}
+
+model ContractWasteStream {
+  id                String   @id @default(uuid())
+  contract_id       String
+  waste_stream_id   String
+  afvalstroomnummer String
+  created_at        DateTime @default(now())
+
+  contract     SupplierContract @relation(fields: [contract_id], references: [id])
+  waste_stream WasteStream      @relation(fields: [waste_stream_id], references: [id])
+  rate_lines   ContractRateLine[]
+
+  @@unique([contract_id, waste_stream_id])
+  @@index([contract_id])
+}
+
+model ContractContaminationPenalty {
+  id          String @id @default(uuid())
+  contract_id String
+  fee_id      String
+
+  contract    SupplierContract @relation(fields: [contract_id], references: [id])
+  fee         FeeMaster        @relation(fields: [fee_id], references: [id])
+
+  @@unique([contract_id, fee_id])
 }

@@ -1,7 +1,7 @@
 const TYPE_CONFIG = {
   PRO: { label: 'PRO', className: 'bg-green-25 text-green-700 border-green-400' },
-  COMMERCIAL: { label: 'Commercial', className: 'bg-blue-25 text-blue-700 border-blue-300' },
-  AD_HOC: { label: 'Ad-hoc', className: 'bg-orange-25 text-orange-700 border-orange-300' },
+  THIRD_PARTY: { label: 'Third Party', className: 'bg-blue-25 text-blue-700 border-blue-300' },
+  PRIVATE_INDIVIDUAL: { label: 'Private Individual', className: 'bg-orange-25 text-orange-700 border-orange-300' },
 };
 
 export default function SupplierTypeBadge({ type }) {

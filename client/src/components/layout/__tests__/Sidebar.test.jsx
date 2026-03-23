@@ -91,9 +91,7 @@ describe('Sidebar', () => {
     expect(screen.getByText('Users')).toBeInTheDocument();
     expect(screen.getByText('Carriers')).toBeInTheDocument();
     expect(screen.getByText('Suppliers')).toBeInTheDocument();
-    expect(screen.getByText('Waste Streams')).toBeInTheDocument();
-    expect(screen.getByText('Materials & Fractions')).toBeInTheDocument();
-    expect(screen.getByText('Processors')).toBeInTheDocument();
+    expect(screen.getByText('Materials')).toBeInTheDocument();
     expect(screen.getByText('Audit Log')).toBeInTheDocument();
     expect(screen.getByText('Settings')).toBeInTheDocument();
   });

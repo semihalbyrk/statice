@@ -17,8 +17,7 @@ function mapMaterialForResponse(material) {
   if (!material) return material;
   return {
     ...material,
-    label_en: material.name_en,
-    label_nl: material.name_nl,
+    label_en: material.name,
     annex_iii_category: material.weee_category,
   };
 }
@@ -27,8 +26,7 @@ function mapFractionForResponse(fraction) {
   if (!fraction) return fraction;
   return {
     ...fraction,
-    label_en: fraction.name_en,
-    label_nl: fraction.name_nl,
+    label_en: fraction.name,
   };
 }
 
@@ -66,7 +64,7 @@ function buildMaterialSnapshot(material) {
   return {
     material_id: material.id,
     material_code_snapshot: material.code,
-    material_name_snapshot: material.name_en,
+    material_name_snapshot: material.name,
     weee_category_snapshot: material.weee_category,
   };
 }
@@ -78,8 +76,7 @@ function buildMaterialWhere({ active, waste_stream_id, search }) {
   if (search) {
     where.OR = [
       { code: { contains: search, mode: 'insensitive' } },
-      { name_en: { contains: search, mode: 'insensitive' } },
-      { name_nl: { contains: search, mode: 'insensitive' } },
+      { name: { contains: search, mode: 'insensitive' } },
       { cbs_code: { contains: search, mode: 'insensitive' } },
       { eural_code: { contains: search, mode: 'insensitive' } },
       { weee_category: { contains: search, mode: 'insensitive' } },
@@ -93,7 +90,7 @@ async function listMaterials(filters = {}) {
     where: buildMaterialWhere(filters),
     include: MATERIAL_INCLUDE,
     orderBy: [
-      { waste_stream: { name_en: 'asc' } },
+      { waste_stream: { name: 'asc' } },
       { code: 'asc' },
     ],
   });
@@ -109,13 +106,11 @@ async function createMaterial(data, userId) {
     const material = await tx.materialMaster.create({
       data: {
         code: data.code,
-        name_en: data.name_en || data.label_en,
-        name_nl: data.name_nl || data.label_nl || data.name_en || data.label_en,
+        name: data.name || data.name_en || data.label_en,
         waste_stream_id: data.waste_stream_id,
         cbs_code: data.cbs_code,
         weeelabex_group: data.weeelabex_group,
         eural_code: data.eural_code,
-        default_afvalstroomnummer: data.default_afvalstroomnummer || null,
         weee_category: data.weee_category || data.annex_iii_category,
         legacy_category_id: data.legacy_category_id || null,
         default_process_description: data.default_process_description || null,
@@ -148,15 +143,11 @@ async function updateMaterial(id, data, userId) {
       where: { id },
       data: {
         code: data.code ?? existing.code,
-        name_en: data.name_en ?? data.label_en ?? existing.name_en,
-        name_nl: data.name_nl ?? data.label_nl ?? existing.name_nl,
+        name: data.name ?? data.name_en ?? data.label_en ?? existing.name,
         waste_stream_id: data.waste_stream_id ?? existing.waste_stream_id,
         cbs_code: data.cbs_code ?? existing.cbs_code,
         weeelabex_group: data.weeelabex_group ?? existing.weeelabex_group,
         eural_code: data.eural_code ?? existing.eural_code,
-        default_afvalstroomnummer: data.default_afvalstroomnummer !== undefined
-          ? data.default_afvalstroomnummer || null
-          : existing.default_afvalstroomnummer,
         weee_category: data.weee_category ?? data.annex_iii_category ?? existing.weee_category,
         legacy_category_id: data.legacy_category_id !== undefined ? data.legacy_category_id || null : existing.legacy_category_id,
         default_process_description: data.default_process_description !== undefined
@@ -186,8 +177,7 @@ async function listFractions({ active, material_id, search } = {}) {
   if (search) {
     where.OR = [
       { code: { contains: search, mode: 'insensitive' } },
-      { name_en: { contains: search, mode: 'insensitive' } },
-      { name_nl: { contains: search, mode: 'insensitive' } },
+      { name: { contains: search, mode: 'insensitive' } },
       { eural_code: { contains: search, mode: 'insensitive' } },
     ];
   }
@@ -219,8 +209,7 @@ async function createFraction(data, userId) {
     const fraction = await tx.fractionMaster.create({
       data: {
         code: data.code,
-        name_en: data.name_en || data.label_en,
-        name_nl: data.name_nl || data.label_nl || data.name_en || data.label_en,
+        name: data.name || data.name_en || data.label_en,
         eural_code: data.eural_code,
         default_acceptant_stage: data.default_acceptant_stage || 'FIRST_ACCEPTANT',
         default_process_description: data.default_process_description || null,
@@ -255,8 +244,7 @@ async function updateFraction(id, data, userId) {
       where: { id },
       data: {
         code: data.code ?? existing.code,
-        name_en: data.name_en ?? data.label_en ?? existing.name_en,
-        name_nl: data.name_nl ?? data.label_nl ?? existing.name_nl,
+        name: data.name ?? data.name_en ?? data.label_en ?? existing.name,
         eural_code: data.eural_code ?? existing.eural_code,
         default_acceptant_stage: data.default_acceptant_stage ?? existing.default_acceptant_stage,
         default_process_description: data.default_process_description !== undefined
@@ -581,7 +569,7 @@ async function listReusableItems(sessionId, assetId) {
   return prisma.reusableItem.findMany({
     where,
     include: {
-      material: { select: { id: true, code: true, name_en: true } },
+      material: { select: { id: true, code: true, name: true } },
       catalogue_entry: { select: { id: true, asset_id: true } },
     },
     orderBy: { created_at: 'asc' },
@@ -604,7 +592,7 @@ async function updateReusableItem(id, data) {
       notes: data.notes !== undefined ? data.notes || null : existing.notes,
     },
     include: {
-      material: { select: { id: true, code: true, name_en: true } },
+      material: { select: { id: true, code: true, name: true } },
       catalogue_entry: { select: { id: true, asset_id: true } },
     },
   });

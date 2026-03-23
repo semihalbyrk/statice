@@ -9,9 +9,7 @@ import OrderDetailPage from './pages/orders/OrderDetailPage';
 import ArrivalPage from './pages/arrival/ArrivalPage';
 import CarriersPage from './pages/admin/CarriersPage';
 import SuppliersPage from './pages/admin/SuppliersPage';
-import WasteStreamsPage from './pages/admin/WasteStreamsPage';
-import ProductTypesPage from './pages/admin/ProductTypesPage';
-import ProcessorsPage from './pages/admin/ProcessorsPage';
+import MaterialsManagementPage from './pages/admin/MaterialsManagementPage';
 import WeighingEventPage from './pages/weighing/WeighingEventPage';
 import OrderCreatePage from './pages/orders/OrderCreatePage';
 import PlanningBoardPage from './pages/orders/PlanningBoardPage';
@@ -23,6 +21,10 @@ import SchedulesPage from './pages/reports/SchedulesPage';
 import UsersPage from './pages/admin/UsersPage';
 import AuditLogPage from './pages/admin/AuditLogPage';
 import SystemSettingsPage from './pages/admin/SystemSettingsPage';
+import ContractsDashboardPage from './pages/contracts/ContractsDashboardPage';
+import ContractCreatePage from './pages/contracts/ContractCreatePage';
+import ContractDetailPage from './pages/contracts/ContractDetailPage';
+import FeeMasterPage from './pages/admin/FeeMasterPage';
 import NotFoundPage from './pages/errors/NotFoundPage';
 import UnauthorisedPage from './pages/errors/UnauthorisedPage';
 
@@ -67,9 +69,12 @@ export default function App() {
           <Route path="/admin/users" element={<ProtectedRoute allowedRoles={['ADMIN']}><UsersPage /></ProtectedRoute>} />
           <Route path="/admin/carriers" element={<ProtectedRoute allowedRoles={['ADMIN']}><CarriersPage /></ProtectedRoute>} />
           <Route path="/admin/suppliers" element={<ProtectedRoute allowedRoles={['ADMIN']}><SuppliersPage /></ProtectedRoute>} />
-          <Route path="/admin/waste-streams" element={<ProtectedRoute allowedRoles={['ADMIN']}><WasteStreamsPage /></ProtectedRoute>} />
-          <Route path="/admin/product-types" element={<ProtectedRoute allowedRoles={['ADMIN']}><ProductTypesPage /></ProtectedRoute>} />
-          <Route path="/admin/processors" element={<ProtectedRoute allowedRoles={['ADMIN']}><ProcessorsPage /></ProtectedRoute>} />
+          <Route path="/admin/materials" element={<ProtectedRoute allowedRoles={['ADMIN']}><MaterialsManagementPage /></ProtectedRoute>} />
+          <Route path="/contracts" element={<ProtectedRoute allowedRoles={['ADMIN', 'FINANCE_MANAGER', 'FINANCE_USER']}><ContractsDashboardPage /></ProtectedRoute>} />
+          <Route path="/contracts/new" element={<ProtectedRoute allowedRoles={['ADMIN', 'FINANCE_MANAGER']}><ContractCreatePage /></ProtectedRoute>} />
+          <Route path="/contracts/:id/edit" element={<ProtectedRoute allowedRoles={['ADMIN', 'FINANCE_MANAGER']}><ContractCreatePage /></ProtectedRoute>} />
+          <Route path="/contracts/:id" element={<ProtectedRoute allowedRoles={['ADMIN', 'FINANCE_MANAGER', 'FINANCE_USER']}><ContractDetailPage /></ProtectedRoute>} />
+          <Route path="/admin/fees" element={<ProtectedRoute allowedRoles={['ADMIN', 'FINANCE_MANAGER']}><FeeMasterPage /></ProtectedRoute>} />
           <Route path="/admin/audit-log" element={<ProtectedRoute allowedRoles={['ADMIN']}><AuditLogPage /></ProtectedRoute>} />
           <Route path="/admin/settings" element={<ProtectedRoute allowedRoles={['ADMIN']}><SystemSettingsPage /></ProtectedRoute>} />
         </Route>

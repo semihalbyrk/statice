@@ -519,7 +519,7 @@ async function generateDownstreamStatementPDF(data, filePath) {
     data.supplier?.name || '—',
     data.material?.eural_code || '—',
     data.material?.weee_category || '—',
-    data.material?.name_en || '—',
+    data.material?.name || '—',
     nlNum(data.totalMaterialKg),
     data.processDescription || '—',
   ];

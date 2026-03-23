@@ -69,7 +69,7 @@ describe('GET /api/admin/waste-streams', () => {
     // Each waste stream should have expected fields
     const ws = res.body.data[0];
     expect(ws).toHaveProperty('id');
-    expect(ws).toHaveProperty('name_en');
+    expect(ws).toHaveProperty('name');
     expect(ws).toHaveProperty('code');
   });
 });
@@ -78,7 +78,7 @@ describe('POST /api/admin/waste-streams', () => {
   it('returns 401 without auth token', async () => {
     const res = await request(app)
       .post('/api/admin/waste-streams')
-      .send({ name_en: 'Test', name_nl: 'Test', code: 'TST' });
+      .send({ name: 'Test', code: 'TST' });
 
     expect(res.status).toBe(401);
   });
@@ -89,7 +89,7 @@ describe('POST /api/admin/waste-streams', () => {
     const res = await request(app)
       .post('/api/admin/waste-streams')
       .set('Authorization', `Bearer ${token}`)
-      .send({ name_en: 'Test', name_nl: 'Test', code: 'TST' });
+      .send({ name: 'Test', code: 'TST' });
 
     expect(res.status).toBe(403);
   });
@@ -100,7 +100,7 @@ describe('POST /api/admin/waste-streams', () => {
     const res = await request(app)
       .post('/api/admin/waste-streams')
       .set('Authorization', `Bearer ${token}`)
-      .send({ name_en: 'Test Only English' });
+      .send({ name: 'Test Only English' });
 
     expect(res.status).toBe(400);
     expect(res.body).toHaveProperty('error');
@@ -114,15 +114,14 @@ describe('POST /api/admin/waste-streams', () => {
       .post('/api/admin/waste-streams')
       .set('Authorization', `Bearer ${token}`)
       .send({
-        name_en: 'Test Waste Stream',
-        name_nl: 'Test Afvalstroom',
+        name: 'Test Waste Stream',
         code: uniqueCode,
         ewc_code: '160211',
       });
 
     expect(res.status).toBe(201);
     expect(res.body).toHaveProperty('id');
-    expect(res.body.name_en).toBe('Test Waste Stream');
+    expect(res.body.name).toBe('Test Waste Stream');
     expect(res.body.code).toBe(uniqueCode);
     createdIds.push(res.body.id);
   });
@@ -132,7 +131,7 @@ describe('PUT /api/admin/waste-streams/:id', () => {
   it('returns 401 without auth token', async () => {
     const res = await request(app)
       .put('/api/admin/waste-streams/some-id')
-      .send({ name_en: 'Updated' });
+      .send({ name: 'Updated' });
 
     expect(res.status).toBe(401);
   });
@@ -143,7 +142,7 @@ describe('PUT /api/admin/waste-streams/:id', () => {
     const res = await request(app)
       .put('/api/admin/waste-streams/some-id')
       .set('Authorization', `Bearer ${token}`)
-      .send({ name_en: 'Updated' });
+      .send({ name: 'Updated' });
 
     expect(res.status).toBe(403);
   });
@@ -154,7 +153,7 @@ describe('PUT /api/admin/waste-streams/:id', () => {
     const res = await request(app)
       .put('/api/admin/waste-streams/00000000-0000-0000-0000-000000000000')
       .set('Authorization', `Bearer ${token}`)
-      .send({ name_en: 'Updated' });
+      .send({ name: 'Updated' });
 
     expect(res.status).toBe(404);
     expect(res.body).toHaveProperty('error', 'Waste stream not found');
@@ -169,9 +168,9 @@ describe('PUT /api/admin/waste-streams/:id', () => {
     const res = await request(app)
       .put(`/api/admin/waste-streams/${id}`)
       .set('Authorization', `Bearer ${token}`)
-      .send({ name_en: 'Updated Waste Stream Name' });
+      .send({ name: 'Updated Waste Stream Name' });
 
     expect(res.status).toBe(200);
-    expect(res.body.name_en).toBe('Updated Waste Stream Name');
+    expect(res.body.name).toBe('Updated Waste Stream Name');
   });
 });

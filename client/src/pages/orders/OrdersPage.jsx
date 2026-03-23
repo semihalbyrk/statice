@@ -24,22 +24,6 @@ const ORDER_TRANSITIONS = {
   CANCELLED: ['PLANNED'],
 };
 
-function formatTimeWindow(order) {
-  if (order.planned_time_window_start && order.planned_time_window_end) {
-    return `${format(new Date(order.planned_time_window_start), 'dd MMM yyyy HH:mm')} - ${format(new Date(order.planned_time_window_end), 'HH:mm')}`;
-  }
-
-  if (order.planned_time_window_start) {
-    return format(new Date(order.planned_time_window_start), 'dd MMM yyyy HH:mm');
-  }
-
-  if (order.planned_time_window_end) {
-    return format(new Date(order.planned_time_window_end), 'dd MMM yyyy HH:mm');
-  }
-
-  return '—';
-}
-
 export default function OrdersPage() {
   const navigate = useNavigate();
   const user = useAuthStore((state) => state.user);
@@ -138,32 +122,29 @@ export default function OrdersPage() {
       </div>
 
       <div className="bg-white rounded-lg border border-grey-200 shadow-sm overflow-x-auto">
-        <table className="w-full min-w-[1540px] text-sm">
+        <table className="w-full min-w-[1000px] text-sm">
           <thead>
             <tr className="bg-grey-50 border-b border-grey-200">
-              <th className="text-left px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide min-w-[150px]"><span className="inline-flex items-center gap-1">Order # <ArrowUpDown size={12} className="text-grey-400" /></span></th>
-              <th className="text-left px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide min-w-[120px]"><span className="inline-flex items-center gap-1">Status <ArrowUpDown size={12} className="text-grey-400" /></span></th>
-              <th className="text-left px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide min-w-[180px]">Carrier</th>
-              <th className="text-left px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide min-w-[180px]">Supplier</th>
-              <th className="text-left px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide min-w-[220px]">Waste Stream</th>
-              <th className="text-left px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide min-w-[140px]"><span className="inline-flex items-center gap-1">Planned Date <ArrowUpDown size={12} className="text-grey-400" /></span></th>
-              <th className="text-left px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide min-w-[240px]">Time Window</th>
-              <th className="text-left px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide min-w-[140px]">Vehicle Plate</th>
-              <th className="text-left px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide min-w-[170px]">Afvalstroomnummer</th>
-              <th className="text-right px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide min-w-[110px]">Exp. Parcels</th>
-              <th className="text-left px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide min-w-[320px]">Notes</th>
+              <th className="text-left px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide"><span className="inline-flex items-center gap-1">Order # <ArrowUpDown size={12} className="text-grey-400" /></span></th>
+              <th className="text-left px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide"><span className="inline-flex items-center gap-1">Status <ArrowUpDown size={12} className="text-grey-400" /></span></th>
+              <th className="text-left px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide">Vehicle Plate</th>
+              <th className="text-left px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide">Carrier</th>
+              <th className="text-left px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide">Supplier</th>
+              <th className="text-left px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide">Waste Stream</th>
+              <th className="text-left px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide"><span className="inline-flex items-center gap-1">Planned Date <ArrowUpDown size={12} className="text-grey-400" /></span></th>
+              <th className="text-right px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide">Parcels</th>
             </tr>
           </thead>
           <tbody>
             {loading ? (
               <tr>
-                <td colSpan={11} className="px-4 py-8 text-center text-grey-400">
+                <td colSpan={8} className="px-4 py-8 text-center text-grey-400">
                   Loading...
                 </td>
               </tr>
             ) : orders.length === 0 ? (
               <tr>
-                <td colSpan={11} className="px-4 py-8 text-center text-grey-400">
+                <td colSpan={8} className="px-4 py-8 text-center text-grey-400">
                   No orders found
                 </td>
               </tr>
@@ -174,38 +155,33 @@ export default function OrdersPage() {
                   onClick={() => navigate(`/orders/${order.id}`)}
                   className="border-b border-grey-100 hover:bg-grey-50 cursor-pointer transition-colors"
                 >
-                  <td className="px-4 py-2.5">
+                  <td className="px-4 py-3">
                     <span className="text-green-500 font-medium hover:underline">{order.order_number}</span>
                   </td>
-                  <td className="px-4 py-2.5">
+                  <td className="px-4 py-3">
                     <ClickableStatusBadge
                       status={order.status}
                       allowedTransitions={canCreate ? (ORDER_TRANSITIONS[order.status] || []) : []}
                       onTransition={(newStatus) => handleStatusTransition(order.id, newStatus)}
                     />
                   </td>
-                  <td className="px-4 py-2.5 text-grey-700">{order.carrier?.name}</td>
-                  <td className="px-4 py-2.5 text-grey-700">
+                  <td className="px-4 py-3 font-mono text-grey-700">{order.vehicle_plate || '\u2014'}</td>
+                  <td className="px-4 py-3 text-grey-700">{order.carrier?.name}</td>
+                  <td className="px-4 py-3 text-grey-700">
                     <div className="flex items-center gap-1.5">
-                      <span>{order.supplier?.name || '—'}</span>
+                      <span>{order.supplier?.name || '\u2014'}</span>
                       <SupplierTypeBadge type={order.supplier?.supplier_type} />
                     </div>
                   </td>
-                  <td className="px-4 py-2.5 text-grey-700">
+                  <td className="px-4 py-3 text-grey-700">
                     {order.waste_streams?.length > 0
-                      ? order.waste_streams.map((ows) => ows.waste_stream?.name_en).filter(Boolean).join(', ') || order.waste_stream?.name_en
-                      : order.waste_stream?.name_en}
+                      ? order.waste_streams.map((ows) => ows.waste_stream?.name).filter(Boolean).join(', ') || order.waste_stream?.name
+                      : order.waste_stream?.name}
                   </td>
-                  <td className="px-4 py-2.5 text-grey-700">
+                  <td className="px-4 py-3 text-grey-700">
                     {format(new Date(order.planned_date), 'dd MMM yyyy')}
                   </td>
-                  <td className="px-4 py-2.5 text-grey-700 whitespace-nowrap">
-                    {formatTimeWindow(order)}
-                  </td>
-                  <td className="px-4 py-2.5 font-mono text-grey-700">{order.vehicle_plate || '—'}</td>
-                  <td className="px-4 py-2.5 text-grey-700">{order.afvalstroomnummer || '—'}</td>
-                  <td className="px-4 py-2.5 text-right text-grey-700">{order.expected_skip_count ?? '—'}</td>
-                  <td className="px-4 py-2.5 text-grey-700 min-w-[320px]">{order.notes || '—'}</td>
+                  <td className="px-4 py-3 text-right text-grey-700">{order.expected_skip_count ?? '\u2014'}</td>
                 </tr>
               ))
             )}

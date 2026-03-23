@@ -59,15 +59,13 @@ export default function SortingProcessListPage() {
       </div>
 
       <div className="bg-white rounded-lg border border-grey-200 shadow-sm overflow-x-auto">
-        <table className="w-full min-w-[1180px] text-sm">
+        <table className="w-full min-w-[900px] text-sm">
           <thead>
             <tr className="bg-grey-50 border-b border-grey-200">
               <th className="text-left px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide min-w-[180px]"><span className="inline-flex items-center gap-1">Process Name <ArrowUpDown size={12} className="text-grey-400" /></span></th>
               <th className="text-left px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide"><span className="inline-flex items-center gap-1">Status <ArrowUpDown size={12} className="text-grey-400" /></span></th>
-              <th className="text-left px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide">Shredding</th>
-              <th className="text-left px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide">Sorting</th>
               <th className="text-left px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide min-w-[150px]">Linked Order</th>
-              <th className="text-left px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide min-w-[160px]">Supplier</th>
+              <th className="text-left px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide">Supplier</th>
               <th className="text-left px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide min-w-[160px]">Carrier</th>
               <th className="text-left px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide min-w-[120px]">Plate</th>
               <th className="text-left px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide min-w-[200px]">Waste Stream</th>
@@ -79,13 +77,13 @@ export default function SortingProcessListPage() {
           <tbody>
             {loading ? (
               <tr>
-                <td colSpan={12} className="px-4 py-8 text-center text-grey-400">
+                <td colSpan={10} className="px-4 py-8 text-center text-grey-400">
                   Loading...
                 </td>
               </tr>
             ) : sessions.length === 0 ? (
               <tr>
-                <td colSpan={12} className="px-4 py-8 text-center text-grey-400">
+                <td colSpan={10} className="px-4 py-8 text-center text-grey-400">
                   No process sessions found
                 </td>
               </tr>
@@ -99,7 +97,7 @@ export default function SortingProcessListPage() {
                   if (a.parcel_type === 'MATERIAL') return 'Material';
                   return a.container_type ? (CONTAINER_TYPE_LABELS[a.container_type] || a.container_type) : '—';
                 }))].join(', ');
-                const wasteStreams = [...new Set(assets.map((a) => a.waste_stream?.name_en).filter(Boolean))].join(', ');
+                const wasteStreams = [...new Set(assets.map((a) => a.waste_stream?.name).filter(Boolean))].join(', ');
 
                 return (
                   <tr key={session.id} className="border-b border-grey-100 hover:bg-grey-50 transition-colors">
@@ -114,12 +112,6 @@ export default function SortingProcessListPage() {
                     <td className="px-4 py-2.5">
                       <StatusBadge status={session.status} />
                     </td>
-                    <td className="px-4 py-2.5">
-                      <StatusBadge status={session.catalogue_status} />
-                    </td>
-                    <td className="px-4 py-2.5">
-                      <StatusBadge status={session.processing_status} />
-                    </td>
                     <td className="px-4 py-2.5 text-sm text-grey-700">{order?.order_number || '—'}</td>
                     <td className="px-4 py-2.5 text-grey-700">
                       <div className="flex items-center gap-1.5">
@@ -129,7 +121,7 @@ export default function SortingProcessListPage() {
                     </td>
                     <td className="px-4 py-2.5 text-grey-700">{order?.carrier?.name || '—'}</td>
                     <td className="px-4 py-2.5 font-mono text-grey-700">{inbound?.vehicle?.registration_plate || '—'}</td>
-                    <td className="px-4 py-2.5 text-grey-700">{wasteStreams || order?.waste_stream?.name_en || '—'}</td>
+                    <td className="px-4 py-2.5 text-grey-700">{wasteStreams || order?.waste_stream?.name || '—'}</td>
                     <td className="px-4 py-2.5 text-grey-700">
                       {session.recorded_at ? format(new Date(session.recorded_at), 'dd MMM yyyy') : '—'}
                     </td>

@@ -396,7 +396,7 @@ export default function SortingPage() {
           <InfoField label="Supplier" value={order?.supplier?.name} />
           <InfoField label="Carrier" value={order?.carrier?.name} />
           <InfoField label="Vehicle Plate" value={session.inbound?.vehicle?.registration_plate} mono />
-          <InfoField label="Waste Stream" value={order?.waste_stream?.name_en} />
+          <InfoField label="Waste Stream" value={order?.waste_stream?.name} />
           <InfoField label="Recorded" value={session.recorded_at ? format(new Date(session.recorded_at), 'dd MMM yyyy HH:mm') : '—'} />
           <InfoField label="Parcels" value={String(assets.length)} />
         </div>
@@ -505,7 +505,7 @@ export default function SortingPage() {
                           <div key={entry.id} className="rounded-lg border border-grey-200 p-4">
                             <div className="flex items-start justify-between gap-3">
                               <div>
-                                <p className="text-sm font-semibold text-grey-900">{(entry.material || entry.product_type).name_en || (entry.material || entry.product_type).label_en}</p>
+                                <p className="text-sm font-semibold text-grey-900">{(entry.material || entry.product_type).name || (entry.material || entry.product_type).label_en}</p>
                                 <p className="text-xs text-grey-500 mt-1">
                                   {(entry.material || entry.product_type).code} | CBS {(entry.material || entry.product_type).cbs_code} | WEEE {(entry.material || entry.product_type).weee_category || (entry.material || entry.product_type).annex_iii_category}
                                 </p>
@@ -544,10 +544,6 @@ export default function SortingPage() {
                               <div>
                                 <span className="text-xs text-grey-500 uppercase tracking-wide">Reusable Qty</span>
                                 <p className="mt-1 font-semibold text-grey-900">{entry.reuse_eligible_quantity}</p>
-                              </div>
-                              <div>
-                                <span className="text-xs text-grey-500 uppercase tracking-wide">Default Afvalstroom</span>
-                                <p className="mt-1 font-semibold text-grey-900">{(entry.material || entry.product_type).default_afvalstroomnummer || '—'}</p>
                               </div>
                             </div>
                             {entry.notes && <p className="mt-3 text-sm text-grey-600">{entry.notes}</p>}
@@ -590,7 +586,7 @@ export default function SortingPage() {
                             .filter((type) => !activeAsset.waste_stream_id || type.waste_stream_id === activeAsset.waste_stream_id)
                             .map((type) => (
                               <option key={type.id} value={type.id}>
-                                {type.code} - {type.name_en}
+                                {type.code} - {type.name}
                               </option>
                             ))}
                         </select>
@@ -799,7 +795,7 @@ export default function SortingPage() {
                                   record.outcomes.map((outcome) => (
                                     <tr key={outcome.id} className="border-b border-grey-100">
                                       <td className="px-3 py-2.5">
-                                        <div className="font-medium text-grey-900">{outcome.fraction?.name_en || outcome.material_fraction}</div>
+                                        <div className="font-medium text-grey-900">{outcome.fraction?.name || outcome.material_fraction}</div>
                                       </td>
                                       <td className="px-3 py-2.5 text-right font-semibold text-grey-900">{Number(outcome.weight_kg).toLocaleString()} kg</td>
                                       <td className="px-3 py-2.5 text-right text-grey-700">{Number(outcome.share_pct || 0).toFixed(2)}%</td>
@@ -907,7 +903,7 @@ export default function SortingPage() {
                                       : fractions
                                     ).filter((f) => !usedFractionIds.includes(f.id) || f.id === editingFractionId);
                                   })().map((fraction) => (
-                                    <option key={fraction.id} value={fraction.id}>{fraction.code} - {fraction.name_en}</option>
+                                    <option key={fraction.id} value={fraction.id}>{fraction.code} - {fraction.name}</option>
                                   ))}
                                 </select>
                               </div>
@@ -1034,7 +1030,7 @@ export default function SortingPage() {
                     <div className="space-y-4">
                       {Object.entries(
                         reusableItems.reduce((groups, item) => {
-                          const key = item.material?.name_en || 'Unknown';
+                          const key = item.material?.name || 'Unknown';
                           if (!groups[key]) groups[key] = [];
                           groups[key].push(item);
                           return groups;
@@ -1103,7 +1099,7 @@ export default function SortingPage() {
                   ) : (
                     <div className="space-y-3">
                       {assetCatalogueEntries.map((entry) => {
-                        const materialName = (entry.material || entry.product_type)?.name_en || 'Unknown';
+                        const materialName = (entry.material || entry.product_type)?.name || 'Unknown';
                         const existingReport = sessionReports.find((r) => {
                           const params = typeof r.parametersJson === 'string' ? JSON.parse(r.parametersJson) : r.parametersJson;
                           return params?.catalogueEntryId === entry.id;

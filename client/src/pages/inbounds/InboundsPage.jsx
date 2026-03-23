@@ -78,7 +78,7 @@ export default function InboundsPage() {
       </div>
 
       <div className="bg-white rounded-lg border border-grey-200 shadow-sm overflow-x-auto">
-        <table className="w-full min-w-[1180px] text-sm">
+        <table className="w-full min-w-[1000px] text-sm">
           <thead>
             <tr className="bg-grey-50 border-b border-grey-200">
               <th className="text-left px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide"><span className="inline-flex items-center gap-1">Inbound Name <ArrowUpDown size={12} className="text-grey-400" /></span></th>
@@ -113,41 +113,41 @@ export default function InboundsPage() {
                   onClick={() => navigate(`/inbounds/${inbound.id}`)}
                   className="border-b border-grey-100 hover:bg-grey-50 cursor-pointer transition-colors"
                 >
-                  <td className="px-4 py-2.5">
+                  <td className="px-4 py-3">
                     <span className="text-sm font-medium text-green-600">
                       {inbound.inbound_number || '—'}
                     </span>
                   </td>
-                  <td className="px-4 py-2.5">
+                  <td className="px-4 py-3">
                     <ClickableStatusBadge
                       status={inbound.status}
                       allowedTransitions={INBOUND_TRANSITIONS[inbound.status] || []}
                       onTransition={(newStatus) => handleStatusTransition(inbound.id, newStatus)}
                     />
                   </td>
-                  <td className="px-4 py-2.5">
+                  <td className="px-4 py-3">
                     <span className="text-sm font-medium text-green-600">
                       {inbound.order?.order_number || '—'}
                     </span>
                   </td>
-                  <td className="px-4 py-2.5 font-mono text-grey-700">
+                  <td className="px-4 py-3 font-mono text-grey-700">
                     {inbound.vehicle?.registration_plate}
                   </td>
-                  <td className="px-4 py-2.5 text-grey-700">{inbound.order?.carrier?.name}</td>
-                  <td className="px-4 py-2.5 text-grey-700">
+                  <td className="px-4 py-3 text-grey-700">{inbound.order?.carrier?.name}</td>
+                  <td className="px-4 py-3 text-grey-700">
                     <div className="flex items-center gap-1.5">
                       <span>{inbound.order?.supplier?.name || '—'}</span>
                       <SupplierTypeBadge type={inbound.order?.supplier?.supplier_type} />
                     </div>
                   </td>
-                  <td className="px-4 py-2.5 text-grey-700">{inbound.order?.waste_stream?.name_en}</td>
-                  <td className="px-4 py-2.5 text-grey-700">
+                  <td className="px-4 py-3 text-grey-700">{inbound.order?.waste_stream?.name}</td>
+                  <td className="px-4 py-3 text-grey-700">
                     {inbound.arrived_at ? format(new Date(inbound.arrived_at), 'dd MMM yyyy HH:mm') : '-'}
                   </td>
-                  <td className="px-4 py-2.5 text-right text-grey-700">
+                  <td className="px-4 py-3 text-right text-grey-700">
                     {inbound.skip_count ?? '-'}
                   </td>
-                  <td className="px-4 py-2.5 text-right text-grey-700">
+                  <td className="px-4 py-3 text-right text-grey-700">
                     {inbound.net_weight != null ? `${Number(inbound.net_weight).toLocaleString()} kg` : '-'}
                   </td>
                 </tr>

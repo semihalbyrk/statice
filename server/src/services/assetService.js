@@ -6,7 +6,7 @@ const TERMINAL_STATUSES = ['READY_FOR_SORTING', 'SORTED'];
 
 const ASSET_INCLUDE = {
   waste_stream: {
-    select: { id: true, name_en: true, code: true },
+    select: { id: true, name: true, code: true },
   },
   material_category: {
     select: { id: true, code_cbs: true, description_en: true },

@@ -1,7 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Plus, Pencil, Trash2, Search } from 'lucide-react';
+import { Plus, Pencil, Search } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { getCarriers, createCarrier, updateCarrier, deleteCarrier } from '../../api/carriers';
+import { getCarriers, createCarrier, updateCarrier, toggleCarrierStatus } from '../../api/carriers';
+import ClickableStatusBadge from '../../components/ui/ClickableStatusBadge';
+import RowActionMenu from '../../components/ui/RowActionMenu';
 
 const inputClass = "w-full h-10 px-3.5 rounded-md border border-grey-300 text-sm text-grey-900 focus:border-green-500 focus:ring-[3px] focus:ring-green-500/15 outline-none transition-colors";
 
@@ -42,14 +44,14 @@ function CarrierFormModal({ carrier, onClose, onSuccess }) {
 
   return (
     <div className="app-modal-overlay">
-      <div className="app-modal-panel max-w-md">
-        <div className="flex items-center justify-between px-5 py-3 border-b border-grey-200">
+      <div className="app-modal-panel max-w-md max-h-[90vh] flex flex-col">
+        <div className="flex items-center justify-between px-5 py-3 border-b border-grey-200 shrink-0">
           <h2 className="text-lg font-semibold text-grey-900">
             {isEdit ? 'Edit Carrier' : 'New Carrier'}
           </h2>
           <button onClick={onClose} className="p-1 rounded-md hover:bg-grey-50 transition-colors text-grey-400">&times;</button>
         </div>
-        <form onSubmit={handleSubmit} className="px-5 py-4 space-y-4">
+        <form onSubmit={handleSubmit} className="px-5 py-4 space-y-4 flex-1 overflow-y-auto">
           <div>
             <label className="block text-sm font-medium text-grey-700 mb-1.5">Name <span className="text-red-500">*</span></label>
             <input name="name" value={form.name} onChange={handleChange} required className={inputClass} />
@@ -108,14 +110,14 @@ export default function CarriersPage() {
     return () => clearTimeout(timer);
   }, [fetchData]);
 
-  async function handleDelete(id) {
-    if (!window.confirm('Deactivate this carrier?')) return;
+  async function handleStatusTransition(carrierId, newStatus) {
+    const isActive = newStatus === 'ACTIVE';
     try {
-      await deleteCarrier(id);
-      toast.success('Carrier deactivated');
+      await toggleCarrierStatus(carrierId, isActive);
+      toast.success(isActive ? 'Carrier activated' : 'Carrier deactivated');
       fetchData();
     } catch (err) {
-      toast.error(err.response?.data?.error || 'Failed to deactivate carrier');
+      toast.error(err.response?.data?.error || 'Failed to update status');
     }
   }
 
@@ -135,17 +137,17 @@ export default function CarriersPage() {
           className="w-full h-10 pl-9 pr-3 rounded-md border border-grey-300 text-sm text-grey-900 placeholder:text-grey-400 focus:border-green-500 focus:ring-[3px] focus:ring-green-500/15 outline-none transition-colors" />
       </div>
 
-      <div className="bg-white rounded-lg border border-grey-200 shadow-sm overflow-x-auto">
+      <div className="bg-white rounded-lg border border-grey-200 shadow-sm overflow-visible">
         <table className="w-full text-sm">
           <thead>
             <tr className="bg-grey-50 border-b border-grey-200">
               <th className="text-left px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide">Name</th>
+              <th className="text-left px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide">Status</th>
               <th className="text-left px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide">KVK</th>
               <th className="text-left px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide">Contact Name</th>
               <th className="text-left px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide">Contact Email</th>
               <th className="text-left px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide">Contact Phone</th>
-              <th className="text-left px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide">Status</th>
-              <th className="text-right px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide">Actions</th>
+              <th className="w-10 px-4 py-3"></th>
             </tr>
           </thead>
           <tbody>
@@ -155,23 +157,20 @@ export default function CarriersPage() {
               <tr><td colSpan={7} className="px-4 py-8 text-center text-grey-400">No carriers found</td></tr>
             ) : carriers.map((c) => (
               <tr key={c.id} className="border-b border-grey-100 hover:bg-grey-50 transition-colors">
-                <td className="px-4 py-2.5 font-medium text-grey-900">{c.name}</td>
-                <td className="px-4 py-2.5 text-grey-700">{c.kvk_number || '—'}</td>
-                <td className="px-4 py-2.5 text-grey-700">{c.contact_name || '—'}</td>
-                <td className="px-4 py-2.5 text-grey-700">{c.contact_email || '—'}</td>
-                <td className="px-4 py-2.5 text-grey-700">{c.contact_phone || '—'}</td>
-                <td className="px-4 py-2.5">
-                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${c.is_active ? 'bg-green-25 text-green-700 border-green-300' : 'bg-grey-100 text-grey-500 border-grey-300'}`}>
-                    {c.is_active ? 'Active' : 'Inactive'}
-                  </span>
+                <td className="px-4 py-3 font-medium text-green-700">{c.name}</td>
+                <td className="px-4 py-3">
+                  <ClickableStatusBadge
+                    status={c.is_active ? 'ACTIVE' : 'INACTIVE'}
+                    allowedTransitions={c.is_active ? ['INACTIVE'] : ['ACTIVE']}
+                    onTransition={(newStatus) => handleStatusTransition(c.id, newStatus)}
+                  />
                 </td>
-                <td className="px-4 py-2.5 text-right">
-                  <button onClick={() => { setEditCarrier(c); setShowModal(true); }}
-                    className="p-1.5 rounded-md hover:bg-grey-100 transition-colors text-grey-400 hover:text-grey-600"><Pencil size={15} /></button>
-                  {c.is_active && (
-                    <button onClick={() => handleDelete(c.id)}
-                      className="p-1.5 rounded-md hover:bg-grey-100 transition-colors text-grey-400 hover:text-red-600 ml-1"><Trash2 size={15} /></button>
-                  )}
+                <td className="px-4 py-3 text-grey-700">{c.kvk_number || '\u2014'}</td>
+                <td className="px-4 py-3 text-grey-700">{c.contact_name || '\u2014'}</td>
+                <td className="px-4 py-3 text-grey-700">{c.contact_email || '\u2014'}</td>
+                <td className="px-4 py-3 text-grey-700">{c.contact_phone || '\u2014'}</td>
+                <td className="px-4 py-3">
+                  <RowActionMenu actions={[{ label: 'Edit', icon: Pencil, onClick: () => { setEditCarrier(c); setShowModal(true); } }]} />
                 </td>
               </tr>
             ))}

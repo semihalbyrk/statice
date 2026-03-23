@@ -4,7 +4,7 @@ const { canTransition: canOrderTransition } = require('../utils/orderStateMachin
 const { writeAuditLog } = require('../utils/auditLog');
 
 const MATERIAL_INCLUDE = {
-  waste_stream: { select: { id: true, name_en: true, code: true } },
+  waste_stream: { select: { id: true, name: true, code: true } },
   legacy_category: { select: { id: true, code_cbs: true, description_en: true, description_nl: true } },
   fractions: {
     where: { is_active: true },
@@ -13,8 +13,7 @@ const MATERIAL_INCLUDE = {
         select: {
           id: true,
           code: true,
-          name_en: true,
-          name_nl: true,
+          name: true,
           eural_code: true,
           default_acceptant_stage: true,
           default_process_description: true,
@@ -55,8 +54,7 @@ const PROCESSING_OUTCOME_INCLUDE = {
     select: {
       id: true,
       code: true,
-      name_en: true,
-      name_nl: true,
+      name: true,
       eural_code: true,
     },
   },

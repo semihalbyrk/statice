@@ -23,6 +23,10 @@ const STATUS_CONFIG = {
   REUSED: { label: 'Reused', className: 'bg-green-25 text-green-700 border-green-300' },
   DISPOSED: { label: 'Disposed', className: 'bg-red-25 text-red-700 border-red-300' },
   LANDFILL: { label: 'Landfill', className: 'bg-orange-25 text-orange-700 border-orange-300' },
+  // Contract statuses
+  DRAFT: { label: 'Draft', className: 'bg-grey-50 text-grey-700 border-grey-300' },
+  EXPIRED: { label: 'Expired', className: 'bg-orange-25 text-orange-700 border-orange-300' },
+  // TERMINATED removed — now uses INACTIVE (line 14)
 };
 
 export default function StatusBadge({ status }) {

@@ -28,7 +28,7 @@ function mapOutcomeForResponse(outcome) {
   return {
     ...outcome,
     fraction: mapFractionForResponse(outcome.fraction),
-    material_fraction: outcome.fraction?.name_en || outcome.material_fraction,
+    material_fraction: outcome.fraction?.name || outcome.material_fraction,
   };
 }
 
@@ -130,7 +130,7 @@ function normaliseOutcomePayload(data, record, fraction) {
 
   return {
     fraction_id: fraction?.id || null,
-    material_fraction: fraction?.name_en || data.material_fraction || '',
+    material_fraction: fraction?.name || data.material_fraction || '',
     weight_kg: weightKg,
     treatment_route: data.treatment_route || (landfillDisposalPct > 0 ? 'LANDFILL' : recyclingPct > 0 ? 'RECYCLED' : preparedForReusePct > 0 ? 'REUSED' : 'DISPOSED'),
     acceptant_stage: data.acceptant_stage || fraction?.default_acceptant_stage || 'FIRST_ACCEPTANT',

@@ -124,7 +124,7 @@ function RPT02Config({ params, onChange, wasteStreams }) {
           value={params.wasteStreamIds || []}
           onChange={(e) => onChange({ ...params, wasteStreamIds: Array.from(e.target.selectedOptions, (o) => o.value) })}
         >
-          {wasteStreams.map((ws) => <option key={ws.id} value={ws.id}>{ws.code} — {ws.name_en}</option>)}
+          {wasteStreams.map((ws) => <option key={ws.id} value={ws.id}>{ws.code} — {ws.name}</option>)}
         </select>
       </div>
     </div>
@@ -194,7 +194,7 @@ function RPT04Config({ params, onChange, carriers, wasteStreams }) {
           <label className={labelClass}>Waste Stream (optional)</label>
           <select className={selectClass} value={params.wasteStreamId || ''} onChange={(e) => onChange({ ...params, wasteStreamId: e.target.value })}>
             <option value="">All streams</option>
-            {wasteStreams.map((ws) => <option key={ws.id} value={ws.id}>{ws.code} — {ws.name_en}</option>)}
+            {wasteStreams.map((ws) => <option key={ws.id} value={ws.id}>{ws.code} — {ws.name}</option>)}
           </select>
         </div>
       </div>
@@ -224,7 +224,7 @@ function RPT05Config({ params, onChange, wasteStreams }) {
           value={params.wasteStreamIds || []}
           onChange={(e) => onChange({ ...params, wasteStreamIds: Array.from(e.target.selectedOptions, (o) => o.value) })}
         >
-          {wasteStreams.map((ws) => <option key={ws.id} value={ws.id}>{ws.code} — {ws.name_en}</option>)}
+          {wasteStreams.map((ws) => <option key={ws.id} value={ws.id}>{ws.code} — {ws.name}</option>)}
         </select>
       </div>
     </div>
@@ -277,7 +277,7 @@ function RPT07Config({ params, onChange, suppliers, materials }) {
           <label className={labelClass}>Material *</label>
           <select className={selectClass} value={params.materialId || ''} onChange={(e) => onChange({ ...params, materialId: e.target.value })}>
             <option value="">Select material...</option>
-            {materials.map((material) => <option key={material.id} value={material.id}>{material.code} — {material.name_en}</option>)}
+            {materials.map((material) => <option key={material.id} value={material.id}>{material.code} — {material.name}</option>)}
           </select>
         </div>
       </div>

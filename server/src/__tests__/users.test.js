@@ -303,3 +303,135 @@ describe('POST /api/admin/users/:id/reset-password', () => {
     expect(res.body).toHaveProperty('message', 'Password reset successfully');
   });
 });
+
+describe('PATCH /api/admin/users/:id/status', () => {
+  let toggleUserId;
+
+  beforeAll(async () => {
+    // Create a dedicated user for toggle tests
+    const token = await getToken('admin@statice.nl', 'Admin1234!');
+    const uniqueEmail = `toggle-user-${Date.now()}@statice.nl`;
+    const res = await request(app)
+      .post('/api/admin/users')
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        email: uniqueEmail,
+        full_name: 'Pieter Hendriksen',
+        role: 'GATE_OPERATOR',
+        password: 'Toggle1234!',
+      });
+    toggleUserId = res.body.data.id;
+    createdUserIds.push(toggleUserId);
+  });
+
+  it('returns 401 without auth token', async () => {
+    const res = await request(app)
+      .patch('/api/admin/users/some-id/status')
+      .send({ is_active: false });
+
+    expect(res.status).toBe(401);
+  });
+
+  it('returns 403 for non-ADMIN roles', async () => {
+    const token = await getToken('planner@statice.nl', 'Planner123!');
+
+    const res = await request(app)
+      .patch('/api/admin/users/some-id/status')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ is_active: false });
+
+    expect(res.status).toBe(403);
+  });
+
+  it('returns 400 when is_active is not a boolean', async () => {
+    const token = await getToken('admin@statice.nl', 'Admin1234!');
+
+    const res = await request(app)
+      .patch(`/api/admin/users/${toggleUserId}/status`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({ is_active: 'nee' });
+
+    expect(res.status).toBe(400);
+    expect(res.body).toHaveProperty('error', 'is_active (boolean) is required');
+  });
+
+  it('returns 400 when is_active is missing', async () => {
+    const token = await getToken('admin@statice.nl', 'Admin1234!');
+
+    const res = await request(app)
+      .patch(`/api/admin/users/${toggleUserId}/status`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({});
+
+    expect(res.status).toBe(400);
+    expect(res.body).toHaveProperty('error');
+  });
+
+  it('returns 404 for non-existent user', async () => {
+    const token = await getToken('admin@statice.nl', 'Admin1234!');
+
+    const res = await request(app)
+      .patch('/api/admin/users/00000000-0000-0000-0000-000000000000/status')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ is_active: false });
+
+    expect(res.status).toBe(404);
+  });
+
+  it('deactivates a user', async () => {
+    const token = await getToken('admin@statice.nl', 'Admin1234!');
+
+    const res = await request(app)
+      .patch(`/api/admin/users/${toggleUserId}/status`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({ is_active: false });
+
+    expect(res.status).toBe(200);
+    expect(res.body.is_active).toBe(false);
+    // Should not expose password_hash
+    expect(res.body).not.toHaveProperty('password_hash');
+  });
+
+  it('reactivates a user', async () => {
+    const token = await getToken('admin@statice.nl', 'Admin1234!');
+
+    const res = await request(app)
+      .patch(`/api/admin/users/${toggleUserId}/status`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({ is_active: true });
+
+    expect(res.status).toBe(200);
+    expect(res.body.is_active).toBe(true);
+  });
+
+  it('returns current state when already in desired state', async () => {
+    const token = await getToken('admin@statice.nl', 'Admin1234!');
+
+    // User is active from previous test
+    const res = await request(app)
+      .patch(`/api/admin/users/${toggleUserId}/status`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({ is_active: true });
+
+    expect(res.status).toBe(200);
+    expect(res.body.is_active).toBe(true);
+  });
+
+  it('prevents admin from deactivating their own account', async () => {
+    const token = await getToken('admin@statice.nl', 'Admin1234!');
+
+    // Get the admin user's ID
+    const listRes = await request(app)
+      .get('/api/admin/users?search=admin@statice.nl')
+      .set('Authorization', `Bearer ${token}`);
+    const adminId = listRes.body.users[0].id;
+
+    const res = await request(app)
+      .patch(`/api/admin/users/${adminId}/status`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({ is_active: false });
+
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/cannot deactivate your own account/i);
+  });
+});

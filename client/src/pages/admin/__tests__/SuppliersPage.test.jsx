@@ -13,11 +13,13 @@ const mockGetSuppliers = vi.fn();
 const mockCreateSupplier = vi.fn();
 const mockUpdateSupplier = vi.fn();
 const mockDeleteSupplier = vi.fn();
+const mockToggleSupplierStatus = vi.fn();
 vi.mock('../../../api/suppliers', () => ({
   getSuppliers: (...args) => mockGetSuppliers(...args),
   createSupplier: (...args) => mockCreateSupplier(...args),
   updateSupplier: (...args) => mockUpdateSupplier(...args),
   deleteSupplier: (...args) => mockDeleteSupplier(...args),
+  toggleSupplierStatus: (...args) => mockToggleSupplierStatus(...args),
 }));
 
 function renderSuppliersPage() {
@@ -66,7 +68,7 @@ describe('SuppliersPage', () => {
     expect(screen.getByText('Contact Name')).toBeInTheDocument();
     expect(screen.getByText('Contact Email')).toBeInTheDocument();
     expect(screen.getByText('Status')).toBeInTheDocument();
-    expect(screen.getByText('Actions')).toBeInTheDocument();
+    // Actions column now has no header text (kebab menu pattern)
   });
 
   it('renders supplier rows after data loads', async () => {
@@ -117,7 +119,7 @@ describe('SuppliersPage', () => {
           {
             id: '2',
             name: 'Old Corp',
-            supplier_type: 'COMMERCIAL',
+            supplier_type: 'THIRD_PARTY',
             is_active: false,
           },
         ],

@@ -453,7 +453,7 @@ async function generateDownstreamStatementXLSX(data, filePath, user) {
     ['Sender', data.supplier?.name || '—'],
     ['Eural Code', data.material?.eural_code || '—'],
     ['WEEE Category', data.material?.weee_category || '—'],
-    ['Material', data.material?.name_en || '—'],
+    ['Material', data.material?.name || '—'],
     ['Quantity in kg', formatWeight(data.totalMaterialKg)],
     ['Process Description', data.processDescription || '—'],
   ].forEach((row) => headerSheet.addRow(row));

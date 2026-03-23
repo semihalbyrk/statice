@@ -1,9 +1,10 @@
 const prisma = require('../utils/prismaClient');
 const { writeAuditLog } = require('../utils/auditLog');
+const contractService = require('../services/contractService');
 
 async function list(req, res, next) {
   try {
-    const { search, supplier_type, page = 1, limit = 20, active } = req.query;
+    const { search, supplier_type, page = 1, limit = 20, active, hasActiveContract } = req.query;
     const pageNum = Math.max(1, parseInt(page, 10));
     const limitNum = Math.min(100, Math.max(1, parseInt(limit, 10)));
     const skip = (pageNum - 1) * limitNum;
@@ -17,6 +18,9 @@ async function list(req, res, next) {
     }
     if (active !== undefined) {
       where.is_active = active === 'true';
+    }
+    if (hasActiveContract === 'true') {
+      where.contracts = { some: { status: 'ACTIVE', is_active: true } };
     }
 
     const [suppliers, total] = await Promise.all([
@@ -37,7 +41,7 @@ async function getById(req, res, next) {
       include: {
         afvalstroomnummers: {
           where: { is_active: true },
-          include: { waste_stream: { select: { id: true, name_en: true, code: true } } },
+          include: { waste_stream: { select: { id: true, name: true, code: true } } },
           orderBy: { created_at: 'desc' },
         },
       },
@@ -120,6 +124,29 @@ async function remove(req, res, next) {
 
     await prisma.$transaction(async (tx) => {
       await tx.supplier.update({ where: { id }, data: { is_active: false } });
+
+      // Terminate all active contracts for this supplier
+      const activeContracts = await tx.supplierContract.findMany({
+        where: { supplier_id: id, status: 'ACTIVE' },
+        select: { id: true },
+      });
+      if (activeContracts.length > 0) {
+        await tx.supplierContract.updateMany({
+          where: { supplier_id: id, status: 'ACTIVE' },
+          data: { status: 'INACTIVE' },
+        });
+        for (const c of activeContracts) {
+          await writeAuditLog({
+            userId: req.user.userId,
+            action: 'TERMINATE',
+            entityType: 'SupplierContract',
+            entityId: c.id,
+            before: { status: 'ACTIVE' },
+            after: { status: 'INACTIVE', reason: 'Supplier deactivated' },
+          }, tx);
+        }
+      }
+
       await writeAuditLog({
         userId: req.user.userId,
         action: 'DELETE',
@@ -136,11 +163,75 @@ async function remove(req, res, next) {
   }
 }
 
+async function toggleStatus(req, res, next) {
+  try {
+    const { id } = req.params;
+    const { is_active } = req.body;
+    if (typeof is_active !== 'boolean') {
+      return res.status(400).json({ error: 'is_active (boolean) is required' });
+    }
+
+    const existing = await prisma.supplier.findUnique({ where: { id } });
+    if (!existing) {
+      return res.status(404).json({ error: 'Supplier not found' });
+    }
+    if (existing.is_active === is_active) {
+      return res.json(existing);
+    }
+
+    const result = await prisma.$transaction(async (tx) => {
+      const updated = await tx.supplier.update({
+        where: { id },
+        data: { is_active },
+      });
+
+      // When deactivating, terminate all active contracts
+      if (!is_active) {
+        const activeContracts = await tx.supplierContract.findMany({
+          where: { supplier_id: id, status: 'ACTIVE' },
+          select: { id: true },
+        });
+        if (activeContracts.length > 0) {
+          await tx.supplierContract.updateMany({
+            where: { supplier_id: id, status: 'ACTIVE' },
+            data: { status: 'INACTIVE' },
+          });
+          for (const c of activeContracts) {
+            await writeAuditLog({
+              userId: req.user.userId,
+              action: 'TERMINATE',
+              entityType: 'SupplierContract',
+              entityId: c.id,
+              before: { status: 'ACTIVE' },
+              after: { status: 'INACTIVE', reason: 'Supplier deactivated' },
+            }, tx);
+          }
+        }
+      }
+
+      await writeAuditLog({
+        userId: req.user.userId,
+        action: 'UPDATE',
+        entityType: 'Supplier',
+        entityId: id,
+        before: { is_active: existing.is_active },
+        after: { is_active },
+      }, tx);
+
+      return updated;
+    });
+
+    return res.json(result);
+  } catch (err) {
+    next(err);
+  }
+}
+
 async function listAfvalstroomnummers(req, res) {
   try {
     const records = await prisma.supplierAfvalstroomnummer.findMany({
       where: { supplier_id: req.params.id, is_active: true },
-      include: { waste_stream: { select: { id: true, name_en: true, code: true } } },
+      include: { waste_stream: { select: { id: true, name: true, code: true } } },
       orderBy: { created_at: 'desc' },
     });
     res.json(records);
@@ -161,7 +252,7 @@ async function createAfvalstroomnummer(req, res) {
         afvalstroomnummer,
         waste_stream_id: waste_stream_id || null,
       },
-      include: { waste_stream: { select: { id: true, name_en: true, code: true } } },
+      include: { waste_stream: { select: { id: true, name: true, code: true } } },
     });
     res.status(201).json(record);
   } catch (err) {
@@ -187,4 +278,13 @@ async function deleteAfvalstroomnummer(req, res) {
   }
 }
 
-module.exports = { list, getById, create, update, remove, listAfvalstroomnummers, createAfvalstroomnummer, deleteAfvalstroomnummer };
+async function listContracts(req, res, next) {
+  try {
+    const data = await contractService.getSupplierContracts(req.params.id, req.query);
+    res.json({ data });
+  } catch (error) {
+    next(error);
+  }
+}
+
+module.exports = { list, getById, create, update, remove, toggleStatus, listAfvalstroomnummers, createAfvalstroomnummer, deleteAfvalstroomnummer, listContracts };

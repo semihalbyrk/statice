@@ -17,7 +17,7 @@ async function listWasteStreams(req, res, next) {
           orderBy: { code_cbs: 'asc' },
         },
       },
-      orderBy: { name_en: 'asc' },
+      orderBy: { name: 'asc' },
     });
     return res.json({ data: streams });
   } catch (err) {
@@ -27,16 +27,15 @@ async function listWasteStreams(req, res, next) {
 
 async function createWasteStream(req, res, next) {
   try {
-    const { name_en, name_nl, code, cbs_code, weeelabex_code, ewc_code } = req.body;
-    if (!name_en || !name_nl || !code) {
-      return res.status(400).json({ error: 'name_en, name_nl, and code are required' });
+    const { name, code, cbs_code, weeelabex_code, ewc_code } = req.body;
+    if (!name || !code) {
+      return res.status(400).json({ error: 'name and code are required' });
     }
 
     const stream = await prisma.$transaction(async (tx) => {
       const created = await tx.wasteStream.create({
         data: {
-          name_en,
-          name_nl,
+          name,
           code,
           cbs_code: cbs_code || null,
           weeelabex_code: weeelabex_code || null,
@@ -67,14 +66,13 @@ async function updateWasteStream(req, res, next) {
       return res.status(404).json({ error: 'Waste stream not found' });
     }
 
-    const { name_en, name_nl, code, cbs_code, weeelabex_code, ewc_code, is_active } = req.body;
+    const { name, code, cbs_code, weeelabex_code, ewc_code, is_active } = req.body;
 
     const stream = await prisma.$transaction(async (tx) => {
       const updated = await tx.wasteStream.update({
         where: { id },
         data: {
-          name_en,
-          name_nl,
+          name,
           code,
           cbs_code,
           weeelabex_code,
@@ -114,7 +112,7 @@ async function listProductCategories(req, res, next) {
 
     const categories = await prisma.productCategory.findMany({
       where,
-      include: { waste_stream: { select: { id: true, name_en: true, code: true } } },
+      include: { waste_stream: { select: { id: true, name: true, code: true } } },
       orderBy: { code_cbs: 'asc' },
     });
     return res.json({ data: categories });

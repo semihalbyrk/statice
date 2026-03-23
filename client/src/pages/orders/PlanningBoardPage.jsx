@@ -9,7 +9,7 @@ import StatusBadge from '../../components/ui/StatusBadge';
 import SupplierTypeBadge from '../../components/ui/SupplierTypeBadge';
 
 const BOARD_STATUSES = ['', 'PLANNED', 'ARRIVED', 'IN_PROGRESS', 'DISPUTE', 'COMPLETED'];
-const SUPPLIER_TYPES = ['', 'PRO', 'COMMERCIAL', 'AD_HOC'];
+const SUPPLIER_TYPES = ['', 'PRO', 'THIRD_PARTY', 'PRIVATE_INDIVIDUAL'];
 
 function formatTimeWindow(order) {
   if (order.planned_time_window_start && order.planned_time_window_end) {
@@ -151,7 +151,7 @@ export default function PlanningBoardPage() {
         >
           <option value="">All waste streams</option>
           {wasteStreams.map((ws) => (
-            <option key={ws.id} value={ws.id}>{ws.name_en}</option>
+            <option key={ws.id} value={ws.id}>{ws.name}</option>
           ))}
         </select>
         <select
@@ -178,25 +178,25 @@ export default function PlanningBoardPage() {
         </div>
       ) : (
         <div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {orders.map((order) => {
               const wasteStreamLabel = order.waste_streams?.length > 0
-                ? order.waste_streams.map((ows) => ows.waste_stream?.name_en).filter(Boolean).join(', ')
-                : order.waste_stream?.name_en;
+                ? order.waste_streams.map((ows) => ows.waste_stream?.name).filter(Boolean).join(', ')
+                : order.waste_stream?.name;
               const timeWindow = formatTimeWindow(order);
 
               return (
                 <div
                   key={order.id}
                   onClick={() => navigate(`/orders/${order.id}`)}
-                  className="bg-white rounded-lg border border-grey-200 shadow-sm p-4 cursor-pointer hover:border-green-400 hover:shadow-md transition-all"
+                  className="bg-white rounded-lg border border-grey-200 shadow-sm p-5 cursor-pointer hover:border-green-400 hover:shadow-md transition-all"
                 >
                   {/* Card Header */}
-                  <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center justify-between mb-4">
                     <span className="text-green-500 font-semibold text-sm hover:underline">
                       {order.order_number}
                     </span>
-                    <div className="flex items-center gap-1.5">
+                    <div className="flex items-center gap-1.5 flex-wrap">
                       {order.is_lzv && (
                         <span className="inline-flex h-6 items-center px-2 rounded-md bg-purple-25 text-purple-700 border border-purple-300 text-[11px] font-semibold uppercase">
                           LZV
@@ -213,7 +213,7 @@ export default function PlanningBoardPage() {
                   </div>
 
                   {/* Card Body */}
-                  <div className="space-y-2 text-sm">
+                  <div className="space-y-2.5 text-sm">
                     {timeWindow && (
                       <div className="flex items-center justify-between">
                         <span className="text-grey-500">Time Window</span>
@@ -235,7 +235,7 @@ export default function PlanningBoardPage() {
                     </div>
                     <div className="flex items-center justify-between">
                       <span className="text-grey-500">Waste Stream</span>
-                      <span className="text-grey-900 text-right max-w-[60%] truncate">{wasteStreamLabel || '—'}</span>
+                      <span className="text-grey-900 text-right max-w-[60%] truncate" title={wasteStreamLabel}>{wasteStreamLabel || '—'}</span>
                     </div>
                     <div className="flex items-center justify-between">
                       <span className="text-grey-500">Expected Parcels</span>

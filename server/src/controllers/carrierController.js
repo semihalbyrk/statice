@@ -127,4 +127,42 @@ async function remove(req, res, next) {
   }
 }
 
-module.exports = { list, getById, create, update, remove };
+async function toggleStatus(req, res, next) {
+  try {
+    const { id } = req.params;
+    const { is_active } = req.body;
+    if (typeof is_active !== 'boolean') {
+      return res.status(400).json({ error: 'is_active (boolean) is required' });
+    }
+
+    const existing = await prisma.carrier.findUnique({ where: { id } });
+    if (!existing) {
+      return res.status(404).json({ error: 'Carrier not found' });
+    }
+    if (existing.is_active === is_active) {
+      return res.json(existing);
+    }
+
+    const result = await prisma.$transaction(async (tx) => {
+      const updated = await tx.carrier.update({
+        where: { id },
+        data: { is_active },
+      });
+      await writeAuditLog({
+        userId: req.user.userId,
+        action: 'UPDATE',
+        entityType: 'Carrier',
+        entityId: id,
+        before: existing,
+        after: updated,
+      }, tx);
+      return updated;
+    });
+
+    return res.json(result);
+  } catch (err) {
+    next(err);
+  }
+}
+
+module.exports = { list, getById, create, update, remove, toggleStatus };

@@ -24,7 +24,7 @@ async function generateWeightTicket(inboundId) {
       tare_ticket: true,
       assets: {
         include: {
-          waste_stream: { select: { id: true, name_en: true, code: true } },
+          waste_stream: { select: { id: true, name: true, code: true } },
           material_category: { select: { id: true, code_cbs: true, description_en: true } },
         },
         orderBy: { sequence: 'asc' },
@@ -123,9 +123,9 @@ function drawOrderDetails(doc, inbound) {
     {
       label: 'Waste Stream',
       value: inbound.waste_stream
-        ? `${inbound.waste_stream.name_en} (${inbound.waste_stream.code})`
+        ? `${inbound.waste_stream.name} (${inbound.waste_stream.code})`
         : order?.waste_stream
-          ? `${order.waste_stream.name_en} (${order.waste_stream.code})`
+          ? `${order.waste_stream.name} (${order.waste_stream.code})`
           : '—',
     },
     { label: 'Planned Date', value: formatDateTime(order?.planned_date, false) },
@@ -401,7 +401,7 @@ function drawAssetsTable(doc, assets) {
     const row = {
       asset_label: asset.asset_label || '—',
       container_label: asset.container_label || '—',
-      waste_stream: asset.waste_stream ? `${asset.waste_stream.name_en} (${asset.waste_stream.code})` : '—',
+      waste_stream: asset.waste_stream ? `${asset.waste_stream.name} (${asset.waste_stream.code})` : '—',
       net: formatWeightValue(asset.net_weight_kg),
     };
 

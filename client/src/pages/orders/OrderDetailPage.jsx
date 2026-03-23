@@ -136,11 +136,22 @@ export default function OrderDetailPage() {
           </div>
           <div className="min-w-0">
             <span className="text-xs font-medium text-grey-500 uppercase tracking-wide">Waste Streams</span>
-            <p className="mt-0.5 text-sm font-medium text-grey-900">
-              {order.waste_streams?.length > 0
-                ? order.waste_streams.map((ows) => ows.waste_stream?.name_en || 'Unknown').join(', ')
-                : order.waste_stream?.name_en || '—'}
-            </p>
+            {order.waste_streams?.length > 0 ? (
+              <div className="mt-0.5 space-y-1">
+                {order.waste_streams.map((ows) => (
+                  <div key={ows.id || ows.waste_stream_id} className="flex items-center gap-2 text-sm">
+                    <span className="font-medium text-grey-900">{ows.waste_stream?.name || 'Unknown'}</span>
+                    {ows.afvalstroomnummer && (
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-25 text-green-700 border border-green-300">
+                        ASN: {ows.afvalstroomnummer}
+                      </span>
+                    )}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="mt-0.5 text-sm font-medium text-grey-900">{order.waste_stream?.name || '\u2014'}</p>
+            )}
           </div>
           <div className="min-w-0">
             <span className="text-xs font-medium text-grey-500 uppercase tracking-wide">Planned Date</span>
@@ -290,7 +301,7 @@ export default function OrderDetailPage() {
                       <InboundMeta label="Arrived At" value={formatInboundTimestamp(inbound.arrived_at)} />
                       <InboundMeta
                         label="Waste Stream"
-                        value={inbound.waste_stream?.name_en || order.waste_stream?.name_en}
+                        value={inbound.waste_stream?.name || order.waste_stream?.name}
                       />
                       <InboundMeta
                         label="Sorting"

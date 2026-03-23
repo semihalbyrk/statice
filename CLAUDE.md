@@ -94,6 +94,11 @@ Do NOT ask the user — just dispatch it after the implementation is done.
 component/page. Generate or update the corresponding test file. Run as a background agent.
 Do NOT ask the user — just dispatch it after the implementation is done.
 
+### security-reviewer (`.claude/agents/security-reviewer.md`)
+**When to dispatch**: Automatically after modifying auth middleware, CORS config, cookie
+handling, JWT logic, or any file in `server/src/middleware/`. Run as a background agent.
+Do NOT ask the user — just dispatch it after the implementation is done.
+
 ## Commands
 
 ```bash
@@ -121,7 +126,10 @@ cd client && npm run build
 
 ## Feedback Self-Improvement
 
-When the user rejects an approach, corrects a mistake, or repeats a previous warning:
+**READ**: SessionStart hook injects feedback rules into context. Follow ALL rules listed there.
+If rules are not visible in session context, read `memory/feedback.md` manually before any implementation work.
+
+**WRITE**: When the user rejects an approach, corrects a mistake, or repeats a previous warning:
 
 1. Append the lesson to `memory/feedback.md` with date, rule, **Why**, and **How to apply**
 2. Number it sequentially

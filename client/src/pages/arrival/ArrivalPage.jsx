@@ -249,7 +249,7 @@ function MatchSection({ title, description, orders, submitting, onSelect, varian
               </div>
               <div>
                 <span className="text-[11px] text-grey-400 uppercase tracking-wide font-medium">Waste Stream</span>
-                <p className="text-sm font-medium text-grey-900 mt-0.5">{order.waste_stream?.name_en || '—'}</p>
+                <p className="text-sm font-medium text-grey-900 mt-0.5">{order.waste_stream?.name || '—'}</p>
               </div>
               <div>
                 <span className="text-[11px] text-grey-400 uppercase tracking-wide font-medium">Parcel Progress</span>

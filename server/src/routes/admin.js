@@ -15,6 +15,7 @@ router.post('/users', usersController.create);
 router.get('/users/:id', usersController.getById);
 router.put('/users/:id', usersController.update);
 router.post('/users/:id/reset-password', usersController.resetPassword);
+router.patch('/users/:id/status', usersController.toggleStatus);
 router.get('/users/:id/activity', usersController.getActivity);
 
 // Audit Log

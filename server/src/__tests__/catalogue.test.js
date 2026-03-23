@@ -72,7 +72,7 @@ describe('POST /api/catalogue/materials', () => {
     const res = await request(app)
       .post('/api/catalogue/materials')
       .set('Authorization', `Bearer ${gateToken}`)
-      .send({ code: 'TEST', name_en: 'Test Material' });
+      .send({ code: 'TEST', name: 'Test Material' });
     expect(res.status).toBe(403);
   });
 
@@ -85,8 +85,7 @@ describe('POST /api/catalogue/materials', () => {
       .set('Authorization', `Bearer ${adminToken}`)
       .send({
         code: 'TEST-MAT-' + Date.now(),
-        name_en: 'Test Material Integration',
-        name_nl: 'Test Materiaal',
+        name: 'Test Material Integration',
         waste_stream_id: wsRes.id,
         cbs_code: 'TST-CBS',
         weeelabex_group: 'TST-WLX',
@@ -97,7 +96,7 @@ describe('POST /api/catalogue/materials', () => {
     expect(res.status).toBe(201);
     expect(res.body).toHaveProperty('data');
     expect(res.body.data).toHaveProperty('id');
-    expect(res.body.data.name_en).toBe('Test Material Integration');
+    expect(res.body.data.name).toBe('Test Material Integration');
     createdMaterialId = res.body.data.id;
   });
 });
@@ -106,7 +105,7 @@ describe('PUT /api/catalogue/materials/:id', () => {
   it('returns 401 without auth token', async () => {
     const res = await request(app)
       .put('/api/catalogue/materials/some-id')
-      .send({ name_en: 'Updated' });
+      .send({ name: 'Updated' });
     expect(res.status).toBe(401);
   });
 
@@ -114,7 +113,7 @@ describe('PUT /api/catalogue/materials/:id', () => {
     const res = await request(app)
       .put('/api/catalogue/materials/some-id')
       .set('Authorization', `Bearer ${plannerToken}`)
-      .send({ name_en: 'Updated' });
+      .send({ name: 'Updated' });
     expect(res.status).toBe(403);
   });
 
@@ -122,7 +121,7 @@ describe('PUT /api/catalogue/materials/:id', () => {
     const res = await request(app)
       .put('/api/catalogue/materials/00000000-0000-0000-0000-000000000000')
       .set('Authorization', `Bearer ${adminToken}`)
-      .send({ name_en: 'Updated' });
+      .send({ name: 'Updated' });
     expect(res.status).toBe(404);
   });
 
@@ -133,10 +132,10 @@ describe('PUT /api/catalogue/materials/:id', () => {
     const res = await request(app)
       .put(`/api/catalogue/materials/${createdMaterialId}`)
       .set('Authorization', `Bearer ${adminToken}`)
-      .send({ name_en: 'Updated Material Name' });
+      .send({ name: 'Updated Material Name' });
 
     expect(res.status).toBe(200);
-    expect(res.body.data.name_en).toBe('Updated Material Name');
+    expect(res.body.data.name).toBe('Updated Material Name');
   });
 });
 
@@ -171,7 +170,7 @@ describe('POST /api/catalogue/fractions', () => {
     const res = await request(app)
       .post('/api/catalogue/fractions')
       .set('Authorization', `Bearer ${gateToken}`)
-      .send({ code: 'TEST-FRAC', name_en: 'Test Fraction' });
+      .send({ code: 'TEST-FRAC', name: 'Test Fraction' });
     expect(res.status).toBe(403);
   });
 
@@ -181,8 +180,7 @@ describe('POST /api/catalogue/fractions', () => {
       .set('Authorization', `Bearer ${adminToken}`)
       .send({
         code: 'FRAC-TEST-' + Date.now(),
-        name_en: 'Test Fraction Integration',
-        name_nl: 'Test Fractie',
+        name: 'Test Fraction Integration',
         eural_code: '20 01 36',
         recycling_pct_default: 100,
       });
@@ -190,7 +188,7 @@ describe('POST /api/catalogue/fractions', () => {
     expect(res.status).toBe(201);
     expect(res.body).toHaveProperty('data');
     expect(res.body.data).toHaveProperty('id');
-    expect(res.body.data.name_en).toBe('Test Fraction Integration');
+    expect(res.body.data.name).toBe('Test Fraction Integration');
     createdFractionId = res.body.data.id;
   });
 });
@@ -200,7 +198,7 @@ describe('PUT /api/catalogue/fractions/:id', () => {
     const res = await request(app)
       .put('/api/catalogue/fractions/00000000-0000-0000-0000-000000000000')
       .set('Authorization', `Bearer ${adminToken}`)
-      .send({ name_en: 'Updated' });
+      .send({ name: 'Updated' });
     expect(res.status).toBe(404);
   });
 
@@ -210,10 +208,10 @@ describe('PUT /api/catalogue/fractions/:id', () => {
     const res = await request(app)
       .put(`/api/catalogue/fractions/${createdFractionId}`)
       .set('Authorization', `Bearer ${adminToken}`)
-      .send({ name_en: 'Updated Fraction Name' });
+      .send({ name: 'Updated Fraction Name' });
 
     expect(res.status).toBe(200);
-    expect(res.body.data.name_en).toBe('Updated Fraction Name');
+    expect(res.body.data.name).toBe('Updated Fraction Name');
   });
 });
 

@@ -1,0 +1,93 @@
+import { useState, useEffect } from 'react';
+import toast from 'react-hot-toast';
+import { listFees } from '../../api/fees';
+import { syncContractPenalties } from '../../api/contracts';
+
+const RATE_TYPE_LABELS = { FIXED: 'Fixed', PERCENTAGE: '%', PER_KG: '/kg', PER_HOUR: '/hr' };
+
+export default function PenaltySelectModal({ contractId, currentPenalties = [], onClose, onSuccess }) {
+  const [fees, setFees] = useState([]);
+  const [selected, setSelected] = useState(new Set(currentPenalties.map((p) => p.fee_id || p.fee?.id)));
+  const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    listFees({ active: 'true' })
+      .then(({ data }) => setFees(data.data))
+      .catch(() => toast.error('Failed to load fees'))
+      .finally(() => setLoading(false));
+  }, []);
+
+  function toggleFee(id) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  async function handleSave() {
+    const selectedIds = [...selected];
+    if (contractId) {
+      // Detail page mode: sync via API
+      setSubmitting(true);
+      try {
+        await syncContractPenalties(contractId, selectedIds);
+        toast.success('Penalties updated');
+        onSuccess(selectedIds);
+      } catch (err) {
+        toast.error(err.response?.data?.error || 'Failed to update penalties');
+      } finally {
+        setSubmitting(false);
+      }
+    } else {
+      // Create/edit form mode: just return selected IDs, no API call
+      onSuccess(selectedIds);
+    }
+  }
+
+  return (
+    <div className="app-modal-overlay">
+      <div className="app-modal-panel max-w-md">
+        <div className="flex items-center justify-between px-5 py-3 border-b border-grey-200">
+          <h2 className="text-lg font-semibold text-grey-900">Manage Contamination Penalties</h2>
+          <button onClick={onClose} className="p-1 rounded-md hover:bg-grey-50 transition-colors text-grey-400">&times;</button>
+        </div>
+        <div className="px-5 py-4 max-h-[50vh] overflow-y-auto">
+          {loading ? (
+            <p className="text-sm text-grey-400 text-center py-4">Loading fees...</p>
+          ) : fees.length === 0 ? (
+            <p className="text-sm text-grey-400 text-center py-4">No active fees found</p>
+          ) : (
+            <div className="space-y-2">
+              {fees.map((f) => (
+                <label key={f.id} className="flex items-start gap-3 p-3 rounded-md border border-grey-200 hover:bg-grey-50 cursor-pointer transition-colors">
+                  <input type="checkbox" checked={selected.has(f.id)} onChange={() => toggleFee(f.id)}
+                    className="mt-0.5 h-4 w-4 rounded border-grey-300 text-green-500 focus:ring-green-500/15" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-grey-900">{f.fee_type}</p>
+                    <p className="text-xs text-grey-500 mt-0.5">{f.description}</p>
+                    <p className="text-xs text-grey-700 mt-1">
+                      {RATE_TYPE_LABELS[f.rate_type]}: {f.rate_type === 'PERCENTAGE' ? `${f.rate_value}%` : `\u20AC${Number(f.rate_value).toFixed(2)}${RATE_TYPE_LABELS[f.rate_type]}`}
+                      {f.min_cap != null && ` (min \u20AC${Number(f.min_cap).toFixed(2)})`}
+                      {f.max_cap != null && ` (max \u20AC${Number(f.max_cap).toFixed(2)})`}
+                    </p>
+                  </div>
+                </label>
+              ))}
+            </div>
+          )}
+        </div>
+        <div className="flex justify-end gap-3 px-5 py-3 border-t border-grey-200">
+          <button onClick={onClose}
+            className="h-9 px-4 bg-white text-grey-700 border border-grey-300 rounded-md text-sm font-semibold hover:bg-grey-50 transition-colors">Cancel</button>
+          <button onClick={handleSave} disabled={submitting}
+            className="h-9 px-4 bg-green-500 text-white rounded-md text-sm font-semibold hover:bg-green-700 disabled:opacity-50 transition-colors">
+            {submitting ? 'Saving...' : `Save (${selected.size} selected)`}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}

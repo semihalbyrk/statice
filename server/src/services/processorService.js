@@ -33,8 +33,7 @@ const CERTIFICATE_INCLUDE = {
         select: {
           id: true,
           code: true,
-          name_en: true,
-          name_nl: true,
+          name: true,
           weee_category: true,
         },
       },

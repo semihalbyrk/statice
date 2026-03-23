@@ -238,7 +238,7 @@ async function main() {
     create: {
       id: 'supplier-private-individual',
       name: 'Ad-hoc / Walk-in',
-      supplier_type: 'AD_HOC',
+      supplier_type: 'PRIVATE_INDIVIDUAL',
       is_active: true,
     },
   });
@@ -253,7 +253,7 @@ async function main() {
     create: {
       id: 'supplier-third-party',
       name: 'TechRecycle B.V.',
-      supplier_type: 'COMMERCIAL',
+      supplier_type: 'THIRD_PARTY',
       kvk_number: '55667788',
       btw_number: 'NL987654321B01',
       contact_phone: '+31 20 567 8901',
@@ -295,6 +295,122 @@ async function main() {
   });
 
   console.log('System settings seeded.');
+
+  // FeeMaster entries
+  const feeEntries = [
+    { fee_type: 'CONTAMINATION_SURCHARGE', description: 'Standard contamination surcharge per kg over tolerance', rate_type: 'PER_KG', rate_value: 0.15, min_cap: null, max_cap: 500.00 },
+    { fee_type: 'CONTAMINATION_FLAT', description: 'Flat contamination penalty for loads exceeding tolerance', rate_type: 'FIXED', rate_value: 150.00, min_cap: null, max_cap: null },
+    { fee_type: 'CONTAMINATION_PERCENTAGE', description: 'Percentage-based contamination penalty on total order value', rate_type: 'PERCENTAGE', rate_value: 5.00, min_cap: 50.00, max_cap: 1000.00 },
+    { fee_type: 'SORTING_SURCHARGE', description: 'Additional sorting labor charge per hour', rate_type: 'PER_HOUR', rate_value: 45.00, min_cap: null, max_cap: null },
+    { fee_type: 'HAZARDOUS_MATERIAL', description: 'Surcharge for undeclared hazardous materials found during sorting', rate_type: 'FIXED', rate_value: 500.00, min_cap: null, max_cap: null },
+    { fee_type: 'REJECTION_FEE', description: 'Fee for rejected loads that cannot be processed', rate_type: 'PER_KG', rate_value: 0.25, min_cap: 100.00, max_cap: null },
+  ];
+
+  for (const fee of feeEntries) {
+    const existing = await prisma.feeMaster.findFirst({
+      where: { fee_type: fee.fee_type, description: fee.description },
+    });
+    if (!existing) {
+      await prisma.feeMaster.create({ data: fee });
+    }
+  }
+
+  console.log('FeeMaster seeded.');
+
+  // Contracts with Waste Stream Agreements
+  const plasticStream = await prisma.wasteStream.findUnique({ where: { code: 'PLASTIC' } });
+  const metalStream = await prisma.wasteStream.findUnique({ where: { code: 'METAL' } });
+
+  // Get some materials for rate lines
+  const weeeMaterials = await prisma.materialMaster.findMany({
+    where: { waste_stream_id: weeeStream.id, is_active: true },
+    take: 3,
+  });
+  const plasticMaterials = await prisma.materialMaster.findMany({
+    where: { waste_stream_id: plasticStream?.id, is_active: true },
+    take: 2,
+  });
+
+  if (weeeMaterials.length > 0) {
+    const existingContract = await prisma.supplierContract.findFirst({
+      where: { supplier_id: 'supplier-stichting-open' },
+    });
+
+    if (!existingContract) {
+      const contract = await prisma.supplierContract.create({
+        data: {
+          contract_number: 'CTR-00001',
+          supplier_id: 'supplier-stichting-open',
+          carrier_id: 'carrier-van-happen',
+          name: '2026 Stichting Open WEEE Agreement',
+          effective_date: new Date('2026-01-01'),
+          expiry_date: new Date('2026-12-31'),
+          status: 'ACTIVE',
+          receiver_name: 'Statice B.V.',
+          payment_term_days: 30,
+          invoicing_frequency: 'MONTHLY',
+          currency: 'EUR',
+          contamination_tolerance_pct: 5.0,
+        },
+      });
+
+      // WEEE waste stream with ASN
+      const cwsWeee = await prisma.contractWasteStream.create({
+        data: {
+          contract_id: contract.id,
+          waste_stream_id: weeeStream.id,
+          afvalstroomnummer: 'AFS-2026-001',
+        },
+      });
+
+      // Rate lines for WEEE materials
+      for (const mat of weeeMaterials) {
+        await prisma.contractRateLine.create({
+          data: {
+            contract_id: contract.id,
+            contract_waste_stream_id: cwsWeee.id,
+            material_id: mat.id,
+            pricing_model: 'WEIGHT',
+            unit_rate: Math.round(20 + Math.random() * 80),
+            btw_rate: 21,
+            valid_from: new Date('2026-01-01'),
+            valid_to: new Date('2026-12-31'),
+          },
+        });
+      }
+
+      // PLASTIC waste stream with ASN (if materials exist)
+      if (plasticStream && plasticMaterials.length > 0) {
+        const cwsPlastic = await prisma.contractWasteStream.create({
+          data: {
+            contract_id: contract.id,
+            waste_stream_id: plasticStream.id,
+            afvalstroomnummer: 'AFS-2026-002',
+          },
+        });
+
+        for (const mat of plasticMaterials) {
+          await prisma.contractRateLine.create({
+            data: {
+              contract_id: contract.id,
+              contract_waste_stream_id: cwsPlastic.id,
+              material_id: mat.id,
+              pricing_model: 'WEIGHT',
+              unit_rate: Math.round(10 + Math.random() * 40),
+              btw_rate: 21,
+              valid_from: new Date('2026-01-01'),
+              valid_to: new Date('2026-12-31'),
+            },
+          });
+        }
+      }
+
+      console.log('Contract with waste streams and ASNs seeded.');
+    } else {
+      console.log('Contracts already exist, skipping contract seed.');
+    }
+  }
+
   console.log('Database seeding complete.');
 }
 

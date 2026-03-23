@@ -13,6 +13,8 @@ const TRANSITION_LABELS = {
   INACTIVE: 'Inactive',
   DISPUTE: 'Dispute',
   INVOICED: 'Invoiced',
+  EXPIRED: 'Expired',
+  DRAFT: 'Draft',
 };
 
 export default function ClickableStatusBadge({ status, allowedTransitions = [], onTransition, disabled }) {

@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, ClipboardList, Truck, Scale, Building2, Users, Recycle, FileBarChart,
-  UserCog, ScrollText, Settings2, Boxes, ChevronDown, ChevronRight, LogOut, CalendarDays,
+  UserCog, ScrollText, Settings2, Boxes, ChevronDown, ChevronRight, LogOut, CalendarDays, Receipt,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../../api/axios';
@@ -16,15 +16,15 @@ const NAV_ITEMS = [
   { to: '/inbounds', label: 'Inbounds', icon: Scale, roles: ['GATE_OPERATOR', 'ADMIN'] },
   { to: '/sorting', label: 'Process', icon: Boxes, roles: ['SORTING_EMPLOYEE', 'GATE_OPERATOR', 'ADMIN'] },
   { to: '/reports', label: 'Reports', icon: FileBarChart, roles: ['REPORTING_MANAGER', 'ADMIN'] },
+  { to: '/contracts', label: 'Contracts', icon: ScrollText, roles: ['ADMIN', 'FINANCE_MANAGER', 'FINANCE_USER'] },
 ];
 
 const ADMIN_ITEMS = [
   { to: '/admin/users', label: 'Users', icon: UserCog },
   { to: '/admin/carriers', label: 'Carriers', icon: Building2 },
   { to: '/admin/suppliers', label: 'Suppliers', icon: Users },
-  { to: '/admin/waste-streams', label: 'Waste Streams', icon: Recycle },
-  { to: '/admin/product-types', label: 'Materials & Fractions', icon: Recycle },
-  { to: '/admin/processors', label: 'Processors', icon: Building2 },
+  { to: '/admin/materials', label: 'Materials', icon: Recycle },
+  { to: '/admin/fees', label: 'Fee Master', icon: Receipt },
   { to: '/admin/audit-log', label: 'Audit Log', icon: ScrollText },
   { to: '/admin/settings', label: 'Settings', icon: Settings2 },
 ];
