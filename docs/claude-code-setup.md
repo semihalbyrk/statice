@@ -1,6 +1,6 @@
 # Claude Code Setup — Statice MRF
 
-> Last updated: 2026-03-23 | 39 configuration points across global + project scope
+> Last updated: 2026-03-23 | 36 configuration points across global + project scope
 
 ## Component Inventory
 
@@ -10,7 +10,7 @@
 | Settings (hooks, permissions) | 1 | 1 | 2 |
 | Agents (background reviewers) | — | 3 | 3 |
 | Skills (utilities) | — | 7 | 7 |
-| Hook scripts | 7 | 3 | 10 |
+| Hook scripts | 7 | — | 7 |
 | Memory files | — | 5 | 5 |
 | Symlinks | — | 5 | 5 |
 | Plugins | 8 | — | 8 |
@@ -27,7 +27,7 @@
 │                                                                         │
 │  1. init.sh          → Detect project type, show git branch/status      │
 │  2. memory.sh        → Load UCES session learnings (JSON-based)         │
-│  3. feedback inject  → Cat memory/feedback.md into context (13 rules)   │
+│  3. feedback inject  → Cat memory/feedback.md into context (10 rules)   │
 │  4. CLAUDE.md load   → Global directives + project conventions          │
 │  5. MEMORY.md load   → Memory index (pointers to detail files)          │
 │  6. MCP connect      → context7 (docs) + postgres (DB access)          │
@@ -50,31 +50,27 @@
 │  12. Vite build      → If client/src edited → build check (15s timeout) │
 │  13. Prisma validate → If schema.prisma edited → validate (10s timeout) │
 │  14. Auto-test       → Find & run related vitest file (30s timeout)     │
-│  15. test-check.sh     → If no test file exists → ⚠ warn + remind        │
-│  16. review-check.sh   → If server source edited → ⚠ remind code-review │
-│  17. security-check.sh → If auth/middleware edited → ⚠ remind sec-review │
 ├─────────────────────────────────────────────────────────────────────────┤
 │  AGENT AUTO-DISPATCH (after implementation complete)                    │
-│  (Triggered by: CLAUDE.md talimatı + hook reminders — layered defense) │
 │                                                                         │
-│  18. code-reviewer     → controllers/services/routes/schema changes     │
-│  19. test-writer       → API endpoint or React component changes        │
-│  20. security-reviewer → auth/CORS/cookie/JWT/middleware changes         │
+│  15. code-reviewer     → controllers/services/routes/schema changes     │
+│  16. test-writer       → API endpoint or React component changes        │
+│  17. security-reviewer → auth/CORS/cookie/JWT/middleware changes         │
 ├─────────────────────────────────────────────────────────────────────────┤
 │  PRE-COMMIT (before git commit)                                         │
 │                                                                         │
-│  21. commit-check.sh → TypeScript check + secret scan + large file warn │
+│  18. commit-check.sh → TypeScript check + secret scan + large file warn │
 ├─────────────────────────────────────────────────────────────────────────┤
 │  PRE-PUSH (.husky/pre-push)                                             │
 │                                                                         │
-│  22. Server tests    → cd server && npx vitest run                      │
-│  23. Client tests    → cd client && npx vitest run                      │
-│  24. Fail = block    → Push aborted if any test fails                   │
+│  19. Server tests    → cd server && npx vitest run                      │
+│  20. Client tests    → cd client && npx vitest run                      │
+│  21. Fail = block    → Push aborted if any test fails                   │
 ├─────────────────────────────────────────────────────────────────────────┤
 │  SESSION END                                                            │
 │                                                                         │
-│  25. memory.sh       → Persist pending learnings to disk                │
-│  26. Feedback write  → If corrections detected → append to feedback.md  │
+│  22. memory.sh       → Persist pending learnings to disk                │
+│  23. Feedback write  → If corrections detected → append to feedback.md  │
 └─────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -136,9 +132,6 @@
 | SessionStart | Feedback inject | Cat `feedback.md` rules into context |
 | PostToolUse: Edit/Write | Prisma validate | Validate on `schema.prisma` edits |
 | PostToolUse: Edit/Write | Auto-test | Run related vitest for server/client |
-| PostToolUse: Edit/Write | `test-check.sh` | Warn if edited source file has no test → remind to dispatch test-writer |
-| PostToolUse: Edit/Write | `review-check.sh` | Warn if server source edited → remind to dispatch code-reviewer |
-| PostToolUse: Edit/Write | `security-check.sh` | Warn if auth/middleware/CORS edited → remind to dispatch security-reviewer |
 | PreToolUse: Edit/Write | Block `.env` | Hard block on `.env` edits |
 
 ### Git Hook (`statice/.husky/pre-push`)
@@ -156,8 +149,6 @@ Runs full server + client test suites before push. Blocks on failure. Skip: `git
 | **security-reviewer** | Auth middleware, CORS, cookie, JWT, `server/src/middleware/` changes | JWT handling, role guards, SQL injection, XSS, CORS, sensitive data, rate limiting, cookie security |
 
 All dispatch **automatically as background agents** — no user request needed.
-
-**Enforcement**: All 3 agents have dual-layer enforcement — CLAUDE.md talimatı (soft) + PostToolUse hook reminder (hard). Hook her edit'te mekanik olarak çalışır ve context'e uyarı basar; CLAUDE.md talimatı hook fail etse bile yedek olarak durur.
 
 ---
 
@@ -206,7 +197,7 @@ Connection string: `postgresql://statice:statice123@localhost:5432/statice_mrf`
 | File | Type | Purpose |
 |------|------|---------|
 | `MEMORY.md` | Index | Auto-loaded every session, pointers to detail files |
-| `feedback.md` | Feedback | 13 correction rules, injected via SessionStart hook |
+| `feedback.md` | Feedback | 10 correction rules, injected via SessionStart hook |
 | `project_status.md` | Project | Which PRD modules are done vs. remaining |
 | `v22_upgrade_session.md` | Project | v2.2 implementation details (2026-03-17) |
 | `reference_postgresql_setup.md` | Reference | Local PG16 vs Docker conflict resolution |
@@ -228,9 +219,6 @@ Connection string: `postgresql://statice:statice123@localhost:5432/statice_mrf`
 | 8 | Kebab aksiyon menü | 3-dot MoreVertical, never inline icons |
 | 9 | Liste tutarlılığı | py-3, font-medium text-green-700, em-dash for empty |
 | 10 | Tam sayfa for complex | >6 fields → dedicated page, not modal |
-| 11 | ClickableStatusBadge | Status change always via clickable badge, no separate buttons |
-| 12 | Enum label mapping | Never show raw enums in UI, always use LABELS map |
-| 13 | Green = clickable only | Don't style non-clickable text as green/hyperlink |
 
 ---
 
@@ -276,10 +264,6 @@ statice/
 │   │   ├── dev-server/          ← Start dev servers
 │   │   ├── seed-reset/          ← DB reset + reseed
 │   │   └── git-pushing/         ← Smart commit + push
-│   ├── hooks/
-│   │   ├── test-check.sh       ← Warn if no test file for edited source
-│   │   ├── review-check.sh     ← Warn if server source needs code review
-│   │   └── security-check.sh   ← Warn if auth/middleware needs security review
 │   ├── CLAUDE.global.md         → symlink → ~/.claude/CLAUDE.md
 │   ├── MY_PLUGINS.md            → symlink → ~/.claude/MY_PLUGINS.md
 │   └── settings.global.json     → symlink → ~/.claude/settings.json
@@ -302,3 +286,11 @@ Global CLAUDE.md              ← Universal directives
 ```
 
 **Merge behavior**: Project hooks ADD to global hooks (don't replace). Project permissions are a whitelist. CLAUDE.md rules are additive — project can be more specific but can't contradict global.
+
+**Test Scriptleri ve Code Reviewer agentının temel farkı**:
+Test scriptleri (npm test) = otomatik çalışan kod. Her push'ta, her edit'te mekanik olarak çalışır. "Bu fonksiyon 200 dönüyor mu, 401 dönüyor
+mu" gibi binary sonuç verir. Pass/fail.
+
+Code reviewer agent = bir LLM'in kodu okuması. "Bu controller çok kalın mı, AuditLog eksik mi, error handling doğru mu" gibi yargı gerektiren
+kontroller yapar. Pass/fail değil, CRITICAL/WARNING/INFO severity'leriyle rapor üretir.
+

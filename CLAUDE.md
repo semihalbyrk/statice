@@ -19,6 +19,8 @@ Full PRD is in /docs/PRD.md — read it before making any decisions.
 - Controllers stay thin — business logic goes in /services
 - Every DB mutation goes through a Prisma transaction
 - Every mutation writes to AuditLog — no exceptions
+- No unauthenticated API routes
+- All UI states must be handled: loading, error, empty, success
 - Pfister integration lives ONLY in server/src/services/pfisterSimulator.js
   The interface contract must match Section 6.2 of the PRD exactly.
 
@@ -41,6 +43,7 @@ Full PRD is in /docs/PRD.md — read it before making any decisions.
 │   │   │   ├── dashboard/
 │   │   │   ├── admin/
 │   │   │   ├── orders/
+│   │   │   ├── contracts/
 │   │   │   ├── arrival/
 │   │   │   ├── inbounds/
 │   │   │   ├── weighing/
@@ -61,7 +64,7 @@ Full PRD is in /docs/PRD.md — read it before making any decisions.
 │   │   │   ├── pdfReportGenerator.js
 │   │   │   ├── xlsxReportGenerator.js
 │   │   │   ├── reportDataService.js
-│   │   │   └── ... (18 services total)
+│   │   │   └── ... (20 services total)
 │   │   └── utils/
 │   ├── prisma/
 │   │   └── schema.prisma
