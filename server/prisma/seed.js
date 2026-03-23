@@ -103,8 +103,7 @@ async function main() {
     update: { cbs_code: 'CBS-WEEE', weeelabex_code: 'WL-WEEE', ewc_code: '20 01 35*' },
     create: {
       code: 'WEEE',
-      name_en: 'Waste Electrical and Electronic Equipment',
-      name_nl: 'Afgedankte elektrische en elektronische apparatuur',
+      name: 'Waste Electrical and Electronic Equipment',
       cbs_code: 'CBS-WEEE',
       weeelabex_code: 'WL-WEEE',
       ewc_code: '20 01 35*',
@@ -116,8 +115,7 @@ async function main() {
     update: { cbs_code: 'CBS-PL', ewc_code: '20 01 39' },
     create: {
       code: 'PLASTIC',
-      name_en: 'Plastics',
-      name_nl: 'Kunststoffen',
+      name: 'Plastics',
       cbs_code: 'CBS-PL',
       ewc_code: '20 01 39',
     },
@@ -128,8 +126,7 @@ async function main() {
     update: { cbs_code: 'CBS-MT', ewc_code: '20 01 40' },
     create: {
       code: 'METAL',
-      name_en: 'Metals',
-      name_nl: 'Metalen',
+      name: 'Metals',
       cbs_code: 'CBS-MT',
       ewc_code: '20 01 40',
     },
