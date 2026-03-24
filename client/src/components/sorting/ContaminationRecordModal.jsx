@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { AlertTriangle, Info, ShieldAlert } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { useTranslation } from 'react-i18next';
 import { recordContaminationIncident, getContractContaminationConfig } from '../../api/contamination';
 import { listContracts } from '../../api/contracts';
 
@@ -8,12 +9,7 @@ const inputClass = 'w-full h-10 px-3.5 rounded-md border border-grey-300 text-sm
 const selectClass = `${inputClass} bg-white`;
 const textareaClass = 'w-full min-h-[80px] px-3.5 py-2.5 rounded-md border border-grey-300 text-sm text-grey-900 placeholder:text-grey-400 focus:border-green-500 focus:ring-[3px] focus:ring-green-500/15 outline-none transition-colors resize-vertical';
 
-const CONTAMINATION_TYPE_LABELS = {
-  NON_WEEE: 'Non-WEEE Material',
-  HAZARDOUS: 'Hazardous Material',
-  EXCESSIVE_MOISTURE: 'Excessive Moisture',
-  SORTING_REQUIRED: 'Sorting Required',
-};
+const CONTAMINATION_TYPES = ['NON_WEEE', 'HAZARDOUS', 'EXCESSIVE_MOISTURE', 'SORTING_REQUIRED'];
 
 function formatEUR(val) {
   if (val == null || isNaN(val)) return '—';
@@ -21,6 +17,7 @@ function formatEUR(val) {
 }
 
 export default function ContaminationRecordModal({ isOpen, onClose, onSuccess, orderId, supplierId, sortingSessionId }) {
+  const { t } = useTranslation(['sorting', 'common']);
   const [config, setConfig] = useState([]);
   const [contractId, setContractId] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -40,7 +37,7 @@ export default function ContaminationRecordModal({ isOpen, onClose, onSuccess, o
 
     if (!supplierId) {
       setLoading(false);
-      setError('Supplier information not available. Please reload the page.');
+      setError(t('sorting:contamination.supplierNotAvailable'));
       return;
     }
 
@@ -106,8 +103,8 @@ export default function ContaminationRecordModal({ isOpen, onClose, onSuccess, o
 
   async function handleSubmit(e) {
     e.preventDefault();
-    if (!form.contamination_type) return toast.error('Select contamination type');
-    if (!form.description.trim()) return toast.error('Description is required');
+    if (!form.contamination_type) return toast.error(t('sorting:contamination.selectType'));
+    if (!form.description.trim()) return toast.error(t('sorting:contamination.descriptionRequired'));
 
     setSubmitting(true);
     try {
@@ -121,7 +118,7 @@ export default function ContaminationRecordModal({ isOpen, onClose, onSuccess, o
         estimated_hours: form.hours ? Number(form.hours) : null,
         notes: form.notes || null,
       });
-      toast.success('Contamination incident recorded');
+      toast.success(t('sorting:contamination.recorded'));
       onSuccess?.();
       onClose();
     } catch (err) {
@@ -140,13 +137,13 @@ export default function ContaminationRecordModal({ isOpen, onClose, onSuccess, o
               <ShieldAlert size={24} className="text-red-500" />
             </div>
             <div>
-              <p className="text-sm font-medium text-grey-900 mb-1">Unable to Load Configuration</p>
+              <p className="text-sm font-medium text-grey-900 mb-1">{t('sorting:contamination.unableToLoad')}</p>
               <p className="text-sm text-grey-500">{error}</p>
             </div>
           </div>
           <div className="flex justify-end mt-6">
             <button onClick={onClose} className="px-4 py-2 rounded-md text-sm font-medium bg-white border border-grey-300 text-grey-700 hover:bg-grey-50 transition-colors">
-              Close
+              {t('sorting:contamination.close')}
             </button>
           </div>
         </div>
@@ -161,13 +158,13 @@ export default function ContaminationRecordModal({ isOpen, onClose, onSuccess, o
               <Info size={24} className="text-orange-500" />
             </div>
             <div>
-              <p className="text-sm font-medium text-grey-900 mb-1">No Active Contract Found</p>
-              <p className="text-sm text-grey-500">This supplier does not have an active contract. A contract with contamination penalties must be configured before incidents can be recorded.</p>
+              <p className="text-sm font-medium text-grey-900 mb-1">{t('sorting:contamination.noActiveContract')}</p>
+              <p className="text-sm text-grey-500">{t('sorting:contamination.noActiveContractDesc')}</p>
             </div>
           </div>
           <div className="flex justify-end mt-6">
             <button onClick={onClose} className="px-4 py-2 rounded-md text-sm font-medium bg-white border border-grey-300 text-grey-700 hover:bg-grey-50 transition-colors">
-              Close
+              {t('sorting:contamination.close')}
             </button>
           </div>
         </div>
@@ -181,13 +178,13 @@ export default function ContaminationRecordModal({ isOpen, onClose, onSuccess, o
             <Info size={24} className="text-grey-400" />
           </div>
           <div>
-            <p className="text-sm font-medium text-grey-900 mb-1">No Contamination Penalties Configured</p>
-            <p className="text-sm text-grey-500">The active contract for this supplier has no contamination penalty rules. Add penalty rules in the contract settings to enable incident recording.</p>
+            <p className="text-sm font-medium text-grey-900 mb-1">{t('sorting:contamination.noPenalties')}</p>
+            <p className="text-sm text-grey-500">{t('sorting:contamination.noPenaltiesDesc')}</p>
           </div>
         </div>
         <div className="flex justify-end mt-6">
           <button onClick={onClose} className="px-4 py-2 rounded-md text-sm font-medium bg-white border border-grey-300 text-grey-700 hover:bg-grey-50 transition-colors">
-            Close
+            {t('sorting:contamination.close')}
           </button>
         </div>
       </div>
@@ -202,7 +199,7 @@ export default function ContaminationRecordModal({ isOpen, onClose, onSuccess, o
             <div className="w-9 h-9 rounded-lg bg-orange-100 flex items-center justify-center">
               <AlertTriangle size={18} className="text-orange-600" />
             </div>
-            <h2 className="text-lg font-semibold text-grey-900">Record Contamination</h2>
+            <h2 className="text-lg font-semibold text-grey-900">{t('sorting:contamination.title')}</h2>
           </div>
           <button onClick={onClose} className="w-8 h-8 rounded-md flex items-center justify-center text-grey-400 hover:text-grey-600 hover:bg-grey-100 transition-colors">
             <span className="text-xl leading-none">&times;</span>
@@ -212,74 +209,74 @@ export default function ContaminationRecordModal({ isOpen, onClose, onSuccess, o
         {loading ? (
           <div className="py-10 text-center">
             <div className="inline-block w-6 h-6 border-2 border-grey-300 border-t-green-500 rounded-full animate-spin mb-3" />
-            <p className="text-sm text-grey-500">Loading configuration...</p>
+            <p className="text-sm text-grey-500">{t('sorting:contamination.loadingConfig')}</p>
           </div>
         ) : (config.length === 0 || error || !contractId) ? (
           renderEmptyState()
         ) : (
           <form onSubmit={handleSubmit} className="flex flex-col gap-4 overflow-y-auto">
             <div>
-              <label className="block text-sm font-medium text-grey-700 mb-1.5">Contamination Type</label>
+              <label className="block text-sm font-medium text-grey-700 mb-1.5">{t('sorting:contamination.contaminationType')}</label>
               <select name="contamination_type" value={form.contamination_type} onChange={handleChange} className={selectClass} required>
-                <option value="">Select type...</option>
-                {Object.entries(CONTAMINATION_TYPE_LABELS).map(([key, label]) => (
-                  <option key={key} value={key}>{label}</option>
+                <option value="">{t('sorting:contamination.selectType')}</option>
+                {CONTAMINATION_TYPES.map((key) => (
+                  <option key={key} value={key}>{t(`common:contaminationTypes.${key}`)}</option>
                 ))}
               </select>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-grey-700 mb-1.5">Description</label>
-              <textarea name="description" value={form.description} onChange={handleChange} className={textareaClass} placeholder="Describe the contamination found..." required />
+              <label className="block text-sm font-medium text-grey-700 mb-1.5">{t('sorting:contamination.description')}</label>
+              <textarea name="description" value={form.description} onChange={handleChange} className={textareaClass} placeholder={t('sorting:contamination.descriptionPlaceholder')} required />
             </div>
 
             {rateType === 'PER_KG' && (
               <div>
-                <label className="block text-sm font-medium text-grey-700 mb-1.5">Contamination Weight (kg)</label>
+                <label className="block text-sm font-medium text-grey-700 mb-1.5">{t('sorting:contamination.weightKg')}</label>
                 <input type="number" name="weight" value={form.weight} onChange={handleChange} className={inputClass} placeholder="0.00" step="0.01" min="0" />
               </div>
             )}
 
             {rateType === 'PERCENTAGE' && (
               <div>
-                <label className="block text-sm font-medium text-grey-700 mb-1.5">Contamination Percentage (%)</label>
+                <label className="block text-sm font-medium text-grey-700 mb-1.5">{t('sorting:contamination.percentage')}</label>
                 <input type="number" name="pct" value={form.pct} onChange={handleChange} className={inputClass} placeholder="0.0" step="0.1" min="0" max="100" />
               </div>
             )}
 
             {rateType === 'PER_HOUR' && (
               <div>
-                <label className="block text-sm font-medium text-grey-700 mb-1.5">Estimated Hours</label>
+                <label className="block text-sm font-medium text-grey-700 mb-1.5">{t('sorting:contamination.hours')}</label>
                 <input type="number" name="hours" value={form.hours} onChange={handleChange} className={inputClass} placeholder="0.0" step="0.5" min="0" />
               </div>
             )}
 
             <div>
-              <label className="block text-sm font-medium text-grey-700 mb-1.5">Notes <span className="text-grey-400 font-normal">(optional)</span></label>
-              <textarea name="notes" value={form.notes} onChange={handleChange} className={textareaClass} placeholder="Additional notes..." />
+              <label className="block text-sm font-medium text-grey-700 mb-1.5">{t('sorting:contamination.notesOptional')}</label>
+              <textarea name="notes" value={form.notes} onChange={handleChange} className={textareaClass} placeholder={t('common:fields.notes')} />
             </div>
 
             {estimatedFee != null && (
               <div className="rounded-lg bg-orange-50 border border-orange-200 px-4 py-3 flex items-center gap-3">
                 <AlertTriangle size={16} className="text-orange-500 shrink-0" />
                 <p className="text-sm text-orange-800">
-                  <span className="font-medium">Estimated fee:</span> {formatEUR(estimatedFee)}
+                  <span className="font-medium">{t('sorting:contamination.estimatedFee')}</span> {formatEUR(estimatedFee)}
                 </p>
               </div>
             )}
             {rateType === 'PERCENTAGE' && (
               <div className="rounded-lg bg-grey-50 border border-grey-200 px-4 py-3 flex items-center gap-3">
                 <Info size={16} className="text-grey-400 shrink-0" />
-                <p className="text-sm text-grey-500">Fee will be calculated as a percentage of the order value on save.</p>
+                <p className="text-sm text-grey-500">{t('sorting:contamination.feePercentageNote')}</p>
               </div>
             )}
 
             <div className="flex justify-end gap-3 pt-3 border-t border-grey-200 mt-1">
               <button type="button" onClick={onClose} className="px-4 py-2 rounded-md text-sm font-medium bg-white border border-grey-300 text-grey-700 hover:bg-grey-50 transition-colors">
-                Cancel
+                {t('sorting:contamination.cancel')}
               </button>
               <button type="submit" disabled={submitting} className="px-4 py-2 rounded-md text-sm font-medium bg-orange-500 text-white hover:bg-orange-600 disabled:opacity-50 transition-colors">
-                {submitting ? 'Recording...' : 'Record Incident'}
+                {submitting ? t('sorting:contamination.recording') : t('sorting:contamination.recordIncident')}
               </button>
             </div>
           </form>

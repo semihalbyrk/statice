@@ -1,0 +1,160 @@
+{
+  "progress": {
+    "arrived": "Arrived",
+    "weighing": "Weighing",
+    "weighedOut": "Weighed Out",
+    "readyForSorting": "Ready for Sorting",
+    "sorted": "Sorted"
+  },
+  "info": {
+    "carrier": "Carrier",
+    "supplier": "Supplier",
+    "vehiclePlate": "Vehicle Plate",
+    "wasteStreams": "Waste Stream(s)",
+    "arrivedAt": "Arrived At",
+    "contract": "Contract",
+    "orderName": "Order Name",
+    "notes": "Notes"
+  },
+  "weighingFlow": {
+    "weighingProcess": "Weighing Process",
+    "gross": "Gross",
+    "tare": "Tare",
+    "net": "Net",
+    "firstWeighing": "First Weighing (Gross)",
+    "nextWeighing": "Next Weighing",
+    "finalWeighing": "Final Weighing (Tare)",
+    "override": "Override",
+    "firstWeighingLabel": "First weighing",
+    "tareWeighingLabel": "Tare weighing",
+    "weighingLabel": "Weighing",
+    "typeGross": "Gross",
+    "typeTare": "Tare",
+    "typeWeighing": "Weighing {{sequence}}",
+    "manual": "(manual)",
+    "confirmed": "Confirmed"
+  },
+  "manualWeighing": {
+    "title": "Manual Weight Entry",
+    "weightKg": "Weight (kg)",
+    "reason": "Reason",
+    "pfisterUnavailable": "Pfister unavailable",
+    "communicationError": "Communication error",
+    "calibrationInProgress": "Calibration in progress",
+    "other": "Other",
+    "thisIsTare": "This is the tare",
+    "recording": "Recording...",
+    "recordWeight": "Record Weight"
+  },
+  "parcelRegistration": {
+    "registerCargo": "Register Unloaded Cargo",
+    "newContainer": "New Container",
+    "existingContainer": "Existing Container",
+    "noContainer": "No Container",
+    "containerId": "Container ID",
+    "containerType": "Container Type",
+    "tareWeight": "Tare Weight (kg)",
+    "volume": "Volume (m³)",
+    "wasteStream": "Waste Stream",
+    "notes": "Notes",
+    "continueNextWeighing": "Continue Next Weighing",
+    "finalizeWeighing": "Finalize Weighing",
+    "lastParcelWarning": "Last parcel — vehicle allows max {{max}} parcels",
+    "searching": "Searching...",
+    "found": "Found: {{label}} — {{type}}",
+    "containerNotFound": "Container not found",
+    "select": "Select...",
+    "auto": "Auto",
+    "optional": "Optional"
+  },
+  "parcelConfirmation": {
+    "parcelRegistered": "Parcel Registered",
+    "writeIdOnCargo": "Write this ID on the cargo packaging for tracking",
+    "printLabel": "Print Label"
+  },
+  "parcelsTable": {
+    "parcels": "Parcels",
+    "parcelId": "Parcel ID",
+    "container": "Container",
+    "cargoNet": "Cargo Net (kg)",
+    "containerTare": "Container Tare (kg)",
+    "materialNet": "Material Net (kg)",
+    "noParcels": "No parcels registered yet",
+    "total": "Total",
+    "parcelCount": "{{count}} parcel(s)"
+  },
+  "excessWeighing": {
+    "maxParcelsReached": "Maximum parcels reached ({{max}})",
+    "excessWeighingMessage": "An extra weighing was triggered but no more parcels can be registered. You can finalize the weighing process now.",
+    "finalizeTare": "Finalize Weighing (Tare)"
+  },
+  "actionsFooter": {
+    "readyForSorting": "Ready for Sorting",
+    "downloadWeightTicket": "Download Weight Ticket",
+    "viewSortingProcess": "View Sorting Process"
+  },
+  "overrideDialog": {
+    "title": "Override Weight",
+    "weighing": "Weighing",
+    "weighingOption": "Weighing {{sequence}} ({{type}}) — {{weight}} kg",
+    "typeIntermediate": "Intermediate",
+    "newWeight": "New Weight (kg)",
+    "reasonCode": "Reason Code",
+    "selectReason": "Select reason...",
+    "calibrationError": "Calibration Error",
+    "equipmentMalfunction": "Equipment Malfunction",
+    "incorrectReading": "Incorrect Reading",
+    "other": "Other",
+    "saving": "Saving...",
+    "override": "Override"
+  },
+  "incident": {
+    "reportIncident": "Report Incident",
+    "selectIncident": "Select incident type...",
+    "damage": "Damage",
+    "dispute": "Dispute",
+    "specialHandling": "Special Handling",
+    "driverInstruction": "Driver Instruction",
+    "notesPlaceholder": "Notes..."
+  },
+  "lzv": {
+    "lzvVehicle": "LZV Vehicle"
+  },
+  "toast": {
+    "parcelRegistered": "Parcel registered",
+    "weighingComplete": "{{label}} complete",
+    "tareComplete": "Tare weighing complete — weighing finalized",
+    "nextWeighingComplete": "Next weighing complete",
+    "statusUpdated": "Status updated to {{status}}",
+    "weighingConfirmed": "Weighing confirmed",
+    "incidentReported": "Incident reported",
+    "parcelDeleted": "Parcel deleted",
+    "deleteParcelConfirm": "Delete parcel {{label}}?",
+    "manualWeightRecorded": "Manual weight recorded",
+    "weightOverridden": "Weight overridden",
+    "readyForSorting": "Inbound ready for sorting — sorting process created",
+    "failedToLoad": "Failed to load inbound",
+    "failedToUpdateStatus": "Failed to update status",
+    "failedToReportIncident": "Failed to report incident",
+    "failedToConfirmWeighing": "Failed to confirm weighing",
+    "weighingFailed": "Weighing failed",
+    "weighingFailedManual": "Weighing failed — register manually",
+    "failedToRegisterParcel": "Failed to register parcel",
+    "tareWeighingFailed": "Tare weighing failed — trigger manually",
+    "failedToDelete": "Failed to delete",
+    "manualEntryFailed": "Manual entry failed",
+    "overrideFailed": "Override failed",
+    "failedToDownloadPdf": "Failed to download PDF"
+  },
+  "printLabel": {
+    "assetLabel": "STATICE ASSET LABEL",
+    "order": "Order",
+    "type": "Type",
+    "category": "Category",
+    "date": "Date",
+    "container": "Container",
+    "material": "Material",
+    "wasteStream": "Waste Stream",
+    "grossTarePair": "Gross/Tare Pair"
+  }
+}

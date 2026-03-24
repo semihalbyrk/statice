@@ -1,0 +1,28 @@
+{
+  "welcome": "Welkom, {{name}}",
+  "roleMessage": "U bent ingelogd als {{role}}.",
+  "stats": {
+    "todayArrivals": "Aankomsten Vandaag",
+    "plannedOrders": "Geplande Bestellingen",
+    "inProgress": "In Behandeling",
+    "completedToday": "Vandaag Afgerond",
+    "tomorrowOrders": "Bestellingen Morgen",
+    "activeInbounds": "Actieve Inkomende"
+  },
+  "todayArrivals": "Aankomsten Vandaag",
+  "table": {
+    "vehiclePlate": "Kenteken",
+    "carrier": "Transporteur",
+    "supplier": "Leverancier",
+    "orderNumber": "Bestelnr.",
+    "parcels": "Pakketten",
+    "arrivedAt": "Aankomsttijd"
+  },
+  "recentOrders": "Recente Bestellingen",
+  "recentReports": "Recente Rapporten",
+  "empty": {
+    "noArrivals": "Geen aankomsten geregistreerd vandaag",
+    "noOrders": "Nog geen bestellingen",
+    "noReports": "Nog geen rapporten gegenereerd"
+  }
+}

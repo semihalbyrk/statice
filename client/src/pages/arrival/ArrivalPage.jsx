@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { Truck, Plus, Clock, Package } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { matchPlate } from '../../api/orders';
@@ -10,6 +11,7 @@ import OrderFormModal from '../../components/orders/OrderFormModal';
 import { format } from 'date-fns';
 
 export default function ArrivalPage() {
+  const { t } = useTranslation('arrival');
   const navigate = useNavigate();
   const [plate, setPlate] = useState('');
   const [matchResult, setMatchResult] = useState({
@@ -56,10 +58,10 @@ export default function ArrivalPage() {
         match_strategy: options.matchStrategy || order.match_strategy || 'MANUAL',
         is_manual_match: Boolean(options.isManualMatch),
       });
-      toast.success('Inbound created');
+      toast.success(t('toast.inboundCreated'));
       navigate(`/inbounds/${data.data.id}`);
     } catch (err) {
-      toast.error(err.response?.data?.error || 'Failed to create inbound');
+      toast.error(err.response?.data?.error || t('toast.inboundFailed'));
     } finally {
       setSubmitting(false);
     }
@@ -72,13 +74,13 @@ export default function ArrivalPage() {
 
   return (
     <div className="max-w-3xl mx-auto">
-      <h1 className="text-2xl font-bold text-grey-900 mb-6 text-center">Arrival Registration</h1>
+      <h1 className="text-2xl font-bold text-grey-900 mb-6 text-center">{t('title')}</h1>
 
       {/* License Plate Card */}
       <div className="bg-white rounded-xl border border-grey-200 shadow-sm p-8 mb-6">
         <div className="text-center mb-4">
-          <h2 className="text-base font-semibold text-grey-900 mb-1">Scan or enter the vehicle license plate</h2>
-          <p className="text-xs text-grey-400">The system will match the plate against planned orders</p>
+          <h2 className="text-base font-semibold text-grey-900 mb-1">{t('subtitle')}</h2>
+          <p className="text-xs text-grey-400">{t('description')}</p>
         </div>
 
         {/* EU License Plate */}
@@ -95,14 +97,14 @@ export default function ArrivalPage() {
                   return <text key={deg} x={x} y={y} textAnchor="middle" dominantBaseline="central" fill="#FFD700" fontSize="6" fontFamily="serif">&#9733;</text>;
                 })}
               </svg>
-              <span className="text-[13px] font-bold text-white tracking-[0.15em]">NL</span>
+              <span className="text-[13px] font-bold text-white tracking-[0.15em]">{t('countryCode')}</span>
             </div>
             {/* Plate input */}
             <input
               type="text"
               value={plate}
               onChange={(e) => setPlate(e.target.value.toUpperCase())}
-              placeholder="XX-999-XX"
+              placeholder={t('platePlaceholder')}
               autoFocus
               className="flex-1 bg-[#F5A623] text-center text-4xl font-bold font-mono text-grey-900 placeholder:text-[#D4891A]/60 py-5 px-6 outline-none tracking-[0.2em] border-none"
             />
@@ -112,7 +114,7 @@ export default function ArrivalPage() {
         {searching && (
           <div className="flex items-center justify-center gap-2 mt-4">
             <div className="w-4 h-4 border-2 border-green-500 border-t-transparent rounded-full animate-spin" />
-            <span className="text-sm text-grey-400">Searching orders...</span>
+            <span className="text-sm text-grey-400">{t('search.searching')}</span>
           </div>
         )}
 
@@ -122,13 +124,13 @@ export default function ArrivalPage() {
       {searched && rankedCandidates.length > 0 && (
         <div className="space-y-4 mb-6">
           <div className="flex items-center gap-2">
-            <h2 className="text-base font-semibold text-grey-900">Matching Orders</h2>
-            <span className="text-xs bg-green-25 text-green-700 border border-green-200 rounded-md px-2 py-0.5 font-medium">{rankedCandidates.length} candidate(s)</span>
+            <h2 className="text-base font-semibold text-grey-900">{t('matchingOrders')}</h2>
+            <span className="text-xs bg-green-25 text-green-700 border border-green-200 rounded-md px-2 py-0.5 font-medium">{t('candidates', { count: rankedCandidates.length })}</span>
           </div>
           {exactSameDay.length > 0 && (
             <MatchSection
-              title="Exact Plate, Today"
-              description="Highest confidence candidates for immediate registration."
+              title={t('match.exactPlateToday.title')}
+              description={t('match.exactPlateToday.description')}
               orders={exactSameDay}
               submitting={submitting}
               onSelect={(order) => handleAddInbound(order, { matchStrategy: 'EXACT_SAME_DAY', isManualMatch: false })}
@@ -136,8 +138,8 @@ export default function ArrivalPage() {
           )}
           {exactWindow.length > 0 && (
             <MatchSection
-              title="Exact Plate, +/- 7 Days"
-              description="Same plate found on nearby planning dates. Check order details before continuing."
+              title={t('match.exactPlateNearby.title')}
+              description={t('match.exactPlateNearby.description')}
               orders={exactWindow}
               submitting={submitting}
               onSelect={(order) => handleAddInbound(order, { matchStrategy: 'EXACT_WINDOW', isManualMatch: false })}
@@ -145,8 +147,8 @@ export default function ArrivalPage() {
           )}
           {manualOverrides.length > 0 && (
             <MatchSection
-              title="Manual Override Candidates"
-              description="No exact plate match is required here. Use only after visual/operator confirmation."
+              title={t('match.manualOverride.title')}
+              description={t('match.manualOverride.description')}
               orders={manualOverrides}
               variant="manual"
               submitting={submitting}
@@ -160,7 +162,7 @@ export default function ArrivalPage() {
                 className="inline-flex items-center gap-2 h-9 px-5 bg-white text-grey-700 border border-grey-300 rounded-md text-sm font-semibold hover:bg-grey-50 transition-colors"
               >
                 <Plus size={16} />
-                Create Ad-hoc Order Instead
+                {t('actions.createAdHocOrderInstead')}
               </button>
             </div>
           )}
@@ -174,16 +176,16 @@ export default function ArrivalPage() {
             <Package size={22} className="text-grey-400" />
           </div>
           <p className="text-sm font-medium text-grey-700 mb-1">
-            No orders match plate &quot;{plate}&quot;
+            {t('match.noMatch.message', { plate })}
           </p>
-          <p className="text-xs text-grey-400 mb-4">The plate must exactly match the one registered on the order</p>
+          <p className="text-xs text-grey-400 mb-4">{t('match.noMatch.plateExactRequired')}</p>
           {!showAdhoc && (
             <button
               onClick={() => setShowAdhoc(true)}
               className="inline-flex items-center gap-2 h-9 px-5 bg-green-500 text-white rounded-md text-sm font-semibold hover:bg-green-700 transition-colors"
             >
               <Plus size={16} />
-              Create Ad-hoc Order
+              {t('actions.createAdHocOrder')}
             </button>
           )}
         </div>
@@ -206,6 +208,7 @@ export default function ArrivalPage() {
 }
 
 function MatchSection({ title, description, orders, submitting, onSelect, variant = 'exact' }) {
+  const { t } = useTranslation('arrival');
   const containerClass = variant === 'manual'
     ? 'border-orange-200 bg-orange-25/40'
     : 'border-grey-200 bg-white';
@@ -237,22 +240,22 @@ function MatchSection({ title, description, orders, submitting, onSelect, varian
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-4 gap-y-3">
               <div>
-                <span className="text-[11px] text-grey-400 uppercase tracking-wide font-medium">Carrier</span>
+                <span className="text-[11px] text-grey-400 uppercase tracking-wide font-medium">{t('fields.carrier')}</span>
                 <p className="text-sm font-medium text-grey-900 mt-0.5">{order.carrier?.name || '—'}</p>
               </div>
               <div className="min-w-0">
-                <span className="text-[11px] text-grey-400 uppercase tracking-wide font-medium">Supplier</span>
+                <span className="text-[11px] text-grey-400 uppercase tracking-wide font-medium">{t('fields.supplier')}</span>
                 <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
                   <p className="text-sm font-medium text-grey-900">{order.supplier?.name || '—'}</p>
                   <SupplierTypeBadge type={order.supplier?.supplier_type} />
                 </div>
               </div>
               <div>
-                <span className="text-[11px] text-grey-400 uppercase tracking-wide font-medium">Waste Stream</span>
+                <span className="text-[11px] text-grey-400 uppercase tracking-wide font-medium">{t('fields.wasteStream')}</span>
                 <p className="text-sm font-medium text-grey-900 mt-0.5">{order.waste_stream?.name || '—'}</p>
               </div>
               <div>
-                <span className="text-[11px] text-grey-400 uppercase tracking-wide font-medium">Parcel Progress</span>
+                <span className="text-[11px] text-grey-400 uppercase tracking-wide font-medium">{t('fields.parcelProgress')}</span>
                 <p className="text-sm font-medium text-grey-900 mt-0.5">
                   {order.received_asset_count || 0} / {order.expected_asset_count || order.expected_skip_count || 0}
                 </p>
@@ -262,7 +265,7 @@ function MatchSection({ title, description, orders, submitting, onSelect, varian
               <div className="space-y-0.5">
                 <span className="text-xs font-mono text-grey-500 tracking-wide">{order.vehicle_plate || 'PLATE NOT SET'}</span>
                 {order.is_partial_delivery && (
-                  <p className="text-xs text-orange-600">Partial delivery in progress</p>
+                  <p className="text-xs text-orange-600">{t('fields.partialDelivery')}</p>
                 )}
               </div>
               <button
@@ -271,7 +274,7 @@ function MatchSection({ title, description, orders, submitting, onSelect, varian
                 className={`h-9 px-5 rounded-md text-sm font-semibold disabled:opacity-50 transition-colors flex items-center gap-2 ${variant === 'manual' ? 'bg-orange-500 hover:bg-orange-600 text-white' : 'bg-green-500 hover:bg-green-700 text-white'}`}
               >
                 <Truck size={15} />
-                {variant === 'manual' ? 'Use Manual Override' : 'Register Arrival'}
+                {variant === 'manual' ? t('actions.useManualOverride') : t('actions.registerArrival')}
               </button>
             </div>
           </div>

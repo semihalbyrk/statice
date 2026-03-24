@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Plus, Trash2, ChevronDown, ChevronRight } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { useTranslation } from 'react-i18next';
 import Breadcrumb from '../../components/ui/Breadcrumb';
 import PenaltySelectModal from '../../components/contracts/PenaltySelectModal';
 import useMasterDataStore from '../../store/masterDataStore';
@@ -67,6 +68,7 @@ export default function ContractCreatePage() {
   const { id: editId } = useParams();
   const isEdit = !!editId;
   const navigate = useNavigate();
+  const { t } = useTranslation(['contracts', 'common']);
   const { suppliers, carriers, wasteStreams, materials, loadAll } = useMasterDataStore();
   const [facilityName, setFacilityName] = useState('Statice B.V.');
   const [loadingContract, setLoadingContract] = useState(false);
@@ -175,11 +177,11 @@ export default function ContractCreatePage() {
         }
       })
       .catch(() => {
-        toast.error('Failed to load contract');
+        toast.error(t('contracts:toast.loadContractFailed'));
         navigate('/contracts');
       })
       .finally(() => setLoadingContract(false));
-  }, [editId, navigate, materials]);
+  }, [editId, navigate, materials, t]);
 
   function handleChange(e) {
     const { name, value, type, checked } = e.target;
@@ -275,18 +277,18 @@ export default function ContractCreatePage() {
     // Validate at least one waste stream with at least one rate line
     const validCards = wsCards.filter((c) => c.waste_stream_id && c.afvalstroomnummer);
     if (validCards.length === 0) {
-      toast.error('Add at least one waste stream with an Afvalstroomnummer');
+      toast.error(t('contracts:toast.atLeastOneWasteStream'));
       return;
     }
     for (const card of validCards) {
       if (card.rate_lines.length === 0) {
         const ws = wasteStreams.find((w) => w.id === card.waste_stream_id);
-        toast.error(`Add at least one material to "${ws?.name || 'waste stream'}"`);
+        toast.error(t('contracts:toast.atLeastOneMaterial', { name: ws?.name || 'waste stream' }));
         return;
       }
       for (const rl of card.rate_lines) {
         if (!rl.material_id || !rl.unit_rate) {
-          toast.error('All material lines must have a material and unit rate');
+          toast.error(t('contracts:toast.allMaterialsRequired'));
           return;
         }
       }
@@ -318,15 +320,15 @@ export default function ContractCreatePage() {
 
       if (isEdit) {
         await updateContract(editId, payload);
-        toast.success('Contract updated');
+        toast.success(t('contracts:toast.updated'));
         navigate(`/contracts/${editId}`);
       } else {
         await createContract(payload);
-        toast.success('Contract created');
+        toast.success(t('contracts:toast.created'));
         navigate('/contracts');
       }
     } catch (err) {
-      toast.error(err.response?.data?.error || 'Failed to save contract');
+      toast.error(err.response?.data?.error || t('contracts:toast.saveFailed'));
     } finally {
       setSubmitting(false);
     }
@@ -336,47 +338,47 @@ export default function ContractCreatePage() {
 
   return (
     <div>
-      <Breadcrumb items={[{ label: 'Contracts', to: '/contracts' }, ...(isEdit ? [{ label: form.name || 'Edit', to: `/contracts/${editId}` }, { label: 'Edit' }] : [{ label: 'New Contract' }])]} />
-      <h1 className="text-xl font-semibold text-grey-900 mb-6">{isEdit ? 'Edit Contract' : 'New Contract'}</h1>
-      {loadingContract && <div className="text-center py-12 text-grey-400">Loading...</div>}
+      <Breadcrumb items={[{ label: t('contracts:title'), to: '/contracts' }, ...(isEdit ? [{ label: form.name || t('contracts:actions.edit'), to: `/contracts/${editId}` }, { label: t('contracts:actions.edit') }] : [{ label: t('contracts:create.breadcrumbNew') }])]} />
+      <h1 className="text-xl font-semibold text-grey-900 mb-6">{isEdit ? t('contracts:editContract') : t('contracts:newContract')}</h1>
+      {loadingContract && <div className="text-center py-12 text-grey-400">{t('contracts:loading')}</div>}
 
       <form onSubmit={handleSubmit}>
         {/* === TOP ROW: 3 columns === */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
           {/* Contract Details */}
           <div className="bg-white rounded-lg border border-grey-200 shadow-sm p-5">
-            <h2 className="text-sm font-semibold text-grey-900 mb-4">Contract Details</h2>
+            <h2 className="text-sm font-semibold text-grey-900 mb-4">{t('contracts:create.contractDetails')}</h2>
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-grey-700 mb-1.5">Contract Name <span className="text-red-500">*</span></label>
-                <input name="name" value={form.name} onChange={handleChange} required placeholder="e.g. 2026 WEEE Processing Agreement" className={inputClass} />
+                <label className="block text-sm font-medium text-grey-700 mb-1.5">{t('contracts:create.fields.contractName')} <span className="text-red-500">*</span></label>
+                <input name="name" value={form.name} onChange={handleChange} required placeholder={t('contracts:create.fields.namePlaceholder')} className={inputClass} />
               </div>
               <div>
-                <label className="block text-sm font-medium text-grey-700 mb-1.5">Supplier <span className="text-red-500">*</span></label>
+                <label className="block text-sm font-medium text-grey-700 mb-1.5">{t('contracts:create.fields.supplier')} <span className="text-red-500">*</span></label>
                 <select name="supplier_id" value={form.supplier_id} onChange={handleChange} required disabled={isEdit} className={`${selectClass} ${isEdit ? 'opacity-60 cursor-not-allowed' : ''}`}>
-                  <option value="">Select supplier...</option>
+                  <option value="">{t('contracts:create.fields.selectSupplier')}</option>
                   {suppliers.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-grey-700 mb-1.5">Carrier <span className="text-red-500">*</span></label>
+                <label className="block text-sm font-medium text-grey-700 mb-1.5">{t('contracts:create.fields.carrier')} <span className="text-red-500">*</span></label>
                 <select name="carrier_id" value={form.carrier_id} onChange={handleChange} required className={selectClass}>
-                  <option value="">Select carrier...</option>
+                  <option value="">{t('contracts:create.fields.selectCarrier')}</option>
                   {carriers.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
                 </select>
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-sm font-medium text-grey-700 mb-1.5">Effective Date <span className="text-red-500">*</span></label>
+                  <label className="block text-sm font-medium text-grey-700 mb-1.5">{t('contracts:create.fields.effectiveDate')} <span className="text-red-500">*</span></label>
                   <input name="effective_date" type="date" value={form.effective_date} onChange={handleChange} required className={inputClass} />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-grey-700 mb-1.5">Expiry Date</label>
+                  <label className="block text-sm font-medium text-grey-700 mb-1.5">{t('contracts:create.fields.expiryDate')}</label>
                   <input name="expiry_date" type="date" value={form.expiry_date} onChange={handleChange} className={inputClass} />
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-medium text-grey-700 mb-1.5">Receiver</label>
+                <label className="block text-sm font-medium text-grey-700 mb-1.5">{t('contracts:create.fields.receiver')}</label>
                 <div className="h-10 bg-grey-50 border border-grey-200 rounded-md px-3.5 text-sm text-grey-700 flex items-center">
                   {facilityName}
                 </div>
@@ -386,27 +388,27 @@ export default function ContractCreatePage() {
 
           {/* Payment Details */}
           <div className="bg-white rounded-lg border border-grey-200 shadow-sm p-5">
-            <h2 className="text-sm font-semibold text-grey-900 mb-4">Payment Details</h2>
+            <h2 className="text-sm font-semibold text-grey-900 mb-4">{t('contracts:create.paymentDetails')}</h2>
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-grey-700 mb-1.5">Payment Term (days)</label>
+                <label className="block text-sm font-medium text-grey-700 mb-1.5">{t('contracts:create.fields.paymentTermDays')}</label>
                 <input name="payment_term_days" type="number" min="0" value={form.payment_term_days} onChange={handleChange} className={inputClass} />
               </div>
               <div>
-                <label className="block text-sm font-medium text-grey-700 mb-1.5">Invoicing Frequency</label>
+                <label className="block text-sm font-medium text-grey-700 mb-1.5">{t('contracts:create.fields.invoicingFrequency')}</label>
                 <select name="invoicing_frequency" value={form.invoicing_frequency} onChange={handleChange} className={selectClass}>
                   {INVOICING_FREQUENCIES.map((f) => <option key={f} value={f}>{FREQ_LABELS[f]}</option>)}
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-grey-700 mb-1.5">Currency</label>
+                <label className="block text-sm font-medium text-grey-700 mb-1.5">{t('contracts:create.fields.currency')}</label>
                 <select name="currency" value={form.currency} onChange={handleChange} className={selectClass}>
                   {CURRENCIES.map((c) => <option key={c.code} value={c.code}>{c.label}</option>)}
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-grey-700 mb-1.5">Invoice Delivery</label>
-                <input name="invoice_delivery_method" value={form.invoice_delivery_method} onChange={handleChange} placeholder="e.g. EMAIL" className={inputClass} />
+                <label className="block text-sm font-medium text-grey-700 mb-1.5">{t('contracts:create.fields.invoiceDelivery')}</label>
+                <input name="invoice_delivery_method" value={form.invoice_delivery_method} onChange={handleChange} placeholder={t('contracts:create.fields.invoiceDeliveryPlaceholder')} className={inputClass} />
               </div>
             </div>
           </div>
@@ -414,20 +416,20 @@ export default function ContractCreatePage() {
           {/* Contamination Details */}
           <div className="bg-white rounded-lg border border-grey-200 shadow-sm p-5">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-sm font-semibold text-grey-900">Contamination Details</h2>
+              <h2 className="text-sm font-semibold text-grey-900">{t('contracts:create.contaminationDetails')}</h2>
               <button type="button" onClick={() => setShowPenaltyModal(true)}
                 className="h-8 px-3 bg-white text-grey-700 border border-grey-300 rounded-md text-xs font-semibold hover:bg-grey-50 transition-colors">
-                Manage Penalties ({selectedPenaltyIds.length})
+                {t('contracts:create.managePenalties', { count: selectedPenaltyIds.length })}
               </button>
             </div>
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-grey-700 mb-1.5">Tolerance (%)</label>
+                <label className="block text-sm font-medium text-grey-700 mb-1.5">{t('contracts:create.fields.tolerancePct')}</label>
                 <input name="contamination_tolerance_pct" type="number" step="0.1" min="0" max="100" value={form.contamination_tolerance_pct} onChange={handleChange} className={inputClass} />
               </div>
               {selectedPenaltyIds.length > 0 && (
                 <div className="border-t border-grey-200 pt-3">
-                  <p className="text-xs font-medium text-grey-500 uppercase tracking-wide mb-2">Selected Penalties</p>
+                  <p className="text-xs font-medium text-grey-500 uppercase tracking-wide mb-2">{t('contracts:create.selectedPenalties')}</p>
                   <div className="space-y-1.5">
                     {selectedPenaltyIds.map((feeId) => {
                       const fee = allFees.find((f) => f.id === feeId);
@@ -451,16 +453,16 @@ export default function ContractCreatePage() {
         {/* === FULL WIDTH: Waste Streams === */}
         <div className="bg-white rounded-lg border border-grey-200 shadow-sm">
           <div className="flex items-center justify-between px-5 py-4 border-b border-grey-200">
-            <h2 className="text-sm font-semibold text-grey-900">Waste Streams</h2>
+            <h2 className="text-sm font-semibold text-grey-900">{t('contracts:create.wasteStreams')}</h2>
             <button type="button" onClick={addWasteStreamCard}
               className="inline-flex items-center gap-1.5 text-sm font-semibold text-green-500 hover:text-green-700 transition-colors">
-              <Plus size={16} strokeWidth={2} /> Add Waste Stream
+              <Plus size={16} strokeWidth={2} /> {t('contracts:create.addWasteStream')}
             </button>
           </div>
 
           <div className="p-5 space-y-4">
             {wsCards.length === 0 && (
-              <p className="text-sm text-grey-400 text-center py-6">No waste streams added yet</p>
+              <p className="text-sm text-grey-400 text-center py-6">{t('contracts:create.noWasteStreams')}</p>
             )}
 
             {wsCards.map((card) => {
@@ -480,7 +482,7 @@ export default function ContractCreatePage() {
                     <div className="flex items-center gap-2">
                       {card.expanded ? <ChevronDown size={16} className="text-grey-500" /> : <ChevronRight size={16} className="text-grey-500" />}
                       <span className="text-sm font-semibold text-grey-900">
-                        {wsInfo ? `${wsInfo.name} \u2014 ${wsInfo.code}` : 'Select waste stream...'}
+                        {wsInfo ? `${wsInfo.name} \u2014 ${wsInfo.code}` : t('contracts:create.selectWasteStream')}
                       </span>
                       {card.afvalstroomnummer && (
                         <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-25 text-green-700 border border-green-300">
@@ -502,20 +504,20 @@ export default function ContractCreatePage() {
                     <div className="px-4 py-4 space-y-4">
                       <div className="grid grid-cols-2 gap-4">
                         <div>
-                          <label className="block text-sm font-medium text-grey-700 mb-1.5">Waste Stream <span className="text-red-500">*</span></label>
+                          <label className="block text-sm font-medium text-grey-700 mb-1.5">{t('contracts:create.fields.wasteStream')} <span className="text-red-500">*</span></label>
                           <select
                             value={card.waste_stream_id}
                             onChange={(e) => updateWsCard(card.id, { waste_stream_id: e.target.value, rate_lines: [] })}
                             className={selectClass}
                           >
-                            <option value="">Select...</option>
+                            <option value="">{t('contracts:create.fields.selectProcessingMethod')}</option>
                             {wasteStreams
                               .filter((ws) => ws.id === card.waste_stream_id || !usedWsIds.includes(ws.id))
                               .map((ws) => <option key={ws.id} value={ws.id}>{ws.name} ({ws.code})</option>)}
                           </select>
                         </div>
                         <div>
-                          <label className="block text-sm font-medium text-grey-700 mb-1.5">Afvalstroomnummer <span className="text-red-500">*</span></label>
+                          <label className="block text-sm font-medium text-grey-700 mb-1.5">{t('contracts:create.fields.afvalstroomnummer')} <span className="text-red-500">*</span></label>
                           <input
                             value={card.afvalstroomnummer}
                             onChange={(e) => updateWsCard(card.id, { afvalstroomnummer: e.target.value })}
@@ -528,18 +530,18 @@ export default function ContractCreatePage() {
                       {/* Rate Lines Table */}
                       {card.waste_stream_id && (
                         <>
-                          <div className="text-xs font-medium text-grey-500 uppercase tracking-wide">Material Lines</div>
+                          <div className="text-xs font-medium text-grey-500 uppercase tracking-wide">{t('contracts:create.materialLines')}</div>
                           {card.rate_lines.length > 0 && (
                             <div className="overflow-x-auto">
                               <table className="w-full text-xs min-w-[1050px]">
                                 <thead>
                                   <tr className="border-b border-grey-200">
-                                    <th className="text-left py-2 pr-2 text-xs font-medium text-grey-500 w-[200px]">Material</th>
-                                    <th className="text-left py-2 px-2 text-xs font-medium text-grey-500 w-[100px]">EURAL Code</th>
-                                    <th className="text-left py-2 px-2 text-xs font-medium text-grey-500 max-w-[280px]">Processing Method</th>
-                                    <th className="text-left py-2 px-2 text-xs font-medium text-grey-500 w-[130px]">Pricing</th>
-                                    <th className="text-left py-2 px-2 text-xs font-medium text-grey-500 w-[120px]">Unit Rate</th>
-                                    <th className="text-left py-2 px-2 text-xs font-medium text-grey-500 w-[80px]">BTW %</th>
+                                    <th className="text-left py-2 pr-2 text-xs font-medium text-grey-500 w-[200px]">{t('contracts:create.fields.material')}</th>
+                                    <th className="text-left py-2 px-2 text-xs font-medium text-grey-500 w-[100px]">{t('contracts:create.fields.euralCode')}</th>
+                                    <th className="text-left py-2 px-2 text-xs font-medium text-grey-500 max-w-[280px]">{t('contracts:create.fields.processingMethod')}</th>
+                                    <th className="text-left py-2 px-2 text-xs font-medium text-grey-500 w-[130px]">{t('contracts:create.fields.pricing')}</th>
+                                    <th className="text-left py-2 px-2 text-xs font-medium text-grey-500 w-[120px]">{t('contracts:create.fields.unitRate')}</th>
+                                    <th className="text-left py-2 px-2 text-xs font-medium text-grey-500 w-[80px]">{t('contracts:create.fields.btwPct')}</th>
                                     <th className="w-7 py-2"></th>
                                   </tr>
                                 </thead>
@@ -552,7 +554,7 @@ export default function ContractCreatePage() {
                                           onChange={(e) => updateRateLine(card.id, rl.id, { material_id: e.target.value })}
                                           className={`${selectClass} h-9 text-xs`}
                                         >
-                                          <option value="">Material...</option>
+                                          <option value="">{t('contracts:create.fields.selectMaterial')}</option>
                                           {filteredMaterials
                                             .filter((m) => m.id === rl.material_id || !usedMats.includes(m.id))
                                             .map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
@@ -569,7 +571,7 @@ export default function ContractCreatePage() {
                                           onChange={(e) => updateRateLine(card.id, rl.id, { processing_method: e.target.value })}
                                           className={`${selectClass} h-9 text-xs`}
                                         >
-                                          <option value="">Select...</option>
+                                          <option value="">{t('contracts:create.fields.selectProcessingMethod')}</option>
                                           {PROCESSING_METHODS.map((pm) => <option key={pm} value={pm}>{pm}</option>)}
                                         </select>
                                       </td>
@@ -591,7 +593,7 @@ export default function ContractCreatePage() {
                                             min="0"
                                             value={rl.unit_rate}
                                             onChange={(e) => updateRateLine(card.id, rl.id, { unit_rate: e.target.value })}
-                                            placeholder="Rate"
+                                            placeholder={t('contracts:create.fields.rate')}
                                             className={`${inputClass} h-9 text-xs pl-7`}
                                           />
                                         </div>
@@ -603,7 +605,7 @@ export default function ContractCreatePage() {
                                           min="0"
                                           value={rl.btw_rate}
                                           onChange={(e) => updateRateLine(card.id, rl.id, { btw_rate: e.target.value })}
-                                          placeholder="BTW %"
+                                          placeholder={t('contracts:create.fields.btwPct')}
                                           className={`${inputClass} h-9 text-xs`}
                                         />
                                       </td>
@@ -627,7 +629,7 @@ export default function ContractCreatePage() {
                             onClick={() => addRateLineToCard(card.id)}
                             className="inline-flex items-center gap-1.5 text-xs font-semibold text-green-500 hover:text-green-700 transition-colors"
                           >
-                            <Plus size={14} /> Add Material
+                            <Plus size={14} /> {t('contracts:create.addMaterial')}
                           </button>
                         </>
                       )}
@@ -643,11 +645,11 @@ export default function ContractCreatePage() {
         <div className="flex justify-end gap-3 mt-6">
           <button type="button" onClick={() => navigate(isEdit ? `/contracts/${editId}` : '/contracts')}
             className="h-9 px-4 bg-white text-grey-700 border border-grey-300 rounded-md text-sm font-semibold hover:bg-grey-50 transition-colors">
-            Cancel
+            {t('contracts:create.buttons.cancel')}
           </button>
           <button type="submit" disabled={submitting}
             className="h-9 px-4 bg-green-500 text-white rounded-md text-sm font-semibold hover:bg-green-700 disabled:opacity-50 transition-colors">
-            {submitting ? 'Saving...' : isEdit ? 'Update Contract' : 'Create Contract'}
+            {submitting ? t('contracts:create.buttons.saving') : isEdit ? t('contracts:create.buttons.update') : t('contracts:create.buttons.create')}
           </button>
         </div>
       </form>

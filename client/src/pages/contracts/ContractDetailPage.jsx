@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { ArrowLeft, Plus, Pencil, Trash2, Settings2 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { useTranslation } from 'react-i18next';
 import { getContract, deactivateContract, updateContract, deleteRateLine, deleteContractWasteStream } from '../../api/contracts';
 import ClickableStatusBadge from '../../components/ui/ClickableStatusBadge';
 import RowActionMenu from '../../components/ui/RowActionMenu';
@@ -31,6 +32,7 @@ const CONTRACT_TRANSITIONS = {
 export default function ContractDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { t } = useTranslation(['contracts', 'common']);
   const userRole = useAuthStore((s) => s.user?.role);
   const canWrite = ['ADMIN', 'FINANCE_MANAGER'].includes(userRole);
 
@@ -47,12 +49,12 @@ export default function ContractDetailPage() {
       const { data } = await getContract(id);
       setContract(data.data);
     } catch {
-      toast.error('Failed to load contract');
+      toast.error(t('contracts:toast.loadContractFailed'));
       navigate('/contracts');
     } finally {
       setLoading(false);
     }
-  }, [id, navigate]);
+  }, [id, navigate, t]);
 
   useEffect(() => { fetchContract(); }, [fetchContract]);
 
@@ -63,36 +65,36 @@ export default function ContractDetailPage() {
       } else {
         await updateContract(id, { status: newStatus });
       }
-      toast.success('Contract status updated');
+      toast.success(t('contracts:toast.statusUpdated'));
       fetchContract();
     } catch (err) {
-      toast.error(err.response?.data?.error || 'Failed to update status');
+      toast.error(err.response?.data?.error || t('contracts:toast.statusFailed'));
     }
   }
 
   async function handleDeleteRateLine(lineId) {
-    if (!window.confirm('Remove this rate line?')) return;
+    if (!window.confirm(t('contracts:detail.confirmRemoveRateLine'))) return;
     try {
       await deleteRateLine(lineId);
-      toast.success('Rate line removed');
+      toast.success(t('contracts:toast.rateLineRemoved'));
       fetchContract();
     } catch (err) {
-      toast.error(err.response?.data?.error || 'Failed to remove rate line');
+      toast.error(err.response?.data?.error || t('contracts:toast.rateLineRemoveFailed'));
     }
   }
 
   async function handleDeleteWasteStream(cwsId) {
-    if (!window.confirm('Remove this waste stream and all its rate lines from the contract?')) return;
+    if (!window.confirm(t('contracts:detail.confirmRemoveWasteStream'))) return;
     try {
       await deleteContractWasteStream(id, cwsId);
-      toast.success('Waste stream removed');
+      toast.success(t('contracts:toast.wasteStreamRemoved'));
       fetchContract();
     } catch (err) {
-      toast.error(err.response?.data?.error || 'Failed to remove waste stream');
+      toast.error(err.response?.data?.error || t('contracts:toast.wasteStreamRemoveFailed'));
     }
   }
 
-  if (loading) return <div className="text-center py-12 text-grey-400">Loading...</div>;
+  if (loading) return <div className="text-center py-12 text-grey-400">{t('contracts:loading')}</div>;
   if (!contract) return null;
 
   const currencySymbol = contract.currency === 'USD' ? '$' : contract.currency === 'GBP' ? '\u00A3' : '\u20AC';
@@ -105,7 +107,7 @@ export default function ContractDetailPage() {
       {/* Breadcrumb + Header */}
       <div className="mb-6">
         <Link to="/contracts" className="inline-flex items-center gap-1.5 text-sm text-grey-500 hover:text-grey-700 mb-3">
-          <ArrowLeft size={14} /> Back to Contracts
+          <ArrowLeft size={14} /> {t('contracts:detail.backToContracts')}
         </Link>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -121,7 +123,7 @@ export default function ContractDetailPage() {
             {canWrite && (
               <button onClick={() => navigate(`/contracts/${id}/edit`)}
                 className="flex items-center gap-1.5 h-9 px-4 bg-white text-grey-700 border border-grey-300 rounded-md text-sm font-semibold hover:bg-grey-50 transition-colors">
-                <Pencil size={14} /> Edit
+                <Pencil size={14} /> {t('contracts:actions.edit')}
               </button>
             )}
           </div>
@@ -130,46 +132,46 @@ export default function ContractDetailPage() {
 
       {/* Contract Details */}
       <div className="bg-white rounded-lg border border-grey-200 shadow-sm p-5 mb-6">
-        <h2 className="text-sm font-semibold text-grey-900 mb-4">Contract Details</h2>
+        <h2 className="text-sm font-semibold text-grey-900 mb-4">{t('contracts:detail.contractDetails')}</h2>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-y-4 gap-x-6 text-sm">
           <div>
-            <p className="text-grey-500 mb-0.5">Name</p>
+            <p className="text-grey-500 mb-0.5">{t('contracts:detail.fields.name')}</p>
             <p className="text-grey-900 font-medium">{contract.name}</p>
           </div>
           <div>
-            <p className="text-grey-500 mb-0.5">Supplier</p>
+            <p className="text-grey-500 mb-0.5">{t('contracts:detail.fields.supplier')}</p>
             <p className="text-grey-900 font-medium">{contract.supplier?.name}</p>
           </div>
           <div>
-            <p className="text-grey-500 mb-0.5">Carrier</p>
+            <p className="text-grey-500 mb-0.5">{t('contracts:detail.fields.carrier')}</p>
             <p className="text-grey-900 font-medium">{contract.carrier?.name || '\u2014'}</p>
           </div>
           <div>
-            <p className="text-grey-500 mb-0.5">Receiver</p>
+            <p className="text-grey-500 mb-0.5">{t('contracts:detail.fields.receiver')}</p>
             <p className="text-grey-900 font-medium">{contract.receiver_name || 'Statice B.V.'}</p>
           </div>
           <div>
-            <p className="text-grey-500 mb-0.5">Effective Date</p>
+            <p className="text-grey-500 mb-0.5">{t('contracts:detail.fields.effectiveDate')}</p>
             <p className="text-grey-900">{formatDate(contract.effective_date)}</p>
           </div>
           <div>
-            <p className="text-grey-500 mb-0.5">Expiry Date</p>
+            <p className="text-grey-500 mb-0.5">{t('contracts:detail.fields.expiryDate')}</p>
             <p className="text-grey-900">{formatDate(contract.expiry_date)}{contract.days_until_expiry != null ? ` (${contract.days_until_expiry}d)` : ''}</p>
           </div>
           <div>
-            <p className="text-grey-500 mb-0.5">Payment Terms</p>
-            <p className="text-grey-900">{contract.payment_term_days} days</p>
+            <p className="text-grey-500 mb-0.5">{t('contracts:detail.fields.paymentTerms')}</p>
+            <p className="text-grey-900">{t('contracts:detail.fields.paymentTermsDays', { days: contract.payment_term_days })}</p>
           </div>
           <div>
-            <p className="text-grey-500 mb-0.5">Invoicing Frequency</p>
+            <p className="text-grey-500 mb-0.5">{t('contracts:detail.fields.invoicingFrequency')}</p>
             <p className="text-grey-900">{FREQ_LABELS[contract.invoicing_frequency] || contract.invoicing_frequency}</p>
           </div>
           <div>
-            <p className="text-grey-500 mb-0.5">Currency</p>
+            <p className="text-grey-500 mb-0.5">{t('contracts:detail.fields.currency')}</p>
             <p className="text-grey-900">{contract.currency}</p>
           </div>
           <div>
-            <p className="text-grey-500 mb-0.5">Contamination Tolerance</p>
+            <p className="text-grey-500 mb-0.5">{t('contracts:detail.fields.contaminationTolerance')}</p>
             <p className="text-grey-900">{Number(contract.contamination_tolerance_pct)}%</p>
           </div>
         </div>
@@ -195,12 +197,12 @@ export default function ContractDetailPage() {
                       onClick={() => { setEditRateLine(null); setRateLineContractWsId(cws.id); setShowRateModal(true); }}
                       className="flex items-center gap-1.5 h-8 px-3 bg-green-500 text-white rounded-md text-xs font-semibold hover:bg-green-700 transition-colors"
                     >
-                      <Plus size={14} /> Add Material
+                      <Plus size={14} /> {t('contracts:actions.addMaterial')}
                     </button>
                   )}
                   {canWrite && contract.status === 'ACTIVE' && (
                     <RowActionMenu actions={[
-                      { label: 'Remove Waste Stream', icon: Trash2, onClick: () => handleDeleteWasteStream(cws.id), variant: 'danger' },
+                      { label: t('contracts:actions.removeWasteStream'), icon: Trash2, onClick: () => handleDeleteWasteStream(cws.id), variant: 'danger' },
                     ]} />
                   )}
                 </div>
@@ -209,20 +211,20 @@ export default function ContractDetailPage() {
                 <table className="w-full text-sm min-w-[900px]">
                   <thead>
                     <tr className="bg-grey-50 border-b border-grey-200">
-                      <th className="text-left px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide">Material</th>
-                      <th className="text-left px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide">CBS Code</th>
-                      <th className="text-left px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide">WEEELABEX</th>
-                      <th className="text-left px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide">EURAL Code</th>
-                      <th className="text-left px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide">Processing Method</th>
-                      <th className="text-left px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide">Pricing</th>
-                      <th className="text-right px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide">Unit Rate</th>
-                      <th className="text-right px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide">BTW %</th>
+                      <th className="text-left px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide">{t('contracts:detail.wasteStream.material')}</th>
+                      <th className="text-left px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide">{t('contracts:detail.wasteStream.cbsCode')}</th>
+                      <th className="text-left px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide">{t('contracts:detail.wasteStream.weeelabex')}</th>
+                      <th className="text-left px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide">{t('contracts:detail.wasteStream.euralCode')}</th>
+                      <th className="text-left px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide">{t('contracts:detail.wasteStream.processingMethod')}</th>
+                      <th className="text-left px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide">{t('contracts:detail.wasteStream.pricing')}</th>
+                      <th className="text-right px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide">{t('contracts:detail.wasteStream.unitRate')}</th>
+                      <th className="text-right px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide">{t('contracts:detail.wasteStream.btwPct')}</th>
                       {canWrite && <th className="w-10 px-4 py-3"></th>}
                     </tr>
                   </thead>
                   <tbody>
                     {(!cws.rate_lines || cws.rate_lines.length === 0) ? (
-                      <tr><td colSpan={canWrite ? 9 : 8} className="px-4 py-4 text-center text-grey-400 text-xs">No materials</td></tr>
+                      <tr><td colSpan={canWrite ? 9 : 8} className="px-4 py-4 text-center text-grey-400 text-xs">{t('contracts:detail.wasteStream.noMaterials')}</td></tr>
                     ) : cws.rate_lines.map((rl) => (
                       <tr key={rl.id} className="border-b border-grey-100 hover:bg-grey-50 transition-colors">
                         <td className="px-4 py-3 text-grey-900 font-medium">{rl.material?.name}</td>
@@ -236,8 +238,8 @@ export default function ContractDetailPage() {
                         {canWrite && (
                           <td className="px-4 py-3 text-right">
                             <RowActionMenu actions={[
-                              { label: 'Edit', icon: Pencil, onClick: () => { setEditRateLine(rl); setRateLineContractWsId(cws.id); setShowRateModal(true); } },
-                              { label: 'Delete', icon: Trash2, onClick: () => handleDeleteRateLine(rl.id), variant: 'danger' },
+                              { label: t('contracts:actions.edit'), icon: Pencil, onClick: () => { setEditRateLine(rl); setRateLineContractWsId(cws.id); setShowRateModal(true); } },
+                              { label: t('contracts:actions.delete'), icon: Trash2, onClick: () => handleDeleteRateLine(rl.id), variant: 'danger' },
                             ]} />
                           </td>
                         )}
@@ -255,11 +257,11 @@ export default function ContractDetailPage() {
       {standaloneRateLines.length > 0 && (
         <div className="bg-white rounded-lg border border-grey-200 shadow-sm mb-6">
           <div className="flex items-center justify-between px-5 py-3 border-b border-grey-200">
-            <h2 className="text-sm font-semibold text-grey-900">Rate Lines ({standaloneRateLines.length})</h2>
+            <h2 className="text-sm font-semibold text-grey-900">{t('contracts:detail.rateLines', { count: standaloneRateLines.length })}</h2>
             {canWrite && contract.status === 'ACTIVE' && (
               <button onClick={() => { setEditRateLine(null); setRateLineContractWsId(null); setShowRateModal(true); }}
                 className="flex items-center gap-1.5 h-8 px-3 bg-green-500 text-white rounded-md text-xs font-semibold hover:bg-green-700 transition-colors">
-                <Plus size={14} /> Add Rate Line
+                <Plus size={14} /> {t('contracts:actions.addRateLine')}
               </button>
             )}
           </div>
@@ -267,14 +269,14 @@ export default function ContractDetailPage() {
             <table className="w-full text-sm min-w-[900px]">
               <thead>
                 <tr className="bg-grey-50 border-b border-grey-200">
-                  <th className="text-left px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide">Material</th>
-                  <th className="text-left px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide">CBS Code</th>
-                  <th className="text-left px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide">WEEELABEX</th>
-                  <th className="text-left px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide">EURAL Code</th>
-                  <th className="text-left px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide">Processing Method</th>
-                  <th className="text-left px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide">Pricing</th>
-                  <th className="text-right px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide">Unit Rate</th>
-                  <th className="text-right px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide">BTW %</th>
+                  <th className="text-left px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide">{t('contracts:detail.wasteStream.material')}</th>
+                  <th className="text-left px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide">{t('contracts:detail.wasteStream.cbsCode')}</th>
+                  <th className="text-left px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide">{t('contracts:detail.wasteStream.weeelabex')}</th>
+                  <th className="text-left px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide">{t('contracts:detail.wasteStream.euralCode')}</th>
+                  <th className="text-left px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide">{t('contracts:detail.wasteStream.processingMethod')}</th>
+                  <th className="text-left px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide">{t('contracts:detail.wasteStream.pricing')}</th>
+                  <th className="text-right px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide">{t('contracts:detail.wasteStream.unitRate')}</th>
+                  <th className="text-right px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide">{t('contracts:detail.wasteStream.btwPct')}</th>
                   {canWrite && <th className="w-10 px-4 py-3"></th>}
                 </tr>
               </thead>
@@ -292,8 +294,8 @@ export default function ContractDetailPage() {
                     {canWrite && (
                       <td className="px-4 py-3 text-right">
                         <RowActionMenu actions={[
-                          { label: 'Edit', icon: Pencil, onClick: () => { setEditRateLine(rl); setRateLineContractWsId(null); setShowRateModal(true); } },
-                          { label: 'Delete', icon: Trash2, onClick: () => handleDeleteRateLine(rl.id), variant: 'danger' },
+                          { label: t('contracts:actions.edit'), icon: Pencil, onClick: () => { setEditRateLine(rl); setRateLineContractWsId(null); setShowRateModal(true); } },
+                          { label: t('contracts:actions.delete'), icon: Trash2, onClick: () => handleDeleteRateLine(rl.id), variant: 'danger' },
                         ]} />
                       </td>
                     )}
@@ -308,17 +310,17 @@ export default function ContractDetailPage() {
       {/* Contamination Penalties */}
       <div className="bg-white rounded-lg border border-grey-200 shadow-sm">
         <div className="flex items-center justify-between px-5 py-3 border-b border-grey-200">
-          <h2 className="text-sm font-semibold text-grey-900">Contamination Penalties ({contract.contamination_penalties?.length || 0})</h2>
+          <h2 className="text-sm font-semibold text-grey-900">{t('contracts:detail.penalties', { count: contract.contamination_penalties?.length || 0 })}</h2>
           {canWrite && contract.status === 'ACTIVE' && (
             <button onClick={() => setShowPenaltyModal(true)}
               className="flex items-center gap-1.5 h-8 px-3 bg-white text-grey-700 border border-grey-300 rounded-md text-xs font-semibold hover:bg-grey-50 transition-colors">
-              <Settings2 size={14} /> Manage
+              <Settings2 size={14} /> {t('contracts:actions.manage')}
             </button>
           )}
         </div>
         <div className="p-5">
           {(!contract.contamination_penalties || contract.contamination_penalties.length === 0) ? (
-            <p className="text-sm text-grey-400 text-center py-4">No penalties linked</p>
+            <p className="text-sm text-grey-400 text-center py-4">{t('contracts:detail.noPenalties')}</p>
           ) : (
             <div className="space-y-2">
               {contract.contamination_penalties.map((p) => (

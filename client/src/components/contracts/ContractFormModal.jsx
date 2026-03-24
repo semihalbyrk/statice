@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import toast from 'react-hot-toast';
+import { useTranslation } from 'react-i18next';
 import useMasterDataStore from '../../store/masterDataStore';
 import { createContract, updateContract } from '../../api/contracts';
 
@@ -17,6 +18,7 @@ const selectClass = `${inputClass} bg-white`;
 
 export default function ContractFormModal({ contract, onClose, onSuccess }) {
   const isEdit = !!contract;
+  const { t } = useTranslation(['contracts', 'common']);
   const suppliers = useMasterDataStore((s) => s.suppliers);
 
   const [form, setForm] = useState({
@@ -50,14 +52,14 @@ export default function ContractFormModal({ contract, onClose, onSuccess }) {
       };
       if (isEdit) {
         await updateContract(contract.id, payload);
-        toast.success('Contract updated');
+        toast.success(t('contracts:toast.updated'));
       } else {
         await createContract(payload);
-        toast.success('Contract created');
+        toast.success(t('contracts:toast.created'));
       }
       onSuccess();
     } catch (err) {
-      toast.error(err.response?.data?.error || 'Failed to save contract');
+      toast.error(err.response?.data?.error || t('contracts:toast.saveFailed'));
     } finally {
       setSubmitting(false);
     }
@@ -67,45 +69,45 @@ export default function ContractFormModal({ contract, onClose, onSuccess }) {
     <div className="app-modal-overlay">
       <div className="app-modal-panel max-w-lg">
         <div className="flex items-center justify-between px-5 py-3 border-b border-grey-200">
-          <h2 className="text-lg font-semibold text-grey-900">{isEdit ? 'Edit Contract' : 'New Contract'}</h2>
+          <h2 className="text-lg font-semibold text-grey-900">{isEdit ? t('contracts:formModal.editTitle') : t('contracts:formModal.newTitle')}</h2>
           <button onClick={onClose} className="p-1 rounded-md hover:bg-grey-50 transition-colors text-grey-400">&times;</button>
         </div>
         <form onSubmit={handleSubmit} className="px-5 py-4 space-y-4 max-h-[70vh] overflow-y-auto">
           {/* Basic Info */}
           <div>
-            <label className="block text-sm font-medium text-grey-700 mb-1.5">Supplier <span className="text-red-500">*</span></label>
+            <label className="block text-sm font-medium text-grey-700 mb-1.5">{t('contracts:formModal.fields.supplier')} <span className="text-red-500">*</span></label>
             <select name="supplier_id" value={form.supplier_id} onChange={handleChange} required disabled={isEdit} className={selectClass}>
-              <option value="">Select supplier...</option>
+              <option value="">{t('contracts:formModal.fields.selectSupplier')}</option>
               {suppliers.map((s) => (
                 <option key={s.id} value={s.id}>{s.name}</option>
               ))}
             </select>
           </div>
           <div>
-            <label className="block text-sm font-medium text-grey-700 mb-1.5">Contract Name <span className="text-red-500">*</span></label>
-            <input name="name" value={form.name} onChange={handleChange} required placeholder="e.g. 2026 WEEE Processing Agreement" className={inputClass} />
+            <label className="block text-sm font-medium text-grey-700 mb-1.5">{t('contracts:formModal.fields.contractName')} <span className="text-red-500">*</span></label>
+            <input name="name" value={form.name} onChange={handleChange} required placeholder={t('contracts:formModal.fields.namePlaceholder')} className={inputClass} />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-sm font-medium text-grey-700 mb-1.5">Effective Date <span className="text-red-500">*</span></label>
+              <label className="block text-sm font-medium text-grey-700 mb-1.5">{t('contracts:formModal.fields.effectiveDate')} <span className="text-red-500">*</span></label>
               <input name="effective_date" type="date" value={form.effective_date} onChange={handleChange} required className={inputClass} />
             </div>
             <div>
-              <label className="block text-sm font-medium text-grey-700 mb-1.5">Expiry Date</label>
+              <label className="block text-sm font-medium text-grey-700 mb-1.5">{t('contracts:formModal.fields.expiryDate')}</label>
               <input name="expiry_date" type="date" value={form.expiry_date} onChange={handleChange} className={inputClass} />
             </div>
           </div>
 
           {/* Payment Terms */}
           <div className="border-t border-grey-200 pt-4">
-            <p className="text-sm font-semibold text-grey-900 mb-3">Payment Terms</p>
+            <p className="text-sm font-semibold text-grey-900 mb-3">{t('contracts:formModal.paymentTerms')}</p>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-sm font-medium text-grey-700 mb-1.5">Payment Term (days)</label>
+                <label className="block text-sm font-medium text-grey-700 mb-1.5">{t('contracts:formModal.fields.paymentTermDays')}</label>
                 <input name="payment_term_days" type="number" min="0" value={form.payment_term_days} onChange={handleChange} className={inputClass} />
               </div>
               <div>
-                <label className="block text-sm font-medium text-grey-700 mb-1.5">Invoicing Frequency</label>
+                <label className="block text-sm font-medium text-grey-700 mb-1.5">{t('contracts:formModal.fields.invoicingFrequency')}</label>
                 <select name="invoicing_frequency" value={form.invoicing_frequency} onChange={handleChange} className={selectClass}>
                   {INVOICING_FREQUENCIES.map((f) => (
                     <option key={f} value={f}>{FREQ_LABELS[f]}</option>
@@ -113,7 +115,7 @@ export default function ContractFormModal({ contract, onClose, onSuccess }) {
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-grey-700 mb-1.5">Currency</label>
+                <label className="block text-sm font-medium text-grey-700 mb-1.5">{t('contracts:formModal.fields.currency')}</label>
                 <select name="currency" value={form.currency} onChange={handleChange} className={selectClass}>
                   {CURRENCIES.map((c) => (
                     <option key={c.code} value={c.code}>{c.label}</option>
@@ -121,18 +123,18 @@ export default function ContractFormModal({ contract, onClose, onSuccess }) {
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-grey-700 mb-1.5">Invoice Delivery</label>
-                <input name="invoice_delivery_method" value={form.invoice_delivery_method} onChange={handleChange} placeholder="e.g. EMAIL" className={inputClass} />
+                <label className="block text-sm font-medium text-grey-700 mb-1.5">{t('contracts:formModal.fields.invoiceDelivery')}</label>
+                <input name="invoice_delivery_method" value={form.invoice_delivery_method} onChange={handleChange} placeholder={t('contracts:formModal.fields.invoiceDeliveryPlaceholder')} className={inputClass} />
               </div>
             </div>
           </div>
 
           {/* Contamination */}
           <div className="border-t border-grey-200 pt-4">
-            <p className="text-sm font-semibold text-grey-900 mb-3">Contamination</p>
+            <p className="text-sm font-semibold text-grey-900 mb-3">{t('contracts:formModal.contamination')}</p>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-sm font-medium text-grey-700 mb-1.5">Tolerance (%)</label>
+                <label className="block text-sm font-medium text-grey-700 mb-1.5">{t('contracts:formModal.fields.tolerancePct')}</label>
                 <input name="contamination_tolerance_pct" type="number" step="0.1" min="0" max="100" value={form.contamination_tolerance_pct} onChange={handleChange} className={inputClass} />
               </div>
             </div>
@@ -140,10 +142,16 @@ export default function ContractFormModal({ contract, onClose, onSuccess }) {
 
           <div className="flex justify-end gap-3 pt-2">
             <button type="button" onClick={onClose}
-              className="h-9 px-4 bg-white text-grey-700 border border-grey-300 rounded-md text-sm font-semibold hover:bg-grey-50 transition-colors">Cancel</button>
+              className="h-9 px-4 bg-white text-grey-700 border border-grey-300 rounded-md text-sm font-semibold hover:bg-grey-50 transition-colors">
+              {t('contracts:formModal.buttons.cancel')}
+            </button>
             <button type="submit" disabled={submitting}
               className="h-9 px-4 bg-green-500 text-white rounded-md text-sm font-semibold hover:bg-green-700 disabled:opacity-50 transition-colors">
-              {submitting ? 'Saving...' : isEdit ? 'Update' : 'Create'}
+              {submitting
+                ? t('contracts:formModal.buttons.saving')
+                : isEdit
+                  ? t('contracts:formModal.buttons.update')
+                  : t('contracts:formModal.buttons.create')}
             </button>
           </div>
         </form>

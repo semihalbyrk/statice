@@ -1,46 +1,35 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Plus, Pencil, KeyRound, Search, X, Shield, Clock, Loader2 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { useTranslation } from 'react-i18next';
 import useAuthStore from '../../store/authStore';
 import { getUsers, createUser, updateUser, resetUserPassword, getUserActivity, toggleUserStatus } from '../../api/admin';
 import ClickableStatusBadge from '../../components/ui/ClickableStatusBadge';
 import RowActionMenu from '../../components/ui/RowActionMenu';
 
 const ROLES = ['GATE_OPERATOR', 'LOGISTICS_PLANNER', 'REPORTING_MANAGER', 'SORTING_EMPLOYEE', 'ADMIN', 'SALES', 'QC_INSPECTOR', 'LOGISTICS_COORDINATOR', 'FINANCE_USER', 'FINANCE_MANAGER', 'COMPLIANCE_OFFICER'];
-const ROLE_LABELS = {
-  GATE_OPERATOR: 'Gate Operator',
-  LOGISTICS_PLANNER: 'Logistics Planner',
-  REPORTING_MANAGER: 'Reporting Manager',
-  SORTING_EMPLOYEE: 'Sorting Employee',
-  ADMIN: 'Admin',
-  SALES: 'Sales',
-  QC_INSPECTOR: 'QC Inspector',
-  LOGISTICS_COORDINATOR: 'Logistics Coordinator',
-  FINANCE_USER: 'Finance User',
-  FINANCE_MANAGER: 'Finance Manager',
-  COMPLIANCE_OFFICER: 'Compliance Officer',
-};
 const PASSWORD_REGEX = /^(?=.*[A-Z])(?=.*\d).{8,}$/;
 
 const inputClass = 'w-full h-10 px-3.5 rounded-md border border-grey-300 text-sm text-grey-900 focus:border-green-500 focus:ring-[3px] focus:ring-green-500/15 outline-none transition-colors';
 const selectClass = `${inputClass} bg-white`;
 const labelClass = 'block text-sm font-medium text-grey-700 mb-1.5';
 
-function relativeTime(dateStr) {
-  if (!dateStr) return 'Never';
+function relativeTime(dateStr, t) {
+  if (!dateStr) return t('users.relativeTime.never');
   const diff = Date.now() - new Date(dateStr).getTime();
   const mins = Math.floor(diff / 60000);
-  if (mins < 1) return 'Just now';
-  if (mins < 60) return `${mins}m ago`;
+  if (mins < 1) return t('users.relativeTime.justNow');
+  if (mins < 60) return t('users.relativeTime.minutesAgo', { count: mins });
   const hours = Math.floor(mins / 60);
-  if (hours < 24) return `${hours}h ago`;
+  if (hours < 24) return t('users.relativeTime.hoursAgo', { count: hours });
   const days = Math.floor(hours / 24);
-  if (days < 30) return `${days}d ago`;
+  if (days < 30) return t('users.relativeTime.daysAgo', { count: days });
   return new Date(dateStr).toLocaleDateString();
 }
 
 // ---- Create User Modal ----
 function CreateUserModal({ onClose, onSuccess }) {
+  const { t } = useTranslation(['admin', 'common']);
   const [form, setForm] = useState({ full_name: '', email: '', password: '', confirm_password: '', role: 'GATE_OPERATOR' });
   const [submitting, setSubmitting] = useState(false);
 
@@ -51,20 +40,20 @@ function CreateUserModal({ onClose, onSuccess }) {
   async function handleSubmit(e) {
     e.preventDefault();
     if (form.password !== form.confirm_password) {
-      toast.error('Passwords do not match');
+      toast.error(t('users.passwordsMismatch'));
       return;
     }
     if (!PASSWORD_REGEX.test(form.password)) {
-      toast.error('Password must be at least 8 characters with one uppercase letter and one number');
+      toast.error(t('users.passwordRequirements'));
       return;
     }
     setSubmitting(true);
     try {
       await createUser({ full_name: form.full_name, email: form.email, password: form.password, role: form.role });
-      toast.success('User created');
+      toast.success(t('users.userCreated'));
       onSuccess();
     } catch (err) {
-      toast.error(err.response?.data?.error || 'Failed to create user');
+      toast.error(err.response?.data?.error || t('users.failedCreateUser'));
     } finally {
       setSubmitting(false);
     }
@@ -74,40 +63,40 @@ function CreateUserModal({ onClose, onSuccess }) {
     <div className="app-modal-overlay" onClick={onClose}>
       <div className="app-modal-panel max-w-md max-h-[90vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between px-5 py-3 border-b border-grey-200 shrink-0">
-          <h2 className="text-lg font-semibold text-grey-900">New User</h2>
+          <h2 className="text-lg font-semibold text-grey-900">{t('users.newUser')}</h2>
           <button onClick={onClose} className="text-grey-400 hover:text-grey-600"><X size={18} /></button>
         </div>
         <form onSubmit={handleSubmit} className="px-5 py-4 space-y-4 flex-1 overflow-y-auto">
           <div>
-            <label className={labelClass}>Full Name <span className="text-red-500">*</span></label>
+            <label className={labelClass}>{t('users.fullName')} <span className="text-red-500">*</span></label>
             <input name="full_name" value={form.full_name} onChange={handleChange} required minLength={2} maxLength={100} className={inputClass} />
           </div>
           <div>
-            <label className={labelClass}>Email <span className="text-red-500">*</span></label>
+            <label className={labelClass}>{t('users.email')} <span className="text-red-500">*</span></label>
             <input name="email" type="email" value={form.email} onChange={handleChange} required className={inputClass} />
           </div>
           <div>
-            <label className={labelClass}>Role <span className="text-red-500">*</span></label>
+            <label className={labelClass}>{t('users.role')} <span className="text-red-500">*</span></label>
             <select name="role" value={form.role} onChange={handleChange} className={selectClass}>
-              {ROLES.map((r) => <option key={r} value={r}>{ROLE_LABELS[r]}</option>)}
+              {ROLES.map((r) => <option key={r} value={r}>{t(`common:roles.${r}`)}</option>)}
             </select>
           </div>
           <div>
-            <label className={labelClass}>Password <span className="text-red-500">*</span></label>
+            <label className={labelClass}>{t('users.password')} <span className="text-red-500">*</span></label>
             <input name="password" type="password" value={form.password} onChange={handleChange} required className={inputClass} />
-            <p className="text-xs text-grey-400 mt-1">Min 8 characters, at least one uppercase letter and one number</p>
+            <p className="text-xs text-grey-400 mt-1">{t('users.passwordHint')}</p>
           </div>
           <div>
-            <label className={labelClass}>Confirm Password <span className="text-red-500">*</span></label>
+            <label className={labelClass}>{t('users.confirmPassword')} <span className="text-red-500">*</span></label>
             <input name="confirm_password" type="password" value={form.confirm_password} onChange={handleChange} required className={inputClass} />
             {form.confirm_password && form.password !== form.confirm_password && (
-              <p className="text-xs text-red-500 mt-1">Passwords do not match</p>
+              <p className="text-xs text-red-500 mt-1">{t('users.passwordsMismatch')}</p>
             )}
           </div>
           <div className="flex justify-end gap-3 pt-2">
-            <button type="button" onClick={onClose} className="h-9 px-4 bg-white text-grey-700 border border-grey-300 rounded-md text-sm font-semibold hover:bg-grey-50 transition-colors">Cancel</button>
+            <button type="button" onClick={onClose} className="h-9 px-4 bg-white text-grey-700 border border-grey-300 rounded-md text-sm font-semibold hover:bg-grey-50 transition-colors">{t('common:buttons.cancel')}</button>
             <button type="submit" disabled={submitting} className="h-9 px-4 bg-green-500 text-white rounded-md text-sm font-semibold hover:bg-green-700 disabled:opacity-50 transition-colors">
-              {submitting ? 'Creating...' : 'Create User'}
+              {submitting ? t('common:buttons.creating') : t('users.createUser')}
             </button>
           </div>
         </form>
@@ -118,6 +107,7 @@ function CreateUserModal({ onClose, onSuccess }) {
 
 // ---- Edit User Modal ----
 function EditUserModal({ user, currentUserId, onClose, onSuccess }) {
+  const { t } = useTranslation(['admin', 'common']);
   const isSelf = user.id === currentUserId;
   const [form, setForm] = useState({ full_name: user.full_name, role: user.role, is_active: user.is_active });
   const [submitting, setSubmitting] = useState(false);
@@ -132,10 +122,10 @@ function EditUserModal({ user, currentUserId, onClose, onSuccess }) {
     setSubmitting(true);
     try {
       await updateUser(user.id, form);
-      toast.success('User updated');
+      toast.success(t('users.userUpdated'));
       onSuccess();
     } catch (err) {
-      toast.error(err.response?.data?.error || 'Failed to update user');
+      toast.error(err.response?.data?.error || t('users.failedUpdateUser'));
     } finally {
       setSubmitting(false);
     }
@@ -145,35 +135,35 @@ function EditUserModal({ user, currentUserId, onClose, onSuccess }) {
     <div className="app-modal-overlay" onClick={onClose}>
       <div className="app-modal-panel max-w-md max-h-[90vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between px-5 py-3 border-b border-grey-200 shrink-0">
-          <h2 className="text-lg font-semibold text-grey-900">Edit User</h2>
+          <h2 className="text-lg font-semibold text-grey-900">{t('users.editUser')}</h2>
           <button onClick={onClose} className="text-grey-400 hover:text-grey-600"><X size={18} /></button>
         </div>
         <form onSubmit={handleSubmit} className="px-5 py-4 space-y-4 flex-1 overflow-y-auto">
           <div>
-            <label className={labelClass}>Email</label>
+            <label className={labelClass}>{t('users.email')}</label>
             <input value={user.email} disabled className={`${inputClass} bg-grey-50 text-grey-500 cursor-not-allowed`} />
           </div>
           <div>
-            <label className={labelClass}>Full Name</label>
+            <label className={labelClass}>{t('users.fullName')}</label>
             <input name="full_name" value={form.full_name} onChange={handleChange} required minLength={2} maxLength={100} className={inputClass} />
           </div>
           <div>
-            <label className={labelClass}>Role</label>
+            <label className={labelClass}>{t('users.role')}</label>
             <select name="role" value={form.role} onChange={handleChange} disabled={isSelf} className={`${selectClass} ${isSelf ? 'opacity-50 cursor-not-allowed' : ''}`}>
-              {ROLES.map((r) => <option key={r} value={r}>{ROLE_LABELS[r]}</option>)}
+              {ROLES.map((r) => <option key={r} value={r}>{t(`common:roles.${r}`)}</option>)}
             </select>
-            {isSelf && <p className="text-xs text-grey-400 mt-1">Cannot change your own role</p>}
+            {isSelf && <p className="text-xs text-grey-400 mt-1">{t('users.cannotChangeOwnRole')}</p>}
           </div>
           <div className="flex items-center gap-3">
             <input type="checkbox" name="is_active" checked={form.is_active} onChange={handleChange} disabled={isSelf}
               className="h-4 w-4 rounded border-grey-300 text-green-500 focus:ring-green-500" />
-            <label className="text-sm text-grey-700">Active</label>
-            {isSelf && <span className="text-xs text-grey-400">(Cannot deactivate yourself)</span>}
+            <label className="text-sm text-grey-700">{t('users.active')}</label>
+            {isSelf && <span className="text-xs text-grey-400">{t('users.cannotDeactivateSelf')}</span>}
           </div>
           <div className="flex justify-end gap-3 pt-2">
-            <button type="button" onClick={onClose} className="h-9 px-4 bg-white text-grey-700 border border-grey-300 rounded-md text-sm font-semibold hover:bg-grey-50 transition-colors">Cancel</button>
+            <button type="button" onClick={onClose} className="h-9 px-4 bg-white text-grey-700 border border-grey-300 rounded-md text-sm font-semibold hover:bg-grey-50 transition-colors">{t('common:buttons.cancel')}</button>
             <button type="submit" disabled={submitting} className="h-9 px-4 bg-green-500 text-white rounded-md text-sm font-semibold hover:bg-green-700 disabled:opacity-50 transition-colors">
-              {submitting ? 'Saving...' : 'Update'}
+              {submitting ? t('common:buttons.saving') : t('common:buttons.update')}
             </button>
           </div>
         </form>
@@ -184,26 +174,27 @@ function EditUserModal({ user, currentUserId, onClose, onSuccess }) {
 
 // ---- Reset Password Modal ----
 function ResetPasswordModal({ user, onClose, onSuccess }) {
+  const { t } = useTranslation(['admin', 'common']);
   const [form, setForm] = useState({ new_password: '', confirm_password: '' });
   const [submitting, setSubmitting] = useState(false);
 
   async function handleSubmit(e) {
     e.preventDefault();
     if (form.new_password !== form.confirm_password) {
-      toast.error('Passwords do not match');
+      toast.error(t('users.passwordsMismatch'));
       return;
     }
     if (!PASSWORD_REGEX.test(form.new_password)) {
-      toast.error('Password must be at least 8 characters with one uppercase letter and one number');
+      toast.error(t('users.passwordRequirements'));
       return;
     }
     setSubmitting(true);
     try {
       await resetUserPassword(user.id, { new_password: form.new_password });
-      toast.success('Password reset successfully');
+      toast.success(t('users.passwordResetSuccess'));
       onSuccess();
     } catch (err) {
-      toast.error(err.response?.data?.error || 'Failed to reset password');
+      toast.error(err.response?.data?.error || t('users.failedResetPassword'));
     } finally {
       setSubmitting(false);
     }
@@ -213,24 +204,24 @@ function ResetPasswordModal({ user, onClose, onSuccess }) {
     <div className="app-modal-overlay" onClick={onClose}>
       <div className="app-modal-panel max-w-sm max-h-[90vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between px-5 py-3 border-b border-grey-200 shrink-0">
-          <h2 className="text-lg font-semibold text-grey-900">Reset Password</h2>
+          <h2 className="text-lg font-semibold text-grey-900">{t('users.resetPassword')}</h2>
           <button onClick={onClose} className="text-grey-400 hover:text-grey-600"><X size={18} /></button>
         </div>
         <form onSubmit={handleSubmit} className="px-5 py-4 space-y-4 flex-1 overflow-y-auto">
-          <p className="text-sm text-grey-600">Reset password for <strong>{user.full_name}</strong></p>
+          <p className="text-sm text-grey-600" dangerouslySetInnerHTML={{ __html: t('users.resetPasswordFor', { name: user.full_name }) }} />
           <div>
-            <label className={labelClass}>New Password</label>
+            <label className={labelClass}>{t('users.newPassword')}</label>
             <input type="password" value={form.new_password} onChange={(e) => setForm((p) => ({ ...p, new_password: e.target.value }))} required className={inputClass} />
-            <p className="text-xs text-grey-400 mt-1">Min 8 characters, one uppercase, one number</p>
+            <p className="text-xs text-grey-400 mt-1">{t('users.passwordHintShort')}</p>
           </div>
           <div>
-            <label className={labelClass}>Confirm Password</label>
+            <label className={labelClass}>{t('users.confirmPassword')}</label>
             <input type="password" value={form.confirm_password} onChange={(e) => setForm((p) => ({ ...p, confirm_password: e.target.value }))} required className={inputClass} />
           </div>
           <div className="flex justify-end gap-3 pt-2">
-            <button type="button" onClick={onClose} className="h-9 px-4 bg-white text-grey-700 border border-grey-300 rounded-md text-sm font-semibold hover:bg-grey-50 transition-colors">Cancel</button>
+            <button type="button" onClick={onClose} className="h-9 px-4 bg-white text-grey-700 border border-grey-300 rounded-md text-sm font-semibold hover:bg-grey-50 transition-colors">{t('common:buttons.cancel')}</button>
             <button type="submit" disabled={submitting} className="h-9 px-4 bg-green-500 text-white rounded-md text-sm font-semibold hover:bg-green-700 disabled:opacity-50 transition-colors">
-              {submitting ? 'Resetting...' : 'Reset Password'}
+              {submitting ? t('users.resetting') : t('users.resetPassword')}
             </button>
           </div>
         </form>
@@ -241,6 +232,7 @@ function ResetPasswordModal({ user, onClose, onSuccess }) {
 
 // ---- Activity Drawer ----
 function ActivityDrawer({ user, onClose }) {
+  const { t } = useTranslation(['admin', 'common']);
   const [entries, setEntries] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -266,7 +258,7 @@ function ActivityDrawer({ user, onClose }) {
       <div className="relative w-full max-w-md bg-white shadow-xl h-full overflow-y-auto" onClick={(e) => e.stopPropagation()}>
         <div className="sticky top-0 bg-white px-5 py-3 border-b border-grey-200 flex items-center justify-between z-10">
           <div>
-            <h3 className="text-base font-semibold text-grey-900">Activity Log</h3>
+            <h3 className="text-base font-semibold text-grey-900">{t('users.activityLog')}</h3>
             <p className="text-xs text-grey-500">{user.full_name}</p>
           </div>
           <button onClick={onClose} className="text-grey-400 hover:text-grey-600"><X size={18} /></button>
@@ -274,10 +266,10 @@ function ActivityDrawer({ user, onClose }) {
         <div className="p-6">
           {loading ? (
             <div className="flex items-center justify-center py-12 text-grey-400">
-              <Loader2 size={20} className="animate-spin mr-2" /> Loading...
+              <Loader2 size={20} className="animate-spin mr-2" /> {t('common:buttons.loading')}
             </div>
           ) : entries.length === 0 ? (
-            <p className="text-sm text-grey-400 text-center py-12">No activity recorded</p>
+            <p className="text-sm text-grey-400 text-center py-12">{t('users.noActivity')}</p>
           ) : (
             <div className="space-y-4">
               {entries.map((e) => (
@@ -288,7 +280,7 @@ function ActivityDrawer({ user, onClose }) {
                   <div className="min-w-0">
                     <p className="text-sm text-grey-900 font-medium">{e.action}</p>
                     <p className="text-xs text-grey-500">{e.entity_type} &middot; {e.entity_id?.slice(0, 8)}</p>
-                    <p className="text-xs text-grey-400 mt-0.5">{relativeTime(e.timestamp)}</p>
+                    <p className="text-xs text-grey-400 mt-0.5">{relativeTime(e.timestamp, t)}</p>
                   </div>
                 </div>
               ))}
@@ -302,6 +294,7 @@ function ActivityDrawer({ user, onClose }) {
 
 // ---- Main Page ----
 export default function UsersPage() {
+  const { t } = useTranslation(['admin', 'common']);
   const currentUser = useAuthStore((s) => s.user);
   const [users, setUsers] = useState([]);
   const [total, setTotal] = useState(0);
@@ -325,11 +318,11 @@ export default function UsersPage() {
       setUsers(data.users);
       setTotal(data.total);
     } catch {
-      toast.error('Failed to load users');
+      toast.error(t('users.failedLoadUsers'));
     } finally {
       setLoading(false);
     }
-  }, [search, roleFilter, statusFilter, page]);
+  }, [search, roleFilter, statusFilter, page, t]);
 
   useEffect(() => {
     const timer = setTimeout(fetchData, 300);
@@ -347,10 +340,10 @@ export default function UsersPage() {
     const isActive = newStatus === 'ACTIVE';
     try {
       await toggleUserStatus(userId, isActive);
-      toast.success(isActive ? 'User activated' : 'User deactivated');
+      toast.success(isActive ? t('users.userActivated') : t('users.userDeactivated'));
       fetchData();
     } catch (err) {
-      toast.error(err.response?.data?.error || 'Failed to update status');
+      toast.error(err.response?.data?.error || t('users.failedUpdateStatus'));
     }
   }
 
@@ -360,12 +353,12 @@ export default function UsersPage() {
     <div>
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-xl font-semibold text-grey-900">User Management</h1>
-          <p className="text-sm text-grey-500 mt-0.5">{total} users total</p>
+          <h1 className="text-xl font-semibold text-grey-900">{t('users.title')}</h1>
+          <p className="text-sm text-grey-500 mt-0.5">{t('users.usersTotal', { count: total })}</p>
         </div>
         <button onClick={() => setShowCreate(true)}
           className="flex items-center gap-2 h-9 px-4 bg-green-500 text-white rounded-md text-sm font-semibold hover:bg-green-700 transition-colors">
-          <Plus size={16} /> Add User
+          <Plus size={16} /> {t('users.addUser')}
         </button>
       </div>
 
@@ -373,17 +366,17 @@ export default function UsersPage() {
       <div className="flex flex-wrap items-center gap-3 mb-4">
         <div className="relative flex-1 min-w-[200px] max-w-xs">
           <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-grey-400" />
-          <input type="text" placeholder="Search name or email..." value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+          <input type="text" placeholder={t('users.searchPlaceholder')} value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }}
             className="w-full h-10 pl-9 pr-3 rounded-md border border-grey-300 text-sm text-grey-900 placeholder:text-grey-400 focus:border-green-500 focus:ring-[3px] focus:ring-green-500/15 outline-none transition-colors" />
         </div>
         <select value={roleFilter} onChange={(e) => { setRoleFilter(e.target.value); setPage(1); }} className="app-list-filter-select">
-          <option value="">All Roles</option>
-          {ROLES.map((r) => <option key={r} value={r}>{ROLE_LABELS[r]}</option>)}
+          <option value="">{t('users.allRoles')}</option>
+          {ROLES.map((r) => <option key={r} value={r}>{t(`common:roles.${r}`)}</option>)}
         </select>
         <select value={statusFilter} onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }} className="app-list-filter-select">
-          <option value="">All statuses</option>
-          <option value="true">Active</option>
-          <option value="false">Inactive</option>
+          <option value="">{t('users.allStatuses')}</option>
+          <option value="true">{t('common:status.ACTIVE')}</option>
+          <option value="false">{t('common:status.INACTIVE')}</option>
         </select>
       </div>
 
@@ -392,19 +385,19 @@ export default function UsersPage() {
         <table className="w-full text-sm">
           <thead>
             <tr className="bg-grey-50 border-b border-grey-200">
-              <th className="text-left px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide">Full Name</th>
-              <th className="text-left px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide">Status</th>
-              <th className="text-left px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide">Email</th>
-              <th className="text-left px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide">Role</th>
-              <th className="text-left px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide">Last Login</th>
+              <th className="text-left px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide">{t('users.fullName')}</th>
+              <th className="text-left px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide">{t('common:table.status')}</th>
+              <th className="text-left px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide">{t('users.email')}</th>
+              <th className="text-left px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide">{t('users.role')}</th>
+              <th className="text-left px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide">{t('users.lastLogin')}</th>
               <th className="w-10 px-4 py-3"></th>
             </tr>
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={6} className="px-4 py-8 text-center text-grey-400">Loading...</td></tr>
+              <tr><td colSpan={6} className="px-4 py-8 text-center text-grey-400">{t('common:table.loading')}</td></tr>
             ) : users.length === 0 ? (
-              <tr><td colSpan={6} className="px-4 py-8 text-center text-grey-400">No users found</td></tr>
+              <tr><td colSpan={6} className="px-4 py-8 text-center text-grey-400">{t('users.noUsersFound')}</td></tr>
             ) : users.map((u) => (
               <tr key={u.id} className="border-b border-grey-100 hover:bg-grey-50 transition-colors">
                 <td className="px-4 py-3">
@@ -421,13 +414,13 @@ export default function UsersPage() {
                   />
                 </td>
                 <td className="px-4 py-3 text-grey-600">{u.email}</td>
-                <td className="px-4 py-3 text-grey-700">{ROLE_LABELS[u.role] || u.role}</td>
-                <td className="px-4 py-3 text-grey-500 text-xs">{relativeTime(u.last_login_at)}</td>
+                <td className="px-4 py-3 text-grey-700">{t(`common:roles.${u.role}`, { defaultValue: u.role })}</td>
+                <td className="px-4 py-3 text-grey-500 text-xs">{relativeTime(u.last_login_at, t)}</td>
                 <td className="px-4 py-3 text-right">
                   <RowActionMenu actions={[
-                    { label: 'Edit', icon: Pencil, onClick: () => setEditUser(u) },
-                    { label: 'Reset Password', icon: KeyRound, onClick: () => setResetUser(u) },
-                    { label: 'View Activity', icon: Clock, onClick: () => setActivityUser(u) },
+                    { label: t('common:buttons.edit'), icon: Pencil, onClick: () => setEditUser(u) },
+                    { label: t('users.resetPassword'), icon: KeyRound, onClick: () => setResetUser(u) },
+                    { label: t('users.viewActivity'), icon: Clock, onClick: () => setActivityUser(u) },
                   ]} />
                 </td>
               </tr>
@@ -439,12 +432,12 @@ export default function UsersPage() {
       {/* Pagination */}
       {totalPages > 1 && (
         <div className="flex items-center justify-between mt-4">
-          <p className="text-xs text-grey-500">Page {page} of {totalPages}</p>
+          <p className="text-xs text-grey-500">{t('pagination.pageOf', { page, total: totalPages })}</p>
           <div className="flex gap-2">
             <button disabled={page <= 1} onClick={() => setPage(page - 1)}
-              className="h-8 px-3 text-xs font-medium rounded-md border border-grey-300 text-grey-700 hover:bg-grey-50 disabled:opacity-50 disabled:cursor-not-allowed">Previous</button>
+              className="h-8 px-3 text-xs font-medium rounded-md border border-grey-300 text-grey-700 hover:bg-grey-50 disabled:opacity-50 disabled:cursor-not-allowed">{t('pagination.previous')}</button>
             <button disabled={page >= totalPages} onClick={() => setPage(page + 1)}
-              className="h-8 px-3 text-xs font-medium rounded-md border border-grey-300 text-grey-700 hover:bg-grey-50 disabled:opacity-50 disabled:cursor-not-allowed">Next</button>
+              className="h-8 px-3 text-xs font-medium rounded-md border border-grey-300 text-grey-700 hover:bg-grey-50 disabled:opacity-50 disabled:cursor-not-allowed">{t('pagination.next')}</button>
           </div>
         </div>
       )}

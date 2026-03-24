@@ -1,0 +1,23 @@
+{
+  "title": "Inkomend",
+  "searchPlaceholder": "Zoek op inkomende naam",
+  "allStatuses": "Alle statussen",
+  "table": {
+    "inboundName": "Inkomende Naam",
+    "status": "Status",
+    "linkedOrder": "Gekoppelde Bestelling",
+    "vehiclePlate": "Kenteken",
+    "carrier": "Transporteur",
+    "supplier": "Leverancier",
+    "wasteStream": "Afvalstroom",
+    "arrivedAt": "Aankomsttijd",
+    "parcels": "Pakketten",
+    "totalNetWeight": "Totaal Netto Gewicht"
+  },
+  "empty": "Geen inkomende gevonden",
+  "totalCount": "{{count}} totaal inkomende",
+  "toast": {
+    "statusUpdated": "Inkomende status bijgewerkt",
+    "statusUpdateFailed": "Kan status niet bijwerken"
+  }
+}

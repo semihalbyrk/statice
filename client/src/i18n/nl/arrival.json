@@ -1,0 +1,47 @@
+{
+  "title": "Aankomst Registratie",
+  "subtitle": "Scan of voer het kenteken in",
+  "description": "Het systeem koppelt het kenteken aan geplande orders",
+  "countryCode": "NL",
+  "platePlaceholder": "XX-999-XX",
+  "matchingOrders": "Overeenkomende Orders",
+  "candidates": "{{count}} kandidaat(en)",
+  "search": {
+    "searching": "Bestellingen zoeken..."
+  },
+  "match": {
+    "exactPlateToday": {
+      "title": "Exact Kenteken, Vandaag",
+      "description": "Kandidaten met hoogste betrouwbaarheid voor directe registratie."
+    },
+    "exactPlateNearby": {
+      "title": "Exact Kenteken, +/- 7 Dagen",
+      "description": "Zelfde kenteken gevonden op nabijgelegen planningsdatums. Controleer de orderdetails voordat u doorgaat."
+    },
+    "manualOverride": {
+      "title": "Handmatige Override Kandidaten",
+      "description": "Geen exacte kentekenovereenkomst vereist. Gebruik alleen na visuele/operatorbevestiging."
+    },
+    "noMatch": {
+      "message": "Geen orders komen overeen met kenteken \"{{plate}}\"",
+      "plateExactRequired": "Het kenteken moet exact overeenkomen met het kenteken op de order"
+    }
+  },
+  "actions": {
+    "registerArrival": "Aankomst Registreren",
+    "useManualOverride": "Handmatige Override Gebruiken",
+    "createAdHocOrder": "Ad-hoc Order Aanmaken",
+    "createAdHocOrderInstead": "Ad-hoc Order Aanmaken"
+  },
+  "fields": {
+    "carrier": "Vervoerder",
+    "supplier": "Leverancier",
+    "wasteStream": "Afvalstroom",
+    "parcelProgress": "Pakketvoortgang",
+    "partialDelivery": "Gedeeltelijke levering in uitvoering"
+  },
+  "toast": {
+    "inboundCreated": "Inkomend transport aangemaakt",
+    "inboundFailed": "Aanmaken inkomend transport mislukt"
+  }
+}

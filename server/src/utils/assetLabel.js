@@ -1,4 +1,5 @@
 const prisma = require('./prismaClient');
+const { generateSequentialId } = require('./sequentialId');
 
 /** Static tare weights (kg) per container type */
 const CONTAINER_TARE_WEIGHTS = {
@@ -11,28 +12,13 @@ const CONTAINER_TARE_WEIGHTS = {
 
 /**
  * Generate the next parcel label in format P-NNNNN (global sequential counter).
- * Short and universal for all parcel types.
  *
  * @param {import('@prisma/client').PrismaClient} [tx] - optional transaction client
  * @returns {Promise<string>} e.g. "P-00001"
  */
 async function generateAssetLabel(tx) {
   const client = tx || prisma;
-  const prefix = 'P-';
-
-  const lastAsset = await client.asset.findFirst({
-    where: { asset_label: { startsWith: prefix } },
-    orderBy: { asset_label: 'desc' },
-    select: { asset_label: true },
-  });
-
-  let nextSeq = 1;
-  if (lastAsset) {
-    const lastSeq = parseInt(lastAsset.asset_label.replace(prefix, ''), 10);
-    if (!isNaN(lastSeq)) nextSeq = lastSeq + 1;
-  }
-
-  return `${prefix}${String(nextSeq).padStart(5, '0')}`;
+  return generateSequentialId(client, 'asset', 'asset_label', 'P-');
 }
 
 /**
@@ -52,21 +38,7 @@ async function previewNextLabel() {
  */
 async function generateContainerLabel(tx) {
   const client = tx || prisma;
-  const prefix = 'CNT-';
-
-  const lastAsset = await client.asset.findFirst({
-    where: { container_label: { startsWith: prefix } },
-    orderBy: { container_label: 'desc' },
-    select: { container_label: true },
-  });
-
-  let nextSeq = 1;
-  if (lastAsset) {
-    const lastSeq = parseInt(lastAsset.container_label.replace(prefix, ''), 10);
-    if (!isNaN(lastSeq)) nextSeq = lastSeq + 1;
-  }
-
-  return `${prefix}${String(nextSeq).padStart(5, '0')}`;
+  return generateSequentialId(client, 'asset', 'container_label', 'CNT-');
 }
 
 /**

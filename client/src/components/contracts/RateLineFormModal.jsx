@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import toast from 'react-hot-toast';
+import { useTranslation } from 'react-i18next';
 import useMasterDataStore from '../../store/masterDataStore';
 import { addRateLine, updateRateLine } from '../../api/contracts';
 
@@ -11,6 +12,7 @@ const selectClass = `${inputClass} bg-white`;
 
 export default function RateLineFormModal({ contractId, rateLine, contractWasteStreamId, contractDates, currency, onClose, onSuccess }) {
   const isEdit = !!rateLine;
+  const { t } = useTranslation(['contracts', 'common']);
   const materials = useMasterDataStore((s) => s.materials);
   const currencySymbol = currency === 'USD' ? '$' : currency === 'GBP' ? '\u00A3' : '\u20AC';
 
@@ -58,7 +60,7 @@ export default function RateLineFormModal({ contractId, rateLine, contractWasteS
           contract_waste_stream_id: contractWasteStreamId || null,
           ...baseDates,
         });
-        toast.success('2 rate lines added (Weight + Quantity)');
+        toast.success(t('contracts:toast.rateLineAddedBoth'));
       } else {
         const payload = {
           material_id: form.material_id,
@@ -70,15 +72,15 @@ export default function RateLineFormModal({ contractId, rateLine, contractWasteS
         };
         if (isEdit) {
           await updateRateLine(rateLine.id, payload);
-          toast.success('Rate line updated (previous version preserved)');
+          toast.success(t('contracts:toast.rateLineUpdated'));
         } else {
           await addRateLine(contractId, payload);
-          toast.success('Rate line added');
+          toast.success(t('contracts:toast.rateLineAdded'));
         }
       }
       onSuccess();
     } catch (err) {
-      toast.error(err.response?.data?.error || 'Failed to save rate line');
+      toast.error(err.response?.data?.error || t('contracts:toast.rateLineSaveFailed'));
     } finally {
       setSubmitting(false);
     }
@@ -88,21 +90,21 @@ export default function RateLineFormModal({ contractId, rateLine, contractWasteS
     <div className="app-modal-overlay">
       <div className="app-modal-panel max-w-md">
         <div className="flex items-center justify-between px-5 py-3 border-b border-grey-200">
-          <h2 className="text-lg font-semibold text-grey-900">{isEdit ? 'Edit Rate Line' : 'Add Rate Line'}</h2>
+          <h2 className="text-lg font-semibold text-grey-900">{isEdit ? t('contracts:rateLineModal.editTitle') : t('contracts:rateLineModal.addTitle')}</h2>
           <button onClick={onClose} className="p-1 rounded-md hover:bg-grey-50 transition-colors text-grey-400">&times;</button>
         </div>
         <form onSubmit={handleSubmit} className="px-5 py-4 space-y-4">
           <div>
-            <label className="block text-sm font-medium text-grey-700 mb-1.5">Material <span className="text-red-500">*</span></label>
+            <label className="block text-sm font-medium text-grey-700 mb-1.5">{t('contracts:rateLineModal.fields.material')} <span className="text-red-500">*</span></label>
             <select name="material_id" value={form.material_id} onChange={handleChange} required className={selectClass}>
-              <option value="">Select material...</option>
+              <option value="">{t('contracts:rateLineModal.fields.selectMaterial')}</option>
               {materials.map((m) => (
                 <option key={m.id} value={m.id}>{m.name}</option>
               ))}
             </select>
           </div>
           <div>
-            <label className="block text-sm font-medium text-grey-700 mb-1.5">Pricing Model <span className="text-red-500">*</span></label>
+            <label className="block text-sm font-medium text-grey-700 mb-1.5">{t('contracts:rateLineModal.fields.pricingModel')} <span className="text-red-500">*</span></label>
             <select name="pricing_model" value={form.pricing_model} onChange={handleChange} required className={selectClass}
               disabled={isEdit}>
               {PRICING_MODELS.filter((p) => !isEdit || p !== 'WEIGHT_AND_QUANTITY').map((p) => (
@@ -113,38 +115,46 @@ export default function RateLineFormModal({ contractId, rateLine, contractWasteS
           {isCombo ? (
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-sm font-medium text-grey-700 mb-1.5">Weight Rate ({currencySymbol}) <span className="text-red-500">*</span></label>
+                <label className="block text-sm font-medium text-grey-700 mb-1.5">{t('contracts:rateLineModal.fields.weightRate', { symbol: currencySymbol })} <span className="text-red-500">*</span></label>
                 <input name="weight_rate" type="number" step="0.01" min="0" value={form.weight_rate} onChange={handleChange} required className={inputClass} />
               </div>
               <div>
-                <label className="block text-sm font-medium text-grey-700 mb-1.5">Quantity Rate ({currencySymbol}) <span className="text-red-500">*</span></label>
+                <label className="block text-sm font-medium text-grey-700 mb-1.5">{t('contracts:rateLineModal.fields.quantityRate', { symbol: currencySymbol })} <span className="text-red-500">*</span></label>
                 <input name="quantity_rate" type="number" step="0.01" min="0" value={form.quantity_rate} onChange={handleChange} required className={inputClass} />
               </div>
             </div>
           ) : (
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-sm font-medium text-grey-700 mb-1.5">Unit Rate ({currencySymbol}) <span className="text-red-500">*</span></label>
+                <label className="block text-sm font-medium text-grey-700 mb-1.5">{t('contracts:rateLineModal.fields.unitRate', { symbol: currencySymbol })} <span className="text-red-500">*</span></label>
                 <input name="unit_rate" type="number" step="0.01" min="0" value={form.unit_rate} onChange={handleChange} required className={inputClass} />
               </div>
               <div>
-                <label className="block text-sm font-medium text-grey-700 mb-1.5">BTW Rate (%)</label>
+                <label className="block text-sm font-medium text-grey-700 mb-1.5">{t('contracts:rateLineModal.fields.btwRate')}</label>
                 <input name="btw_rate" type="number" step="0.01" min="0" value={form.btw_rate} onChange={handleChange} className={inputClass} />
               </div>
             </div>
           )}
           {isCombo && (
             <div>
-              <label className="block text-sm font-medium text-grey-700 mb-1.5">BTW Rate (%)</label>
+              <label className="block text-sm font-medium text-grey-700 mb-1.5">{t('contracts:rateLineModal.fields.btwRate')}</label>
               <input name="btw_rate" type="number" step="0.01" min="0" value={form.btw_rate} onChange={handleChange} className={inputClass} />
             </div>
           )}
           <div className="flex justify-end gap-3 pt-2">
             <button type="button" onClick={onClose}
-              className="h-9 px-4 bg-white text-grey-700 border border-grey-300 rounded-md text-sm font-semibold hover:bg-grey-50 transition-colors">Cancel</button>
+              className="h-9 px-4 bg-white text-grey-700 border border-grey-300 rounded-md text-sm font-semibold hover:bg-grey-50 transition-colors">
+              {t('contracts:rateLineModal.buttons.cancel')}
+            </button>
             <button type="submit" disabled={submitting}
               className="h-9 px-4 bg-green-500 text-white rounded-md text-sm font-semibold hover:bg-green-700 disabled:opacity-50 transition-colors">
-              {submitting ? 'Saving...' : isEdit ? 'Update' : isCombo ? 'Add Both' : 'Add'}
+              {submitting
+                ? t('contracts:rateLineModal.buttons.saving')
+                : isEdit
+                  ? t('contracts:rateLineModal.buttons.update')
+                  : isCombo
+                    ? t('contracts:rateLineModal.buttons.addBoth')
+                    : t('contracts:rateLineModal.buttons.add')}
             </button>
           </div>
         </form>

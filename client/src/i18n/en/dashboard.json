@@ -1,0 +1,28 @@
+{
+  "welcome": "Welcome, {{name}}",
+  "roleMessage": "You are signed in as {{role}}.",
+  "stats": {
+    "todayArrivals": "Today's Arrivals",
+    "plannedOrders": "Planned Orders",
+    "inProgress": "In Progress",
+    "completedToday": "Completed Today",
+    "tomorrowOrders": "Tomorrow's Orders",
+    "activeInbounds": "Active Inbounds"
+  },
+  "todayArrivals": "Today's Arrivals",
+  "table": {
+    "vehiclePlate": "Vehicle Plate",
+    "carrier": "Carrier",
+    "supplier": "Supplier",
+    "orderNumber": "Order #",
+    "parcels": "Parcels",
+    "arrivedAt": "Arrived At"
+  },
+  "recentOrders": "Recent Orders",
+  "recentReports": "Recent Reports",
+  "empty": {
+    "noArrivals": "No arrivals recorded today",
+    "noOrders": "No orders yet",
+    "noReports": "No reports generated yet"
+  }
+}

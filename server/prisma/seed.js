@@ -325,11 +325,11 @@ async function main() {
   };
 
   const contractsData = [
-    { number: 'CTR-2026-001', supplier_id: 'supplier-stichting-open', carrier_id: 'carrier-van-happen', name: '2026 Stichting Open WEEE Agreement', effective: '2026-01-01', expiry: '2026-12-31', freq: 'MONTHLY', term: 30, tolerance: 5.0, asn: 'AFS-2026-001', rateFactor: 1.0, penalties: [feeSurcharge, feeFlat] },
-    { number: 'CTR-2026-002', supplier_id: 'supplier-techrecycle', carrier_id: 'carrier-renewi', name: '2026 TechRecycle WEEE Agreement', effective: '2026-01-01', expiry: '2026-12-31', freq: 'MONTHLY', term: 14, tolerance: 3.0, asn: 'AFS-2026-003', rateFactor: 0.95, penalties: [feeSurcharge] },
-    { number: 'CTR-2026-003', supplier_id: 'supplier-wecycle', carrier_id: 'carrier-suez', name: '2026 Wecycle WEEE Agreement', effective: '2026-01-01', expiry: '2026-12-31', freq: 'QUARTERLY', term: 30, tolerance: 5.0, asn: 'AFS-2026-004', rateFactor: 1.05, penalties: [feeSurcharge, feeFlat] },
-    { number: 'CTR-2026-004', supplier_id: 'supplier-coolrec', carrier_id: 'carrier-dejong', name: '2026 Coolrec WEEE Agreement', effective: '2026-03-01', expiry: '2027-02-28', freq: 'MONTHLY', term: 45, tolerance: 4.0, asn: 'AFS-2026-005', rateFactor: 0.90, penalties: [feeFlat] },
-    { number: 'CTR-2026-005', supplier_id: 'supplier-stichting-open', carrier_id: 'carrier-direct-dropoff', name: '2026 Stichting Open Ad-hoc Drops', effective: '2026-01-01', expiry: '2026-12-31', freq: 'PER_ORDER', term: 30, tolerance: 2.0, asn: 'AFS-2026-001', rateFactor: 1.10, penalties: [feeSurcharge] },
+    { number: 'CTR-00001', supplier_id: 'supplier-stichting-open', carrier_id: 'carrier-van-happen', name: '2026 Stichting Open WEEE Agreement', effective: '2026-01-01', expiry: '2026-12-31', freq: 'MONTHLY', term: 30, tolerance: 5.0, asn: 'AFS-2026-001', rateFactor: 1.0, penalties: [feeSurcharge, feeFlat] },
+    { number: 'CTR-00002', supplier_id: 'supplier-techrecycle', carrier_id: 'carrier-renewi', name: '2026 TechRecycle WEEE Agreement', effective: '2026-01-01', expiry: '2026-12-31', freq: 'MONTHLY', term: 14, tolerance: 3.0, asn: 'AFS-2026-003', rateFactor: 0.95, penalties: [feeSurcharge] },
+    { number: 'CTR-00003', supplier_id: 'supplier-wecycle', carrier_id: 'carrier-suez', name: '2026 Wecycle WEEE Agreement', effective: '2026-01-01', expiry: '2026-12-31', freq: 'QUARTERLY', term: 30, tolerance: 5.0, asn: 'AFS-2026-004', rateFactor: 1.05, penalties: [feeSurcharge, feeFlat] },
+    { number: 'CTR-00004', supplier_id: 'supplier-coolrec', carrier_id: 'carrier-dejong', name: '2026 Coolrec WEEE Agreement', effective: '2026-03-01', expiry: '2027-02-28', freq: 'MONTHLY', term: 45, tolerance: 4.0, asn: 'AFS-2026-005', rateFactor: 0.90, penalties: [feeFlat] },
+    { number: 'CTR-00005', supplier_id: 'supplier-stichting-open', carrier_id: 'carrier-direct-dropoff', name: '2026 Stichting Open Ad-hoc Drops', effective: '2026-01-01', expiry: '2026-12-31', freq: 'PER_ORDER', term: 30, tolerance: 2.0, asn: 'AFS-2026-001', rateFactor: 1.10, penalties: [feeSurcharge] },
   ];
 
   const materialIds = materialsData.map((m) => m.id);
@@ -433,13 +433,13 @@ async function main() {
 
   // ─── Inbound Orders (7) ───────────────────────────────────────────
   const ordersData = [
-    { id: 'seed-order-001', order_number: 'ORD-2026-0010', supplier_id: 'supplier-stichting-open', carrier_id: 'carrier-van-happen', planned_date: '2026-03-10', expected_skip_count: 2, status: 'COMPLETED', vehicle_plate: 'NL-VH-142', afvalstroomnummer: 'AFS-2026-001', received_asset_count: 2 },
-    { id: 'seed-order-002', order_number: 'ORD-2026-0011', supplier_id: 'supplier-techrecycle', carrier_id: 'carrier-renewi', planned_date: '2026-03-12', expected_skip_count: 1, status: 'COMPLETED', vehicle_plate: 'NL-RN-308', afvalstroomnummer: 'AFS-2026-003', received_asset_count: 1 },
-    { id: 'seed-order-003', order_number: 'ORD-2026-0012', supplier_id: 'supplier-wecycle', carrier_id: 'carrier-suez', planned_date: '2026-03-14', expected_skip_count: 3, status: 'COMPLETED', vehicle_plate: 'NL-SZ-517', afvalstroomnummer: 'AFS-2026-004', received_asset_count: 3 },
-    { id: 'seed-order-004', order_number: 'ORD-2026-0013', supplier_id: 'supplier-coolrec', carrier_id: 'carrier-dejong', planned_date: '2026-03-17', expected_skip_count: 1, status: 'COMPLETED', vehicle_plate: 'NL-DJ-224', afvalstroomnummer: 'AFS-2026-005', received_asset_count: 1 },
-    { id: 'seed-order-005', order_number: 'ORD-2026-0014', supplier_id: 'supplier-stichting-open', carrier_id: 'carrier-direct-dropoff', planned_date: '2026-03-20', expected_skip_count: 1, status: 'IN_PROGRESS', vehicle_plate: 'NL-DD-099', afvalstroomnummer: 'AFS-2026-001', received_asset_count: 1 },
-    { id: 'seed-order-006', order_number: 'ORD-2026-0015', supplier_id: 'supplier-techrecycle', carrier_id: 'carrier-renewi', planned_date: '2026-03-22', expected_skip_count: 1, status: 'ARRIVED', vehicle_plate: 'NL-RN-308', afvalstroomnummer: 'AFS-2026-003', received_asset_count: 1 },
-    { id: 'seed-order-007', order_number: 'ORD-2026-0016', supplier_id: 'supplier-wecycle', carrier_id: 'carrier-suez', planned_date: '2026-03-25', expected_skip_count: 2, status: 'PLANNED', vehicle_plate: 'NL-SZ-517', afvalstroomnummer: 'AFS-2026-004', received_asset_count: 0 },
+    { id: 'seed-order-001', order_number: 'ORD-00001', supplier_id: 'supplier-stichting-open', carrier_id: 'carrier-van-happen', planned_date: '2026-03-10', expected_skip_count: 2, status: 'COMPLETED', vehicle_plate: 'NL-VH-142', afvalstroomnummer: 'AFS-2026-001', received_asset_count: 2 },
+    { id: 'seed-order-002', order_number: 'ORD-00002', supplier_id: 'supplier-techrecycle', carrier_id: 'carrier-renewi', planned_date: '2026-03-12', expected_skip_count: 1, status: 'COMPLETED', vehicle_plate: 'NL-RN-308', afvalstroomnummer: 'AFS-2026-003', received_asset_count: 1 },
+    { id: 'seed-order-003', order_number: 'ORD-00003', supplier_id: 'supplier-wecycle', carrier_id: 'carrier-suez', planned_date: '2026-03-14', expected_skip_count: 3, status: 'COMPLETED', vehicle_plate: 'NL-SZ-517', afvalstroomnummer: 'AFS-2026-004', received_asset_count: 3 },
+    { id: 'seed-order-004', order_number: 'ORD-00004', supplier_id: 'supplier-coolrec', carrier_id: 'carrier-dejong', planned_date: '2026-03-17', expected_skip_count: 1, status: 'COMPLETED', vehicle_plate: 'NL-DJ-224', afvalstroomnummer: 'AFS-2026-005', received_asset_count: 1 },
+    { id: 'seed-order-005', order_number: 'ORD-00005', supplier_id: 'supplier-stichting-open', carrier_id: 'carrier-direct-dropoff', planned_date: '2026-03-20', expected_skip_count: 1, status: 'IN_PROGRESS', vehicle_plate: 'NL-DD-099', afvalstroomnummer: 'AFS-2026-001', received_asset_count: 1 },
+    { id: 'seed-order-006', order_number: 'ORD-00006', supplier_id: 'supplier-techrecycle', carrier_id: 'carrier-renewi', planned_date: '2026-03-22', expected_skip_count: 1, status: 'ARRIVED', vehicle_plate: 'NL-RN-308', afvalstroomnummer: 'AFS-2026-003', received_asset_count: 1 },
+    { id: 'seed-order-007', order_number: 'ORD-00007', supplier_id: 'supplier-wecycle', carrier_id: 'carrier-suez', planned_date: '2026-03-25', expected_skip_count: 2, status: 'PLANNED', vehicle_plate: 'NL-SZ-517', afvalstroomnummer: 'AFS-2026-004', received_asset_count: 0 },
   ];
 
   for (const o of ordersData) {
@@ -513,12 +513,12 @@ async function main() {
 
   // ─── Inbounds (for orders 1-6) ────────────────────────────────────
   const inboundsData = [
-    { id: 'seed-inbound-001', inbound_number: 'INB-2026-0010', order_id: 'seed-order-001', vehicle_id: 'seed-vehicle-vh-001', status: 'SORTED', arrived_at: '2026-03-10T08:10:00Z', gross_weight_kg: 5400, tare_weight_kg: 3300, net_weight_kg: 2100 },
-    { id: 'seed-inbound-002', inbound_number: 'INB-2026-0011', order_id: 'seed-order-002', vehicle_id: 'seed-vehicle-rn-001', status: 'SORTED', arrived_at: '2026-03-12T08:55:00Z', gross_weight_kg: 3270, tare_weight_kg: 2500, net_weight_kg: 770 },
-    { id: 'seed-inbound-003', inbound_number: 'INB-2026-0012', order_id: 'seed-order-003', vehicle_id: 'seed-vehicle-sz-001', status: 'SORTED', arrived_at: '2026-03-14T07:25:00Z', gross_weight_kg: 6720, tare_weight_kg: 5000, net_weight_kg: 1720 },
-    { id: 'seed-inbound-004', inbound_number: 'INB-2026-0013', order_id: 'seed-order-004', vehicle_id: 'seed-vehicle-dj-001', status: 'SORTED', arrived_at: '2026-03-17T08:40:00Z', gross_weight_kg: 4580, tare_weight_kg: 3500, net_weight_kg: 1080 },
-    { id: 'seed-inbound-005', inbound_number: 'INB-2026-0014', order_id: 'seed-order-005', vehicle_id: 'seed-vehicle-dd-001', status: 'READY_FOR_SORTING', arrived_at: '2026-03-20T09:25:00Z', gross_weight_kg: 2950, tare_weight_kg: 2500, net_weight_kg: 450 },
-    { id: 'seed-inbound-006', inbound_number: 'INB-2026-0015', order_id: 'seed-order-006', vehicle_id: 'seed-vehicle-rn-001', status: 'ARRIVED', arrived_at: '2026-03-22T09:55:00Z', gross_weight_kg: 3100, tare_weight_kg: null, net_weight_kg: null },
+    { id: 'seed-inbound-001', inbound_number: 'INB-00001', order_id: 'seed-order-001', vehicle_id: 'seed-vehicle-vh-001', status: 'SORTED', arrived_at: '2026-03-10T08:10:00Z', gross_weight_kg: 5400, tare_weight_kg: 3300, net_weight_kg: 2100 },
+    { id: 'seed-inbound-002', inbound_number: 'INB-00002', order_id: 'seed-order-002', vehicle_id: 'seed-vehicle-rn-001', status: 'SORTED', arrived_at: '2026-03-12T08:55:00Z', gross_weight_kg: 3270, tare_weight_kg: 2500, net_weight_kg: 770 },
+    { id: 'seed-inbound-003', inbound_number: 'INB-00003', order_id: 'seed-order-003', vehicle_id: 'seed-vehicle-sz-001', status: 'SORTED', arrived_at: '2026-03-14T07:25:00Z', gross_weight_kg: 6720, tare_weight_kg: 5000, net_weight_kg: 1720 },
+    { id: 'seed-inbound-004', inbound_number: 'INB-00004', order_id: 'seed-order-004', vehicle_id: 'seed-vehicle-dj-001', status: 'SORTED', arrived_at: '2026-03-17T08:40:00Z', gross_weight_kg: 4580, tare_weight_kg: 3500, net_weight_kg: 1080 },
+    { id: 'seed-inbound-005', inbound_number: 'INB-00005', order_id: 'seed-order-005', vehicle_id: 'seed-vehicle-dd-001', status: 'READY_FOR_SORTING', arrived_at: '2026-03-20T09:25:00Z', gross_weight_kg: 2950, tare_weight_kg: 2500, net_weight_kg: 450 },
+    { id: 'seed-inbound-006', inbound_number: 'INB-00006', order_id: 'seed-order-006', vehicle_id: 'seed-vehicle-rn-001', status: 'ARRIVED', arrived_at: '2026-03-22T09:55:00Z', gross_weight_kg: 3100, tare_weight_kg: null, net_weight_kg: null },
   ];
 
   for (const ib of inboundsData) {
@@ -592,20 +592,20 @@ async function main() {
   // ─── Assets (containers/parcels) ──────────────────────────────────
   const assetsData = [
     // Order 1: 2 assets, net 2100 total
-    { id: 'seed-asset-001-a', asset_label: 'AST-2026-001A', inbound_id: 'seed-inbound-001', container_type: 'OPEN_TOP', sequence: 1, gross_weighing_id: 'seed-iw-001-g', tare_weighing_id: 'seed-iw-001-t', net_weight_kg: 1200, gross_weight_kg: 3100, tare_weight_kg: 1900 },
-    { id: 'seed-asset-001-b', asset_label: 'AST-2026-001B', inbound_id: 'seed-inbound-001', container_type: 'OPEN_TOP', sequence: 2, gross_weighing_id: 'seed-iw-001-g', tare_weighing_id: 'seed-iw-001-t', net_weight_kg: 900, gross_weight_kg: 2300, tare_weight_kg: 1400 },
+    { id: 'seed-asset-001-a', asset_label: 'P-00001', inbound_id: 'seed-inbound-001', container_type: 'OPEN_TOP', sequence: 1, gross_weighing_id: 'seed-iw-001-g', tare_weighing_id: 'seed-iw-001-t', net_weight_kg: 1200, gross_weight_kg: 3100, tare_weight_kg: 1900 },
+    { id: 'seed-asset-001-b', asset_label: 'P-00002', inbound_id: 'seed-inbound-001', container_type: 'OPEN_TOP', sequence: 2, gross_weighing_id: 'seed-iw-001-g', tare_weighing_id: 'seed-iw-001-t', net_weight_kg: 900, gross_weight_kg: 2300, tare_weight_kg: 1400 },
     // Order 2: 1 asset, net 770
-    { id: 'seed-asset-002-a', asset_label: 'AST-2026-002A', inbound_id: 'seed-inbound-002', container_type: 'GITTERBOX', sequence: 1, gross_weighing_id: 'seed-iw-002-g', tare_weighing_id: 'seed-iw-002-t', net_weight_kg: 770, gross_weight_kg: 3270, tare_weight_kg: 2500 },
+    { id: 'seed-asset-002-a', asset_label: 'P-00003', inbound_id: 'seed-inbound-002', container_type: 'GITTERBOX', sequence: 1, gross_weighing_id: 'seed-iw-002-g', tare_weighing_id: 'seed-iw-002-t', net_weight_kg: 770, gross_weight_kg: 3270, tare_weight_kg: 2500 },
     // Order 3: 3 assets, net 1720
-    { id: 'seed-asset-003-a', asset_label: 'AST-2026-003A', inbound_id: 'seed-inbound-003', container_type: 'CLOSED_TOP', sequence: 1, gross_weighing_id: 'seed-iw-003-g', tare_weighing_id: 'seed-iw-003-t', net_weight_kg: 850, gross_weight_kg: 2800, tare_weight_kg: 1950 },
-    { id: 'seed-asset-003-b', asset_label: 'AST-2026-003B', inbound_id: 'seed-inbound-003', container_type: 'GITTERBOX', sequence: 2, gross_weighing_id: 'seed-iw-003-g', tare_weighing_id: 'seed-iw-003-t', net_weight_kg: 350, gross_weight_kg: 1920, tare_weight_kg: 1570 },
-    { id: 'seed-asset-003-c', asset_label: 'AST-2026-003C', inbound_id: 'seed-inbound-003', container_type: 'PALLET', sequence: 3, gross_weighing_id: 'seed-iw-003-g', tare_weighing_id: 'seed-iw-003-t', net_weight_kg: 520, gross_weight_kg: 2000, tare_weight_kg: 1480 },
+    { id: 'seed-asset-003-a', asset_label: 'P-00004', inbound_id: 'seed-inbound-003', container_type: 'CLOSED_TOP', sequence: 1, gross_weighing_id: 'seed-iw-003-g', tare_weighing_id: 'seed-iw-003-t', net_weight_kg: 850, gross_weight_kg: 2800, tare_weight_kg: 1950 },
+    { id: 'seed-asset-003-b', asset_label: 'P-00005', inbound_id: 'seed-inbound-003', container_type: 'GITTERBOX', sequence: 2, gross_weighing_id: 'seed-iw-003-g', tare_weighing_id: 'seed-iw-003-t', net_weight_kg: 350, gross_weight_kg: 1920, tare_weight_kg: 1570 },
+    { id: 'seed-asset-003-c', asset_label: 'P-00006', inbound_id: 'seed-inbound-003', container_type: 'PALLET', sequence: 3, gross_weighing_id: 'seed-iw-003-g', tare_weighing_id: 'seed-iw-003-t', net_weight_kg: 520, gross_weight_kg: 2000, tare_weight_kg: 1480 },
     // Order 4: 1 asset, net 1080
-    { id: 'seed-asset-004-a', asset_label: 'AST-2026-004A', inbound_id: 'seed-inbound-004', container_type: 'OPEN_TOP', sequence: 1, gross_weighing_id: 'seed-iw-004-g', tare_weighing_id: 'seed-iw-004-t', net_weight_kg: 1080, gross_weight_kg: 4580, tare_weight_kg: 3500 },
+    { id: 'seed-asset-004-a', asset_label: 'P-00007', inbound_id: 'seed-inbound-004', container_type: 'OPEN_TOP', sequence: 1, gross_weighing_id: 'seed-iw-004-g', tare_weighing_id: 'seed-iw-004-t', net_weight_kg: 1080, gross_weight_kg: 4580, tare_weight_kg: 3500 },
     // Order 5: 1 asset, net 450
-    { id: 'seed-asset-005-a', asset_label: 'AST-2026-005A', inbound_id: 'seed-inbound-005', container_type: 'PALLET', sequence: 1, gross_weighing_id: 'seed-iw-005-g', tare_weighing_id: 'seed-iw-005-t', net_weight_kg: 450, gross_weight_kg: 2950, tare_weight_kg: 2500 },
+    { id: 'seed-asset-005-a', asset_label: 'P-00008', inbound_id: 'seed-inbound-005', container_type: 'PALLET', sequence: 1, gross_weighing_id: 'seed-iw-005-g', tare_weighing_id: 'seed-iw-005-t', net_weight_kg: 450, gross_weight_kg: 2950, tare_weight_kg: 2500 },
     // Order 6: 1 asset, no tare yet
-    { id: 'seed-asset-006-a', asset_label: 'AST-2026-006A', inbound_id: 'seed-inbound-006', container_type: 'GITTERBOX', sequence: 1, gross_weighing_id: 'seed-iw-006-g', tare_weighing_id: null, net_weight_kg: null, gross_weight_kg: 3100, tare_weight_kg: null },
+    { id: 'seed-asset-006-a', asset_label: 'P-00009', inbound_id: 'seed-inbound-006', container_type: 'GITTERBOX', sequence: 1, gross_weighing_id: 'seed-iw-006-g', tare_weighing_id: null, net_weight_kg: null, gross_weight_kg: 3100, tare_weight_kg: null },
   ];
 
   for (const a of assetsData) {

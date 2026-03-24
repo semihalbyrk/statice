@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { ExternalLink, Loader2, MoreVertical, Pencil } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { useTranslation } from 'react-i18next';
 import useOrdersStore from '../../store/ordersStore';
 import useAuthStore from '../../store/authStore';
 import ClickableStatusBadge from '../../components/ui/ClickableStatusBadge';
@@ -32,6 +33,7 @@ function formatInboundTimestamp(timestamp) {
 export default function OrderDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { t } = useTranslation(['orders', 'common']);
   const user = useAuthStore((state) => state.user);
   const { currentOrder: order, loading, fetchOrder } = useOrdersStore();
   const [showEdit, setShowEdit] = useState(false);
@@ -54,7 +56,7 @@ export default function OrderDetailPage() {
       toast.success(`Order ${ACTION_LABELS[newStatus]?.toLowerCase() || 'updated'}`);
       fetchOrder(id);
     } catch (err) {
-      toast.error(err.response?.data?.error || 'Failed to update status');
+      toast.error(err.response?.data?.error || t('orders:toast.statusUpdateFailed'));
     } finally {
       setTransitioning(false);
     }
@@ -63,12 +65,12 @@ export default function OrderDetailPage() {
   async function handleIncident() {
     try {
       await setOrderIncident(order.id, { incident_category: incidentCategory, incident_notes: incidentNotes });
-      toast.success('Incident reported');
+      toast.success(t('orders:toast.incidentReported'));
       setIncidentCategory('');
       setIncidentNotes('');
       fetchOrder(id);
     } catch (err) {
-      toast.error(err.response?.data?.error || 'Failed to report incident');
+      toast.error(err.response?.data?.error || t('orders:toast.incidentFailed'));
     }
   }
 
@@ -82,7 +84,7 @@ export default function OrderDetailPage() {
 
   return (
     <div>
-      <Breadcrumb items={[{ label: 'Orders', to: '/orders' }, { label: order.order_number }]} />
+      <Breadcrumb items={[{ label: t('orders:title'), to: '/orders' }, { label: order.order_number }]} />
 
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
@@ -95,7 +97,7 @@ export default function OrderDetailPage() {
           />
           {order.is_adhoc && (
             <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border bg-orange-50 text-orange-700 border-orange-300">
-              Ad-hoc
+              {t('orders:detail.adHoc')}
             </span>
           )}
         </div>
@@ -105,7 +107,7 @@ export default function OrderDetailPage() {
               onClick={() => setShowActions((v) => !v)}
               className="h-9 px-3 bg-white text-grey-700 border border-grey-300 rounded-md text-sm font-semibold hover:bg-grey-50 transition-colors inline-flex items-center gap-1.5"
             >
-              Actions <MoreVertical size={14} />
+              {t('orders:detail.actions')} <MoreVertical size={14} />
             </button>
             {showActions && (
               <div className="absolute right-0 top-full mt-1 z-10 bg-white border border-grey-200 rounded-md shadow-md py-1 min-w-[140px]">
@@ -113,7 +115,7 @@ export default function OrderDetailPage() {
                   onClick={() => { setShowActions(false); setShowEdit(true); }}
                   className="w-full text-left px-3 py-2 text-sm text-grey-700 hover:bg-grey-50 flex items-center gap-2"
                 >
-                  <Pencil size={14} /> Edit Order
+                  <Pencil size={14} /> {t('orders:detail.editOrder')}
                 </button>
               </div>
             )}
@@ -124,18 +126,18 @@ export default function OrderDetailPage() {
       <div className="bg-white rounded-lg border border-grey-200 shadow-sm p-4 mb-6">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-3 gap-x-8">
           <div className="min-w-0">
-            <span className="text-xs font-medium text-grey-500 uppercase tracking-wide">Carrier</span>
+            <span className="text-xs font-medium text-grey-500 uppercase tracking-wide">{t('orders:detail.fields.carrier')}</span>
             <p className="mt-0.5 break-words text-sm font-medium text-grey-900">{order.carrier?.name}</p>
           </div>
           <div className="min-w-0">
-            <span className="text-xs font-medium text-grey-500 uppercase tracking-wide">Supplier</span>
+            <span className="text-xs font-medium text-grey-500 uppercase tracking-wide">{t('orders:detail.fields.supplier')}</span>
             <div className="mt-0.5 flex items-center gap-1.5">
               <p className="break-words text-sm font-medium text-grey-900">{order.supplier?.name}</p>
               <SupplierTypeBadge type={order.supplier?.supplier_type} />
             </div>
           </div>
           <div className="min-w-0">
-            <span className="text-xs font-medium text-grey-500 uppercase tracking-wide">Waste Streams</span>
+            <span className="text-xs font-medium text-grey-500 uppercase tracking-wide">{t('orders:detail.fields.wasteStreams')}</span>
             {order.waste_streams?.length > 0 ? (
               <div className="mt-0.5 space-y-1">
                 {order.waste_streams.map((ows) => (
@@ -154,21 +156,21 @@ export default function OrderDetailPage() {
             )}
           </div>
           <div className="min-w-0">
-            <span className="text-xs font-medium text-grey-500 uppercase tracking-wide">Planned Date</span>
+            <span className="text-xs font-medium text-grey-500 uppercase tracking-wide">{t('orders:detail.fields.plannedDate')}</span>
             <p className="text-sm font-medium text-grey-900 mt-0.5">
               {format(new Date(order.planned_date), 'dd MMMM yyyy')}
             </p>
           </div>
           <div className="min-w-0">
-            <span className="text-xs font-medium text-grey-500 uppercase tracking-wide">Expected Parcels</span>
+            <span className="text-xs font-medium text-grey-500 uppercase tracking-wide">{t('orders:detail.fields.expectedParcels')}</span>
             <p className="text-sm font-medium text-grey-900 mt-0.5">{order.expected_skip_count}</p>
           </div>
           <div className="min-w-0">
-            <span className="text-xs font-medium text-grey-500 uppercase tracking-wide">Created By</span>
+            <span className="text-xs font-medium text-grey-500 uppercase tracking-wide">{t('orders:detail.fields.createdBy')}</span>
             <p className="mt-0.5 break-words text-sm font-medium text-grey-900">{order.created_by_user?.full_name}</p>
           </div>
           <div className="min-w-0">
-            <span className="text-xs font-medium text-grey-500 uppercase tracking-wide">Linked Contract</span>
+            <span className="text-xs font-medium text-grey-500 uppercase tracking-wide">{t('orders:detail.fields.linkedContract')}</span>
             <div className="mt-0.5">
               {order.linked_contract ? (
                 <Link to={`/contracts/${order.linked_contract.id}`} className="text-sm font-medium text-green-700 hover:underline">
@@ -181,49 +183,49 @@ export default function OrderDetailPage() {
           </div>
           {order.vehicle_plate && (
             <div className="min-w-0">
-              <span className="text-xs font-medium text-grey-500 uppercase tracking-wide">Vehicle Plate</span>
+              <span className="text-xs font-medium text-grey-500 uppercase tracking-wide">{t('orders:detail.fields.vehiclePlate')}</span>
               <p className="mt-0.5 break-all text-sm font-medium font-mono text-grey-900">{order.vehicle_plate}</p>
             </div>
           )}
           {order.afvalstroomnummer && (
             <div className="min-w-0">
-              <span className="text-xs font-medium text-grey-500 uppercase tracking-wide">Afvalstroomnummer</span>
+              <span className="text-xs font-medium text-grey-500 uppercase tracking-wide">{t('orders:detail.fields.afvalstroomnummer')}</span>
               <p className="mt-0.5 break-words text-sm font-medium text-grey-900">{order.afvalstroomnummer}</p>
             </div>
           )}
           {order.notes && (
             <div className="min-w-0 sm:col-span-2">
-              <span className="text-xs font-medium text-grey-500 uppercase tracking-wide">Notes</span>
+              <span className="text-xs font-medium text-grey-500 uppercase tracking-wide">{t('orders:detail.fields.notes')}</span>
               <p className="mt-0.5 break-words text-sm text-grey-700">{order.notes}</p>
             </div>
           )}
           {order.client_reference && (
             <div className="min-w-0">
-              <span className="text-xs font-medium text-grey-500 uppercase tracking-wide">Client Reference</span>
+              <span className="text-xs font-medium text-grey-500 uppercase tracking-wide">{t('orders:detail.fields.clientReference')}</span>
               <p className="mt-0.5 break-words text-sm font-medium text-grey-900">{order.client_reference}</p>
             </div>
           )}
           {order.adhoc_person_name && (
             <div className="min-w-0">
-              <span className="text-xs font-medium text-grey-500 uppercase tracking-wide">Contact Person</span>
+              <span className="text-xs font-medium text-grey-500 uppercase tracking-wide">{t('orders:detail.fields.contactPerson')}</span>
               <p className="mt-0.5 break-words text-sm font-medium text-grey-900">{order.adhoc_person_name}</p>
             </div>
           )}
           {order.adhoc_id_reference && (
             <div className="min-w-0">
-              <span className="text-xs font-medium text-grey-500 uppercase tracking-wide">ID Reference</span>
+              <span className="text-xs font-medium text-grey-500 uppercase tracking-wide">{t('orders:detail.fields.idReference')}</span>
               <p className="mt-0.5 break-words text-sm font-medium text-grey-900">{order.adhoc_id_reference}</p>
             </div>
           )}
           {order.is_lzv && (
             <div className="min-w-0">
-              <span className="text-xs font-medium text-grey-500 uppercase tracking-wide">Vehicle Type</span>
+              <span className="text-xs font-medium text-grey-500 uppercase tracking-wide">{t('orders:detail.fields.vehicleType')}</span>
               <p className="mt-0.5 text-sm font-medium text-grey-900">LZV</p>
             </div>
           )}
           {order.incident_category && (
             <div className="min-w-0 sm:col-span-2">
-              <span className="text-xs font-medium text-grey-500 uppercase tracking-wide">Incident</span>
+              <span className="text-xs font-medium text-grey-500 uppercase tracking-wide">{t('orders:detail.fields.incident')}</span>
               <p className="mt-0.5 text-sm font-medium text-red-600">{order.incident_category.replace(/_/g, ' ')}</p>
               {order.incident_notes && (
                 <p className="mt-0.5 break-words text-sm text-grey-700">{order.incident_notes}</p>
@@ -235,22 +237,22 @@ export default function OrderDetailPage() {
         {/* Incident Section */}
         {!['COMPLETED', 'INVOICED'].includes(order.status) && (
           <div className="mt-4 pt-4 border-t">
-            <h4 className="text-sm font-medium text-gray-700 mb-2">Report Incident</h4>
+            <h4 className="text-sm font-medium text-gray-700 mb-2">{t('orders:detail.incident.title')}</h4>
             <div className="flex gap-2">
               <select
                 value={incidentCategory}
                 onChange={e => setIncidentCategory(e.target.value)}
                 className="h-10 px-3.5 rounded-md border border-grey-300 text-sm text-grey-900 bg-white focus:border-green-500 focus:ring-[3px] focus:ring-green-500/15 outline-none transition-colors"
               >
-                <option value="">Select incident type...</option>
-                <option value="DAMAGE">Damage</option>
-                <option value="DISPUTE">Dispute</option>
-                <option value="SPECIAL_HANDLING">Special Handling</option>
-                <option value="DRIVER_INSTRUCTION">Driver Instruction</option>
+                <option value="">{t('orders:detail.incident.selectType')}</option>
+                <option value="DAMAGE">{t('common:incidentTypes.DAMAGE')}</option>
+                <option value="DISPUTE">{t('common:incidentTypes.DISPUTE')}</option>
+                <option value="SPECIAL_HANDLING">{t('common:incidentTypes.SPECIAL_HANDLING')}</option>
+                <option value="DRIVER_INSTRUCTION">{t('common:incidentTypes.DRIVER_INSTRUCTION')}</option>
               </select>
               <input
                 type="text"
-                placeholder="Notes..."
+                placeholder={t('orders:detail.incident.notesPlaceholder')}
                 value={incidentNotes}
                 onChange={e => setIncidentNotes(e.target.value)}
                 className="flex-1 h-10 px-3.5 rounded-md border border-grey-300 text-sm text-grey-900 focus:border-green-500 focus:ring-[3px] focus:ring-green-500/15 outline-none transition-colors"
@@ -260,7 +262,7 @@ export default function OrderDetailPage() {
                 disabled={!incidentCategory}
                 className="h-10 px-4 bg-red-500 text-white rounded-md text-sm font-semibold hover:bg-red-600 disabled:opacity-50 transition-colors"
               >
-                Report
+                {t('orders:detail.incident.reportBtn')}
               </button>
             </div>
           </div>
@@ -270,8 +272,8 @@ export default function OrderDetailPage() {
       <div className="bg-white rounded-lg border border-grey-200 shadow-sm overflow-hidden">
         <div className="flex items-center justify-between px-5 py-4 border-b border-grey-200">
           <div>
-            <h2 className="text-base font-semibold text-grey-900">Inbounds</h2>
-            <p className="text-sm text-grey-500 mt-1">Each order can contain multiple inbound records. This section keeps the inbound status and operational details together.</p>
+            <h2 className="text-base font-semibold text-grey-900">{t('orders:detail.inbounds.title')}</h2>
+            <p className="text-sm text-grey-500 mt-1">{t('orders:detail.inbounds.description')}</p>
           </div>
         </div>
 
@@ -303,21 +305,21 @@ export default function OrderDetailPage() {
                         disabled
                       />
                       <span className="inline-flex items-center gap-1 text-xs font-medium text-grey-500">
-                        Open inbound
+                        {t('orders:detail.inbounds.openInbound')}
                         <ExternalLink size={12} />
                       </span>
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-x-6 gap-y-3">
-                      <InboundMeta label="Vehicle Plate" value={inbound.vehicle?.registration_plate} mono />
-                      <InboundMeta label="Arrived At" value={formatInboundTimestamp(inbound.arrived_at)} />
+                      <InboundMeta label={t('orders:detail.inbounds.vehiclePlate')} value={inbound.vehicle?.registration_plate} mono />
+                      <InboundMeta label={t('orders:detail.inbounds.arrivedAt')} value={formatInboundTimestamp(inbound.arrived_at)} />
                       <InboundMeta
-                        label="Waste Stream"
+                        label={t('orders:detail.inbounds.wasteStream')}
                         value={inbound.waste_stream?.name || order.waste_stream?.name}
                       />
                       <InboundMeta
-                        label="Sorting"
-                        value={inbound.sorting_session ? 'Sorting process available' : 'Not started'}
+                        label={t('orders:detail.inbounds.sorting')}
+                        value={inbound.sorting_session ? t('orders:detail.inbounds.sortingAvailable') : t('orders:detail.inbounds.notStarted')}
                       />
                     </div>
                   </div>
@@ -325,7 +327,7 @@ export default function OrderDetailPage() {
               ))}
             </div>
           ) : (
-            <p className="text-sm text-grey-400">No inbounds yet</p>
+            <p className="text-sm text-grey-400">{t('orders:detail.inbounds.noInbounds')}</p>
           )}
         </div>
       </div>

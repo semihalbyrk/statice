@@ -1,0 +1,200 @@
+{
+  "title": "Contracts",
+  "newContract": "New Contract",
+  "editContract": "Edit Contract",
+  "searchPlaceholder": "Search contracts...",
+  "rag": {
+    "onTrack": "On Track",
+    "onTrackDesc": ">60 days to expiry",
+    "expiringSoon": "Expiring Soon",
+    "expiringSoonDesc": "30–60 days to expiry",
+    "critical": "Critical / Expired",
+    "criticalDesc": "<30 days or expired"
+  },
+  "tabs": {
+    "all": "All",
+    "active": "Active",
+    "expired": "Expired",
+    "inactive": "Inactive"
+  },
+  "table": {
+    "contractNumber": "Contract #",
+    "status": "Status",
+    "supplier": "Supplier",
+    "carrier": "Carrier",
+    "name": "Name",
+    "effective": "Effective",
+    "expiry": "Expiry",
+    "rag": "RAG"
+  },
+  "loading": "Loading...",
+  "noContracts": "No contracts found",
+  "actions": {
+    "edit": "Edit",
+    "delete": "Delete",
+    "manage": "Manage",
+    "addMaterial": "Add Material",
+    "addRateLine": "Add Rate Line",
+    "removeWasteStream": "Remove Waste Stream"
+  },
+  "toast": {
+    "loadFailed": "Failed to load contracts",
+    "loadContractFailed": "Failed to load contract",
+    "statusUpdated": "Contract status updated",
+    "statusFailed": "Failed to update status",
+    "rateLineRemoved": "Rate line removed",
+    "rateLineRemoveFailed": "Failed to remove rate line",
+    "wasteStreamRemoved": "Waste stream removed",
+    "wasteStreamRemoveFailed": "Failed to remove waste stream",
+    "rateLineAdded": "Rate line added",
+    "rateLineAddedBoth": "2 rate lines added (Weight + Quantity)",
+    "rateLineUpdated": "Rate line updated (previous version preserved)",
+    "rateLineSaveFailed": "Failed to save rate line",
+    "penaltiesUpdated": "Penalties updated",
+    "penaltiesUpdateFailed": "Failed to update penalties",
+    "penaltiesLoadFailed": "Failed to load fees",
+    "created": "Contract created",
+    "updated": "Contract updated",
+    "saveFailed": "Failed to save contract",
+    "atLeastOneWasteStream": "Add at least one waste stream with an Afvalstroomnummer",
+    "atLeastOneMaterial": "Add at least one material to \"{{name}}\"",
+    "allMaterialsRequired": "All material lines must have a material and unit rate"
+  },
+  "detail": {
+    "backToContracts": "Back to Contracts",
+    "contractDetails": "Contract Details",
+    "fields": {
+      "name": "Name",
+      "supplier": "Supplier",
+      "carrier": "Carrier",
+      "receiver": "Receiver",
+      "effectiveDate": "Effective Date",
+      "expiryDate": "Expiry Date",
+      "paymentTerms": "Payment Terms",
+      "paymentTermsDays": "{{days}} days",
+      "invoicingFrequency": "Invoicing Frequency",
+      "currency": "Currency",
+      "contaminationTolerance": "Contamination Tolerance"
+    },
+    "wasteStream": {
+      "material": "Material",
+      "cbsCode": "CBS Code",
+      "weeelabex": "WEEELABEX",
+      "euralCode": "EURAL Code",
+      "processingMethod": "Processing Method",
+      "pricing": "Pricing",
+      "unitRate": "Unit Rate",
+      "btwPct": "BTW %",
+      "noMaterials": "No materials"
+    },
+    "rateLines": "Rate Lines ({{count}})",
+    "penalties": "Contamination Penalties ({{count}})",
+    "noPenalties": "No penalties linked",
+    "confirmRemoveRateLine": "Remove this rate line?",
+    "confirmRemoveWasteStream": "Remove this waste stream and all its rate lines from the contract?"
+  },
+  "create": {
+    "breadcrumbNew": "New Contract",
+    "contractDetails": "Contract Details",
+    "paymentDetails": "Payment Details",
+    "contaminationDetails": "Contamination Details",
+    "managePenalties": "Manage Penalties ({{count}})",
+    "selectedPenalties": "Selected Penalties",
+    "wasteStreams": "Waste Streams",
+    "addWasteStream": "Add Waste Stream",
+    "noWasteStreams": "No waste streams added yet",
+    "materialLines": "Material Lines",
+    "addMaterial": "Add Material",
+    "selectWasteStream": "Select waste stream...",
+    "fields": {
+      "contractName": "Contract Name",
+      "namePlaceholder": "e.g. 2026 WEEE Processing Agreement",
+      "supplier": "Supplier",
+      "selectSupplier": "Select supplier...",
+      "carrier": "Carrier",
+      "selectCarrier": "Select carrier...",
+      "effectiveDate": "Effective Date",
+      "expiryDate": "Expiry Date",
+      "receiver": "Receiver",
+      "paymentTermDays": "Payment Term (days)",
+      "invoicingFrequency": "Invoicing Frequency",
+      "currency": "Currency",
+      "invoiceDelivery": "Invoice Delivery",
+      "invoiceDeliveryPlaceholder": "e.g. EMAIL",
+      "tolerancePct": "Tolerance (%)",
+      "wasteStream": "Waste Stream",
+      "afvalstroomnummer": "Afvalstroomnummer",
+      "material": "Material",
+      "euralCode": "EURAL Code",
+      "processingMethod": "Processing Method",
+      "pricing": "Pricing",
+      "unitRate": "Unit Rate",
+      "btwPct": "BTW %",
+      "selectMaterial": "Material...",
+      "selectProcessingMethod": "Select...",
+      "rate": "Rate"
+    },
+    "buttons": {
+      "cancel": "Cancel",
+      "create": "Create Contract",
+      "update": "Update Contract",
+      "saving": "Saving..."
+    }
+  },
+  "rateLineModal": {
+    "addTitle": "Add Rate Line",
+    "editTitle": "Edit Rate Line",
+    "fields": {
+      "material": "Material",
+      "selectMaterial": "Select material...",
+      "pricingModel": "Pricing Model",
+      "weightRate": "Weight Rate ({{symbol}})",
+      "quantityRate": "Quantity Rate ({{symbol}})",
+      "unitRate": "Unit Rate ({{symbol}})",
+      "btwRate": "BTW Rate (%)"
+    },
+    "buttons": {
+      "cancel": "Cancel",
+      "add": "Add",
+      "addBoth": "Add Both",
+      "update": "Update",
+      "saving": "Saving..."
+    }
+  },
+  "penaltyModal": {
+    "title": "Manage Contamination Penalties",
+    "loadingFees": "Loading fees...",
+    "noActiveFees": "No active fees found",
+    "buttons": {
+      "cancel": "Cancel",
+      "save": "Save ({{count}} selected)",
+      "saving": "Saving..."
+    }
+  },
+  "formModal": {
+    "newTitle": "New Contract",
+    "editTitle": "Edit Contract",
+    "paymentTerms": "Payment Terms",
+    "contamination": "Contamination",
+    "fields": {
+      "supplier": "Supplier",
+      "selectSupplier": "Select supplier...",
+      "contractName": "Contract Name",
+      "namePlaceholder": "e.g. 2026 WEEE Processing Agreement",
+      "effectiveDate": "Effective Date",
+      "expiryDate": "Expiry Date",
+      "paymentTermDays": "Payment Term (days)",
+      "invoicingFrequency": "Invoicing Frequency",
+      "currency": "Currency",
+      "invoiceDelivery": "Invoice Delivery",
+      "invoiceDeliveryPlaceholder": "e.g. EMAIL",
+      "tolerancePct": "Tolerance (%)"
+    },
+    "buttons": {
+      "cancel": "Cancel",
+      "create": "Create",
+      "update": "Update",
+      "saving": "Saving..."
+    }
+  }
+}

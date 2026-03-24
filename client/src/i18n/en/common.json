@@ -1,0 +1,166 @@
+{
+  "buttons": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "create": "Create",
+    "close": "Close",
+    "confirm": "Confirm",
+    "back": "Back",
+    "next": "Next",
+    "search": "Search",
+    "add": "Add",
+    "remove": "Remove",
+    "update": "Update",
+    "submit": "Submit",
+    "loading": "Loading...",
+    "saving": "Saving...",
+    "creating": "Creating...",
+    "updating": "Updating...",
+    "download": "Download",
+    "print": "Print",
+    "dismiss": "Dismiss",
+    "report": "Report",
+    "reset": "Reset",
+    "apply": "Apply",
+    "retry": "Retry"
+  },
+  "status": {
+    "PLANNED": "Planned",
+    "ARRIVED": "Arrived",
+    "IN_PROGRESS": "In Progress",
+    "COMPLETED": "Completed",
+    "CANCELLED": "Cancelled",
+    "DISPUTE": "Dispute",
+    "INVOICED": "Invoiced",
+    "WEIGHED_IN": "Weighed In",
+    "WEIGHED_OUT": "Weighed Out",
+    "READY_FOR_SORTING": "Ready for Sorting",
+    "SORTED": "Sorted",
+    "ACTIVE": "Active",
+    "INACTIVE": "Inactive",
+    "DRAFT": "Draft",
+    "EXPIRED": "Expired",
+    "NOT_STARTED": "Not Started",
+    "FINALIZED": "Finalized",
+    "CONFIRMED": "Confirmed",
+    "SUPERSEDED": "Superseded"
+  },
+  "roles": {
+    "ADMIN": "Admin",
+    "LOGISTICS_PLANNER": "Logistics Planner",
+    "GATE_OPERATOR": "Gate Operator",
+    "REPORTING_MANAGER": "Reporting Manager",
+    "SORTING_EMPLOYEE": "Sorting Employee",
+    "COMPLIANCE_OFFICER": "Compliance Officer",
+    "LOGISTICS_COORDINATOR": "Logistics Coordinator",
+    "FINANCE_MANAGER": "Finance Manager",
+    "FINANCE_USER": "Finance User",
+    "SALES": "Sales",
+    "QC_INSPECTOR": "QC Inspector"
+  },
+  "containerTypes": {
+    "OPEN_TOP": "Open Top",
+    "CLOSED_TOP": "Closed Top",
+    "GITTERBOX": "Gitterbox",
+    "PALLET": "Pallet",
+    "OTHER": "Other"
+  },
+  "supplierTypes": {
+    "PRO": "PRO",
+    "THIRD_PARTY": "Third Party",
+    "PRIVATE_INDIVIDUAL": "Private Individual"
+  },
+  "pricingModels": {
+    "WEIGHT": "Per Weight (kg)",
+    "QUANTITY": "Per Quantity",
+    "WEIGHT_AND_QUANTITY": "Per Weight and Quantity"
+  },
+  "rateTypes": {
+    "FIXED": "Fixed",
+    "PERCENTAGE": "Percentage",
+    "PER_KG": "Per kg",
+    "PER_HOUR": "Per hour"
+  },
+  "feeTypes": {
+    "CONTAMINATION_SURCHARGE": "Contamination Surcharge",
+    "CONTAMINATION_FLAT_FEE": "Contamination Flat Fee",
+    "CONTAMINATION_PERCENTAGE": "Contamination Percentage",
+    "SORTING_SURCHARGE": "Sorting Surcharge",
+    "HAZARDOUS_MATERIAL": "Hazardous Material",
+    "REJECTION_FEE": "Rejection Fee"
+  },
+  "frequencies": {
+    "WEEKLY": "Weekly",
+    "MONTHLY": "Monthly",
+    "QUARTERLY": "Quarterly",
+    "ANNUALLY": "Annually"
+  },
+  "currencies": {
+    "EUR": "EUR (€)",
+    "USD": "USD ($)",
+    "GBP": "GBP (£)"
+  },
+  "weeeCategories": {
+    "CAT_1": "Cat. 1 — Large Household Appliances",
+    "CAT_2": "Cat. 2 — Small Household Appliances",
+    "CAT_3": "Cat. 3 — IT and Telecommunications Equipment",
+    "CAT_4": "Cat. 4 — Consumer Equipment",
+    "CAT_5": "Cat. 5 — Lighting Equipment",
+    "CAT_6": "Cat. 6 — Electrical and Electronic Tools",
+    "CAT_7": "Cat. 7 — Toys, Leisure and Sports Equipment",
+    "CAT_8": "Cat. 8 — Medical Devices",
+    "CAT_9": "Cat. 9 — Monitoring and Control Instruments",
+    "CAT_10": "Cat. 10 — Automatic Dispensers"
+  },
+  "incidentTypes": {
+    "DAMAGE": "Damage",
+    "DISPUTE": "Dispute",
+    "SPECIAL_HANDLING": "Special Handling",
+    "DRIVER_INSTRUCTION": "Driver Instruction"
+  },
+  "contaminationTypes": {
+    "NON_WEEE": "Non-WEEE Material",
+    "HAZARDOUS": "Hazardous Material",
+    "EXCESSIVE_MOISTURE": "Excessive Moisture",
+    "SORTING_REQUIRED": "Sorting Required"
+  },
+  "table": {
+    "loading": "Loading...",
+    "noData": "No data found",
+    "totalCount": "{{count}} total",
+    "pageOf": "Page {{page}} of {{total}}",
+    "perPage": "{{count}} / page",
+    "status": "Status"
+  },
+  "confirm": {
+    "areYouSure": "Are you sure?",
+    "cannotUndo": "This action cannot be undone.",
+    "deleteConfirm": "Are you sure you want to delete this?"
+  },
+  "toast": {
+    "created": "{{entity}} created",
+    "updated": "{{entity}} updated",
+    "deleted": "{{entity}} deleted",
+    "failed": "Failed to {{action}}",
+    "statusUpdated": "Status updated to {{status}}"
+  },
+  "fields": {
+    "name": "Name",
+    "email": "Email",
+    "phone": "Phone",
+    "status": "Status",
+    "notes": "Notes",
+    "optional": "Optional",
+    "required": "Required",
+    "active": "Active",
+    "description": "Description"
+  },
+  "empty": "—",
+  "yes": "Yes",
+  "no": "No",
+  "all": "All",
+  "total": "Total",
+  "or": "or"
+}

@@ -1,0 +1,15 @@
+{
+  "notFound": {
+    "title": "404",
+    "message": "Page not found",
+    "description": "The page you are looking for does not exist or has been moved.",
+    "goHome": "Go to Dashboard"
+  },
+  "unauthorized": {
+    "title": "403",
+    "message": "Access Denied",
+    "description": "You don't have permission to view this page.",
+    "goBack": "Go Back",
+    "dashboard": "Dashboard"
+  }
+}

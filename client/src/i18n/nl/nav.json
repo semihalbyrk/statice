@@ -1,0 +1,23 @@
+{
+  "main": "Hoofdmenu",
+  "dashboard": "Dashboard",
+  "orders": "Bestellingen",
+  "planningBoard": "Dagplanning",
+  "arrival": "Aankomst",
+  "inbounds": "Inkomend",
+  "process": "Verwerking",
+  "reports": "Rapporten",
+  "contracts": "Contracten",
+  "invoices": "Facturen",
+  "admin": "Beheer",
+  "users": "Gebruikers",
+  "carriers": "Transporteurs",
+  "suppliers": "Leveranciers",
+  "materials": "Materialen",
+  "feeMaster": "Tarieven",
+  "auditLog": "Auditlog",
+  "settings": "Instellingen",
+  "logout": "Uitloggen",
+  "signedOut": "Uitgelogd",
+  "language": "Taal"
+}

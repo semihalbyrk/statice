@@ -1,0 +1,138 @@
+{
+  "title": "Bestellingen",
+  "newOrder": "Nieuwe Bestelling",
+  "tabs": {
+    "allOrders": "Alle Bestellingen",
+    "today": "Vandaag"
+  },
+  "searchPlaceholder": "Zoek op bestelnaam...",
+  "allStatuses": "Alle statussen",
+  "allCarriers": "Alle transporteurs",
+  "allSuppliers": "Alle leveranciers",
+  "allSupplierTypes": "Alle leverancierstypes",
+  "allWasteStreams": "Alle afvalstromen",
+  "table": {
+    "orderName": "Bestelling #",
+    "status": "Status",
+    "vehiclePlate": "Kenteken",
+    "carrier": "Transporteur",
+    "supplier": "Leverancier",
+    "wasteStream": "Afvalstroom",
+    "plannedDate": "Geplande Datum",
+    "parcels": "Pakketten"
+  },
+  "pagination": {
+    "totalOrders": "{{count}} bestellingen in totaal"
+  },
+  "empty": {
+    "noOrders": "Geen bestellingen gevonden"
+  },
+  "toast": {
+    "statusUpdated": "Bestelstatus bijgewerkt naar {{status}}",
+    "statusFailed": "Kan bestelstatus niet bijwerken",
+    "created": "Bestelling aangemaakt",
+    "createFailed": "Kan bestelling niet aanmaken",
+    "incidentReported": "Incident gemeld",
+    "incidentFailed": "Kan incident niet melden",
+    "statusUpdateFailed": "Kan status niet bijwerken",
+    "boardFailed": "Kan dagplanning niet laden"
+  },
+  "detail": {
+    "adHoc": "Ad-hoc",
+    "actions": "Acties",
+    "editOrder": "Bestelling Bewerken",
+    "fields": {
+      "carrier": "Transporteur",
+      "supplier": "Leverancier",
+      "wasteStreams": "Afvalstromen",
+      "plannedDate": "Geplande Datum",
+      "expectedParcels": "Verwachte Pakketten",
+      "createdBy": "Aangemaakt Door",
+      "linkedContract": "Gekoppeld Contract",
+      "vehiclePlate": "Kenteken",
+      "afvalstroomnummer": "Afvalstroomnummer",
+      "notes": "Opmerkingen",
+      "clientReference": "Klantrefeentie",
+      "contactPerson": "Contactpersoon",
+      "idReference": "ID-referentie",
+      "vehicleType": "Voertuigtype",
+      "incident": "Incident"
+    },
+    "inbounds": {
+      "title": "Inkomende",
+      "description": "Een bestelling kan meerdere inkomende registraties bevatten. Dit gedeelte houdt de inkomende status en operationele details bij elkaar.",
+      "openInbound": "Inkomende openen",
+      "sortingAvailable": "Sorteerproces beschikbaar",
+      "notStarted": "Niet gestart",
+      "noInbounds": "Nog geen inkomende",
+      "vehiclePlate": "Kenteken",
+      "arrivedAt": "Aangekomen Om",
+      "wasteStream": "Afvalstroom",
+      "sorting": "Sortering"
+    },
+    "incident": {
+      "title": "Incident Melden",
+      "selectType": "Selecteer incidenttype...",
+      "notesPlaceholder": "Opmerkingen...",
+      "reportBtn": "Melden"
+    }
+  },
+  "create": {
+    "title": "Nieuwe Bestelling",
+    "breadcrumb": "Nieuwe Bestelling",
+    "fields": {
+      "supplier": "Leverancier",
+      "supplierPlaceholder": "Selecteer leverancier...",
+      "carrier": "Transporteur",
+      "carrierPlaceholder": "Selecteer transporteur...",
+      "wasteStreams": "Afvalstromen",
+      "noWasteStreams": "Geen afvalstromen beschikbaar",
+      "selectWasteStreams": "Selecteer afvalstromen...",
+      "nSelected": "{{count}} geselecteerd",
+      "searchingContract": "Zoeken naar actief contract...",
+      "noContract": "Geen actief contract gevonden voor deze leverancier + transporteur combinatie",
+      "afvalstroomnummer": "Afvalstroomnummer",
+      "plannedDate": "Geplande Datum",
+      "timeWindowStart": "Tijdvenster Begin",
+      "timeWindowEnd": "Tijdvenster Einde",
+      "vehiclePlate": "Kenteken",
+      "vehiclePlatePlaceholder": "AB-123-CD",
+      "expectedParcels": "Verwachte Pakketten",
+      "lzvLabel": "LZV Voertuig (tot 3 containers)",
+      "clientReference": "Klantreferentie",
+      "clientRefPlaceholder": "Klant PO/referentienummer",
+      "notes": "Opmerkingen",
+      "notesPlaceholder": "Optionele opmerkingen..."
+    },
+    "buttons": {
+      "cancel": "Annuleren",
+      "createOrder": "Bestelling Aanmaken",
+      "creating": "Aanmaken..."
+    },
+    "validation": {
+      "selectWasteStream": "Selecteer ten minste één afvalstroom",
+      "vehiclePlateRequired": "Kenteken is verplicht"
+    }
+  },
+  "planningBoard": {
+    "title": "Dagplanning",
+    "todayBtn": "Vandaag",
+    "noTimeWindow": "Geen tijdvenster",
+    "card": {
+      "carrier": "Transporteur",
+      "supplier": "Leverancier",
+      "wasteStream": "Afvalstroom",
+      "vehiclePlate": "Voertuig",
+      "timeWindow": "Tijdvenster",
+      "expectedParcels": "Verwachte Pakketten",
+      "completedInbounds": "Inkomende",
+      "totalNetWeight": "Totaal Nettogewicht",
+      "incident": "Incident"
+    },
+    "empty": {
+      "noDeliveries": "Geen leveringen gepland voor deze datum"
+    },
+    "summary": "{{count}} levering voor {{date}}",
+    "summaryPlural": "{{count}} leveringen voor {{date}}"
+  }
+}

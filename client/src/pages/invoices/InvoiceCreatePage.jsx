@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
+import { useTranslation } from 'react-i18next';
 import Breadcrumb from '../../components/ui/Breadcrumb';
 import StatusBadge from '../../components/ui/StatusBadge';
 import useMasterDataStore from '../../store/masterDataStore';
@@ -25,6 +26,7 @@ const getOrderNetWeight = (order) => {
 };
 
 export default function InvoiceCreatePage() {
+  const { t } = useTranslation(['invoices', 'common']);
   const navigate = useNavigate();
   const { suppliers, fetchSuppliers } = useMasterDataStore();
 
@@ -50,9 +52,9 @@ export default function InvoiceCreatePage() {
     setLoadingOrders(true);
     getCompletedOrdersForInvoicing(supplierId)
       .then((res) => setOrders(res.data.data || []))
-      .catch(() => toast.error('Failed to load orders'))
+      .catch(() => toast.error(t('invoices:toast.ordersFailed')))
       .finally(() => setLoadingOrders(false));
-  }, [supplierId]);
+  }, [supplierId, t]);
 
   const toggleOrder = (orderId) => {
     setSelectedIds((prev) => {
@@ -70,16 +72,16 @@ export default function InvoiceCreatePage() {
 
   const handleGenerate = async () => {
     if (selectedIds.size === 0) {
-      toast.error('Select at least one order');
+      toast.error(t('invoices:create.validation.selectOrder'));
       return;
     }
     setGenerating(true);
     try {
       const res = await generateSupplierInvoice({ order_ids: Array.from(selectedIds) });
-      toast.success('Invoice created');
+      toast.success(t('invoices:create.toast.created'));
       navigate(`/invoices/${res.data.data.id}`);
     } catch (err) {
-      toast.error(err.response?.data?.error || 'Failed to generate invoice');
+      toast.error(err.response?.data?.error || t('invoices:create.toast.failed'));
     } finally {
       setGenerating(false);
     }
@@ -87,23 +89,23 @@ export default function InvoiceCreatePage() {
 
   return (
     <div>
-      <Breadcrumb items={[{ label: 'Invoices', to: '/invoices' }, { label: 'Create Invoice' }]} />
-      <h1 className="text-xl font-semibold text-grey-900 mb-6">Create Invoice</h1>
+      <Breadcrumb items={[{ label: t('invoices:title'), to: '/invoices' }, { label: t('invoices:create.breadcrumb') }]} />
+      <h1 className="text-xl font-semibold text-grey-900 mb-6">{t('invoices:create.title')}</h1>
 
       {/* Step 1: Select Supplier */}
       <div className="bg-white rounded-lg border border-grey-200 shadow-sm p-5 mb-6">
-        <h2 className="text-sm font-semibold text-grey-900 mb-4">Select Supplier</h2>
+        <h2 className="text-sm font-semibold text-grey-900 mb-4">{t('invoices:create.stepSupplier.heading')}</h2>
         <div className="max-w-md">
-          <label className="block text-sm font-medium text-grey-700 mb-1.5">Supplier</label>
+          <label className="block text-sm font-medium text-grey-700 mb-1.5">{t('invoices:create.stepSupplier.label')}</label>
           {suppliers.length === 0 ? (
-            <div className="text-sm text-grey-400 py-2">Loading...</div>
+            <div className="text-sm text-grey-400 py-2">{t('invoices:loading')}</div>
           ) : (
             <select
               value={supplierId}
               onChange={(e) => setSupplierId(e.target.value)}
               className={selectClass}
             >
-              <option value="">Select supplier...</option>
+              <option value="">{t('invoices:create.stepSupplier.placeholder')}</option>
               {activeSuppliers.map((s) => (
                 <option key={s.id} value={s.id}>{s.name}</option>
               ))}
@@ -116,14 +118,14 @@ export default function InvoiceCreatePage() {
       {supplierId && (
         <div className="bg-white rounded-lg border border-grey-200 shadow-sm mb-6">
           <div className="px-5 py-4 border-b border-grey-200">
-            <h2 className="text-sm font-semibold text-grey-900">Completed Orders</h2>
+            <h2 className="text-sm font-semibold text-grey-900">{t('invoices:create.stepOrders.heading')}</h2>
           </div>
 
           {loadingOrders ? (
-            <div className="text-center py-12 text-sm text-grey-400">Loading orders...</div>
+            <div className="text-center py-12 text-sm text-grey-400">{t('invoices:create.stepOrders.loading')}</div>
           ) : orders.length === 0 ? (
             <div className="text-center py-12 text-sm text-grey-400">
-              No completed orders found for this supplier.
+              {t('invoices:create.stepOrders.empty')}
             </div>
           ) : (
             <div className="overflow-x-auto">
@@ -138,11 +140,11 @@ export default function InvoiceCreatePage() {
                         className="h-4 w-4 rounded border-grey-300 text-green-500 focus:ring-green-500/15"
                       />
                     </th>
-                    <th className="text-left py-3 px-3 text-xs font-medium text-grey-500 uppercase tracking-wide">Order Number</th>
-                    <th className="text-left py-3 px-3 text-xs font-medium text-grey-500 uppercase tracking-wide">Planned Date</th>
-                    <th className="text-left py-3 px-3 text-xs font-medium text-grey-500 uppercase tracking-wide">Waste Stream</th>
-                    <th className="text-left py-3 px-3 text-xs font-medium text-grey-500 uppercase tracking-wide">Net Weight</th>
-                    <th className="text-left py-3 px-3 text-xs font-medium text-grey-500 uppercase tracking-wide">Status</th>
+                    <th className="text-left py-3 px-3 text-xs font-medium text-grey-500 uppercase tracking-wide">{t('invoices:create.stepOrders.table.orderNumber')}</th>
+                    <th className="text-left py-3 px-3 text-xs font-medium text-grey-500 uppercase tracking-wide">{t('invoices:create.stepOrders.table.plannedDate')}</th>
+                    <th className="text-left py-3 px-3 text-xs font-medium text-grey-500 uppercase tracking-wide">{t('invoices:create.stepOrders.table.wasteStream')}</th>
+                    <th className="text-left py-3 px-3 text-xs font-medium text-grey-500 uppercase tracking-wide">{t('invoices:create.stepOrders.table.netWeight')}</th>
+                    <th className="text-left py-3 px-3 text-xs font-medium text-grey-500 uppercase tracking-wide">{t('invoices:create.stepOrders.table.status')}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -182,7 +184,7 @@ export default function InvoiceCreatePage() {
         <div className="flex items-center justify-end gap-3">
           {selectedIds.size > 0 && (
             <span className="text-sm text-grey-600 mr-auto">
-              {selectedIds.size} {selectedIds.size === 1 ? 'order' : 'orders'} selected
+              {t('invoices:create.stepOrders.selectedCount', { count: selectedIds.size })}
             </span>
           )}
           <button
@@ -190,7 +192,7 @@ export default function InvoiceCreatePage() {
             onClick={() => navigate('/invoices')}
             className="h-9 px-4 bg-white text-grey-700 border border-grey-300 rounded-md text-sm font-semibold hover:bg-grey-50 transition-colors"
           >
-            Cancel
+            {t('invoices:create.buttons.cancel')}
           </button>
           <button
             type="button"
@@ -198,7 +200,7 @@ export default function InvoiceCreatePage() {
             disabled={generating || selectedIds.size === 0}
             className="h-9 px-4 bg-green-500 text-white rounded-md text-sm font-semibold hover:bg-green-700 disabled:opacity-50 transition-colors"
           >
-            {generating ? 'Generating...' : 'Generate Invoice'}
+            {generating ? t('invoices:create.buttons.generating') : t('invoices:create.buttons.generate')}
           </button>
         </div>
       )}

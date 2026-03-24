@@ -5,42 +5,10 @@ import {
   UserCog, ScrollText, Settings2, Boxes, ChevronDown, ChevronRight, LogOut, CalendarDays, Receipt, FileText,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { useTranslation } from 'react-i18next';
 import api from '../../api/axios';
 import useAuthStore from '../../store/authStore';
-
-const NAV_ITEMS = [
-  { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, roles: null },
-  { to: '/orders', label: 'Orders', icon: ClipboardList, roles: ['ADMIN', 'LOGISTICS_PLANNER'] },
-  { to: '/planning', label: 'Planning Board', icon: CalendarDays, roles: ['ADMIN', 'LOGISTICS_PLANNER', 'GATE_OPERATOR'] },
-  { to: '/arrival', label: 'Arrival', icon: Truck, roles: ['GATE_OPERATOR', 'ADMIN'] },
-  { to: '/inbounds', label: 'Inbounds', icon: Scale, roles: ['GATE_OPERATOR', 'ADMIN'] },
-  { to: '/sorting', label: 'Process', icon: Boxes, roles: ['SORTING_EMPLOYEE', 'GATE_OPERATOR', 'ADMIN'] },
-  { to: '/reports', label: 'Reports', icon: FileBarChart, roles: ['REPORTING_MANAGER', 'ADMIN'] },
-  { to: '/contracts', label: 'Contracts', icon: ScrollText, roles: ['ADMIN', 'FINANCE_MANAGER', 'FINANCE_USER'] },
-  { to: '/invoices', label: 'Invoices', icon: FileText, roles: ['ADMIN', 'FINANCE_MANAGER', 'FINANCE_USER'] },
-];
-
-const ADMIN_ITEMS = [
-  { to: '/admin/users', label: 'Users', icon: UserCog },
-  { to: '/admin/carriers', label: 'Carriers', icon: Building2 },
-  { to: '/admin/suppliers', label: 'Suppliers', icon: Users },
-  { to: '/admin/materials', label: 'Materials', icon: Recycle },
-  { to: '/admin/fees', label: 'Fee Master', icon: Receipt },
-  { to: '/admin/audit-log', label: 'Audit Log', icon: ScrollText },
-  { to: '/admin/settings', label: 'Settings', icon: Settings2 },
-];
-
-const ROLE_LABELS = {
-  ADMIN: 'Admin',
-  LOGISTICS_PLANNER: 'Logistics Planner',
-  GATE_OPERATOR: 'Gate Operator',
-  REPORTING_MANAGER: 'Reporting Manager',
-  SORTING_EMPLOYEE: 'Sorting Employee',
-  COMPLIANCE_OFFICER: 'Compliance Officer',
-  LOGISTICS_COORDINATOR: 'Logistics Coordinator',
-  FINANCE_MANAGER: 'Finance Manager',
-  FINANCE_USER: 'Finance User',
-};
+import LanguageSelector from './LanguageSelector';
 
 function SidebarLink({ to, label, icon: Icon, onClick }) {
   return (
@@ -63,6 +31,7 @@ function SidebarLink({ to, label, icon: Icon, onClick }) {
 
 export default function Sidebar({ open, onClose }) {
   const navigate = useNavigate();
+  const { t } = useTranslation(['nav', 'common']);
   const { user, clearAuth } = useAuthStore((state) => ({
     user: state.user,
     clearAuth: state.clearAuth,
@@ -79,6 +48,28 @@ export default function Sidebar({ open, onClose }) {
       .join('') || 'S';
   }, [user?.email, user?.full_name]);
 
+  const navItems = [
+    { to: '/dashboard', label: t('nav:dashboard'), icon: LayoutDashboard, roles: null },
+    { to: '/orders', label: t('nav:orders'), icon: ClipboardList, roles: ['ADMIN', 'LOGISTICS_PLANNER'] },
+    { to: '/planning', label: t('nav:planningBoard'), icon: CalendarDays, roles: ['ADMIN', 'LOGISTICS_PLANNER', 'GATE_OPERATOR'] },
+    { to: '/arrival', label: t('nav:arrival'), icon: Truck, roles: ['GATE_OPERATOR', 'ADMIN'] },
+    { to: '/inbounds', label: t('nav:inbounds'), icon: Scale, roles: ['GATE_OPERATOR', 'ADMIN'] },
+    { to: '/sorting', label: t('nav:process'), icon: Boxes, roles: ['SORTING_EMPLOYEE', 'GATE_OPERATOR', 'ADMIN'] },
+    { to: '/reports', label: t('nav:reports'), icon: FileBarChart, roles: ['REPORTING_MANAGER', 'ADMIN'] },
+    { to: '/contracts', label: t('nav:contracts'), icon: ScrollText, roles: ['ADMIN', 'FINANCE_MANAGER', 'FINANCE_USER'] },
+    { to: '/invoices', label: t('nav:invoices'), icon: FileText, roles: ['ADMIN', 'FINANCE_MANAGER', 'FINANCE_USER'] },
+  ];
+
+  const adminItems = [
+    { to: '/admin/users', label: t('nav:users'), icon: UserCog },
+    { to: '/admin/carriers', label: t('nav:carriers'), icon: Building2 },
+    { to: '/admin/suppliers', label: t('nav:suppliers'), icon: Users },
+    { to: '/admin/materials', label: t('nav:materials'), icon: Recycle },
+    { to: '/admin/fees', label: t('nav:feeMaster'), icon: Receipt },
+    { to: '/admin/audit-log', label: t('nav:auditLog'), icon: ScrollText },
+    { to: '/admin/settings', label: t('nav:settings'), icon: Settings2 },
+  ];
+
   async function handleLogout() {
     try {
       await api.post('/auth/logout');
@@ -87,7 +78,7 @@ export default function Sidebar({ open, onClose }) {
     }
     clearAuth();
     navigate('/login');
-    toast.success('Signed out');
+    toast.success(t('nav:signedOut'));
   }
 
   return (
@@ -109,9 +100,9 @@ export default function Sidebar({ open, onClose }) {
 
         <nav className="flex-1 py-3 px-2.5 space-y-0.5 overflow-y-auto">
           <div className="px-3 pt-1 pb-2">
-            <span className="text-[10px] font-semibold text-dark-blue-500 uppercase tracking-widest">Main</span>
+            <span className="text-[10px] font-semibold text-dark-blue-500 uppercase tracking-widest">{t('nav:main')}</span>
           </div>
-          {NAV_ITEMS.filter((item) => !item.roles || item.roles.includes(role)).map((item) => (
+          {navItems.filter((item) => !item.roles || item.roles.includes(role)).map((item) => (
             <SidebarLink key={item.to} {...item} onClick={onClose} />
           ))}
 
@@ -121,13 +112,13 @@ export default function Sidebar({ open, onClose }) {
                 onClick={() => setAdminOpen((v) => !v)}
                 className="w-full flex items-center justify-between px-3 pt-5 pb-2 group"
               >
-                <span className="text-[10px] font-semibold text-dark-blue-500 uppercase tracking-widest">Admin</span>
+                <span className="text-[10px] font-semibold text-dark-blue-500 uppercase tracking-widest">{t('nav:admin')}</span>
                 {adminOpen
                   ? <ChevronDown size={12} className="text-dark-blue-500 group-hover:text-dark-blue-400" />
                   : <ChevronRight size={12} className="text-dark-blue-500 group-hover:text-dark-blue-400" />
                 }
               </button>
-              {adminOpen && ADMIN_ITEMS.map((item) => (
+              {adminOpen && adminItems.map((item) => (
                 <SidebarLink key={item.to} {...item} onClick={onClose} />
               ))}
             </>
@@ -136,12 +127,14 @@ export default function Sidebar({ open, onClose }) {
 
         <div className="px-3 pb-3">
           <div className="border-t border-white/20 pt-3">
+            <LanguageSelector />
+
             <button
               onClick={handleLogout}
               className="mb-3 flex items-center gap-2 text-[14px] font-medium text-[#f04438] transition-colors hover:text-[#ff6b5b]"
             >
               <LogOut size={15} strokeWidth={1.8} />
-              Logout
+              {t('nav:logout')}
             </button>
 
             <div className="flex items-center gap-3 rounded-xl">
@@ -150,7 +143,7 @@ export default function Sidebar({ open, onClose }) {
               </div>
               <div className="min-w-0">
                 <p className="truncate text-[14px] font-semibold text-white">{user?.full_name || 'Statice User'}</p>
-                <p className="truncate text-[12px] text-white/72">{ROLE_LABELS[role] || role || 'User'}</p>
+                <p className="truncate text-[12px] text-white/72">{t('common:roles.' + role, { defaultValue: role || 'User' })}</p>
               </div>
             </div>
           </div>

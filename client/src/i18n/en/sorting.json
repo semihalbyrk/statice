@@ -1,0 +1,199 @@
+{
+  "title": "Process",
+  "searchPlaceholder": "Search by process name...",
+  "allStatuses": "All statuses",
+  "table": {
+    "processName": "Process Name",
+    "status": "Status",
+    "linkedOrder": "Linked Order",
+    "supplier": "Supplier",
+    "carrier": "Carrier",
+    "plate": "Plate",
+    "wasteStream": "Waste Stream",
+    "date": "Date",
+    "parcels": "Parcels",
+    "netWeight": "Net Weight"
+  },
+  "empty": "No process sessions found",
+  "pageInfo": "{{count}} total sessions",
+
+  "sessionSubtitle": "Shredding and sorting drive the process; downstream statements are generated from the material and fraction records captured here.",
+  "recordContamination": "Record Contamination",
+
+  "infoFields": {
+    "linkedInbound": "Linked Inbound",
+    "linkedOrder": "Linked Order",
+    "supplier": "Supplier",
+    "carrier": "Carrier",
+    "vehiclePlate": "Vehicle Plate",
+    "wasteStream": "Waste Stream",
+    "contract": "Contract",
+    "recorded": "Recorded",
+    "parcels": "Parcels"
+  },
+
+  "noParcels": "No parcels found on this inbound",
+
+  "tabs": {
+    "catalogue": "Shredding",
+    "outcomes": "Sorting",
+    "reusableItems": "Reusables",
+    "history": "History",
+    "reports": "Reports"
+  },
+
+  "material": "Material",
+
+  "catalogue": {
+    "title": "Shredding Entries",
+    "subtitle": "Capture materials and weights for {{assetLabel}}.",
+    "lineCount": "{{count}} line(s)",
+    "addEntry": "Add Shredding Entry",
+    "editEntry": "Edit Shredding Entry",
+    "addSubtitle": "Select the material and enter its weight. Fractions are captured in the sorting tab.",
+    "saveCatalogue": "Save Catalogue",
+    "noEntries": "No catalogue entries yet",
+    "edit": "Edit",
+    "reset": "Reset",
+    "weight": "Weight (kg)",
+    "reusableQty": "Reusable Qty",
+    "reusable": "Reusable",
+    "quantity": "Quantity:",
+    "notes": "Notes",
+    "notesPlaceholder": "Optional notes, operator observations, packaging cues...",
+    "selectMaterial": "Select material...",
+    "useRemaining": "Use Remaining",
+    "addEntryBtn": "Add Entry",
+    "updateEntry": "Update Entry",
+    "balance": {
+      "label": "Shredding Balance:",
+      "balanced": "Balanced",
+      "over": "Over by {{amount}} kg",
+      "remaining": "Remaining {{amount}} kg"
+    }
+  },
+
+  "outcomes": {
+    "title": "Sorting",
+    "processingOutcomes": "Processing Outcomes",
+    "addOutcome": "Add Outcome",
+    "saveOutcome": "Save Outcome",
+    "noOutcomes": "No outcomes yet",
+    "addFraction": "Add Fraction",
+    "editFraction": "Edit Fraction",
+    "fraction": "Fraction",
+    "weight": "Weight (kg)",
+    "processDescription": "Process Description",
+    "fractionPlaceholder": "Select fraction...",
+    "notesPlaceholder": "Transfer comments, contamination notes, operator remarks...",
+    "recoveryTotal": "Recovery profile total: {{pct}}%",
+    "reusePct": "% Prepared for re-use",
+    "recyclingPct": "% Recycling",
+    "otherMrPct": "% Other MR",
+    "energyPct": "% Energy",
+    "thermalPct": "% Thermal",
+    "submit": "Submit",
+    "submitAddAnother": "Submit & Add Another",
+    "updateFraction": "Update Fraction",
+    "cancel": "Cancel",
+    "close": "Close",
+    "versionHistory": "Version History",
+    "showHistory": "Show History",
+    "hideHistory": "Hide History",
+    "balance": {
+      "label": "Sorting Balance:",
+      "balanced": "Balanced",
+      "over": "Over by {{amount}} kg",
+      "remaining": "Remaining {{amount}} kg",
+      "hint": "All fractions must balance within ±1 kg of the total shredding weight before finalization.",
+      "finalizeHint": "Finalize when all fractions balance within ±1 kg of the shredding weight."
+    },
+    "addShreddingFirst": "Add shredding entries first. Draft sorting records are created automatically from shredding.",
+    "actions": {
+      "finalizeParcel": "Finalize Parcel",
+      "confirmCompliance": "Confirm Compliance",
+      "reopenVersion": "Reopen Version",
+      "working": "Working..."
+    },
+    "table": {
+      "fraction": "Fraction",
+      "weight": "Weight",
+      "share": "Share",
+      "actions": "Actions"
+    }
+  },
+
+  "reusables": {
+    "title": "Reusable Items",
+    "noItems": "No reusable items. Mark shredding entries as reusable to create items here.",
+    "brand": "Brand",
+    "model": "Model",
+    "type": "Type",
+    "serialNumber": "Serial Number",
+    "condition": "Condition",
+    "notes": "Notes",
+    "conditions": {
+      "GOOD": "Good",
+      "FAIR": "Fair",
+      "POOR": "Poor",
+      "DAMAGED": "Damaged"
+    }
+  },
+
+  "reports": {
+    "title": "Downstream Reports",
+    "downloadPdf": "Download PDF",
+    "regenerate": "Regenerate",
+    "generating": "Generating...",
+    "generateReport": "Generate Report",
+    "confirmAllFirst": "Confirm all records first",
+    "addShreddingFirst": "Add shredding entries first to generate downstream reports."
+  },
+
+  "reopen": {
+    "title": "Reopen Version",
+    "reasonCode": "Reason Code",
+    "reasonCodeRequired": "Reason Code *",
+    "selectReason": "Select reason...",
+    "notes": "Notes",
+    "notesPlaceholder": "Explain why this version needs to be reopened...",
+    "cancel": "Cancel",
+    "reopen": "Reopen",
+    "reopening": "Reopening...",
+    "reasons": {
+      "BALANCE_CORRECTION": "Balance Correction",
+      "CERTIFICATE_FIX": "Certificate Fix",
+      "DATA_ENTRY_ERROR": "Data Entry Error",
+      "MATERIAL_RECLASSIFICATION": "Material Reclassification",
+      "OTHER": "Other"
+    }
+  },
+
+  "contamination": {
+    "title": "Record Contamination",
+    "contaminationType": "Contamination Type",
+    "description": "Description",
+    "descriptionPlaceholder": "Describe the contamination found...",
+    "weightKg": "Contamination Weight (kg)",
+    "percentage": "Contamination Percentage (%)",
+    "hours": "Estimated Hours",
+    "notes": "Notes",
+    "notesOptional": "Notes (optional)",
+    "estimatedFee": "Estimated fee:",
+    "feePercentageNote": "Fee will be calculated as a percentage of the order value on save.",
+    "selectType": "Select type...",
+    "unableToLoad": "Unable to Load Configuration",
+    "supplierNotAvailable": "Supplier information not available. Please reload the page.",
+    "noActiveContract": "No Active Contract Found",
+    "noActiveContractDesc": "This supplier does not have an active contract. A contract with contamination penalties must be configured before incidents can be recorded.",
+    "noPenalties": "No Contamination Penalties Configured",
+    "noPenaltiesDesc": "The active contract for this supplier has no contamination penalty rules. Add penalty rules in the contract settings to enable incident recording.",
+    "loadingConfig": "Loading configuration...",
+    "recorded": "Contamination incident recorded",
+    "recordIncident": "Record Incident",
+    "recording": "Recording...",
+    "close": "Close",
+    "cancel": "Cancel",
+    "descriptionRequired": "Description is required"
+  }
+}

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState, useMemo } from 'react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Download, Plus, Pencil, Trash2 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { useTranslation } from 'react-i18next';
 import ClickableStatusBadge from '../../components/ui/ClickableStatusBadge';
 import RowActionMenu from '../../components/ui/RowActionMenu';
 import {
@@ -20,12 +21,6 @@ const INVOICE_TRANSITIONS = {
   FINALIZED: ['CANCELLED'],
 };
 
-const LINE_TYPE_LABELS = {
-  material: 'Material',
-  contamination_fee: 'Contamination Fee',
-  manual: 'Manual',
-};
-
 /**
  * Format a number in Dutch locale: € X.XXX,XX
  */
@@ -38,6 +33,7 @@ function formatEur(value) {
    AddEditLineModal
    ───────────────────────────────────────────── */
 function AddEditLineModal({ isOpen, onClose, onSuccess, line, invoiceId }) {
+  const { t } = useTranslation(['invoices', 'common']);
   const isEdit = !!line;
 
   const [form, setForm] = useState({
@@ -73,14 +69,14 @@ function AddEditLineModal({ isOpen, onClose, onSuccess, line, invoiceId }) {
       };
       if (isEdit) {
         await updateInvoiceLine(line.id, payload);
-        toast.success('Line item updated');
+        toast.success(t('invoices:toast.lineUpdated'));
       } else {
         await addInvoiceLine(invoiceId, payload);
-        toast.success('Line item added');
+        toast.success(t('invoices:toast.lineAdded'));
       }
       onSuccess();
     } catch (err) {
-      toast.error(err.response?.data?.error || 'Failed to save line item');
+      toast.error(err.response?.data?.error || t('invoices:toast.lineSaveFailed'));
     } finally {
       setSubmitting(false);
     }
@@ -97,7 +93,7 @@ function AddEditLineModal({ isOpen, onClose, onSuccess, line, invoiceId }) {
       <div className="app-modal-panel max-w-md">
         <div className="flex items-center justify-between px-5 py-3 border-b border-grey-200">
           <h2 className="text-lg font-semibold text-grey-900">
-            {isEdit ? 'Edit Line Item' : 'Add Line Item'}
+            {isEdit ? t('invoices:lineModal.titleEdit') : t('invoices:lineModal.titleAdd')}
           </h2>
           <button
             onClick={onClose}
@@ -109,7 +105,7 @@ function AddEditLineModal({ isOpen, onClose, onSuccess, line, invoiceId }) {
         <form onSubmit={handleSubmit} className="px-5 py-4 space-y-4">
           <div>
             <label className="block text-sm font-medium text-grey-700 mb-1.5">
-              Description <span className="text-red-500">*</span>
+              {t('invoices:lineModal.fields.description')} <span className="text-red-500">*</span>
             </label>
             <input
               name="description"
@@ -118,13 +114,13 @@ function AddEditLineModal({ isOpen, onClose, onSuccess, line, invoiceId }) {
               onChange={handleChange}
               required
               className={inputClass}
-              placeholder="Line item description"
+              placeholder={t('invoices:lineModal.fields.descriptionPlaceholder')}
             />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-sm font-medium text-grey-700 mb-1.5">
-                Quantity <span className="text-red-500">*</span>
+                {t('invoices:lineModal.fields.quantity')} <span className="text-red-500">*</span>
               </label>
               <input
                 name="quantity"
@@ -139,7 +135,7 @@ function AddEditLineModal({ isOpen, onClose, onSuccess, line, invoiceId }) {
             </div>
             <div>
               <label className="block text-sm font-medium text-grey-700 mb-1.5">
-                Unit <span className="text-red-500">*</span>
+                {t('invoices:lineModal.fields.unit')} <span className="text-red-500">*</span>
               </label>
               <select
                 name="unit"
@@ -156,7 +152,7 @@ function AddEditLineModal({ isOpen, onClose, onSuccess, line, invoiceId }) {
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-sm font-medium text-grey-700 mb-1.5">
-                Unit Rate (&euro;) <span className="text-red-500">*</span>
+                {t('invoices:lineModal.fields.unitRate')} <span className="text-red-500">*</span>
               </label>
               <input
                 name="unit_rate"
@@ -171,7 +167,7 @@ function AddEditLineModal({ isOpen, onClose, onSuccess, line, invoiceId }) {
             </div>
             <div>
               <label className="block text-sm font-medium text-grey-700 mb-1.5">
-                BTW Rate (%)
+                {t('invoices:lineModal.fields.btwRate')}
               </label>
               <input
                 name="btw_rate"
@@ -188,15 +184,15 @@ function AddEditLineModal({ isOpen, onClose, onSuccess, line, invoiceId }) {
           {/* Live calculation preview */}
           <div className="bg-grey-50 rounded-md p-3 text-sm space-y-1">
             <div className="flex justify-between text-grey-600">
-              <span>Subtotal</span>
+              <span>{t('invoices:lineModal.preview.subtotal')}</span>
               <span>{formatEur(lineSubtotal)}</span>
             </div>
             <div className="flex justify-between text-grey-600">
-              <span>BTW ({btwRate}%)</span>
+              <span>{t('invoices:lineModal.preview.btw', { rate: btwRate })}</span>
               <span>{formatEur(btwAmount)}</span>
             </div>
             <div className="flex justify-between font-medium text-grey-900 pt-1 border-t border-grey-200">
-              <span>Total</span>
+              <span>{t('invoices:lineModal.preview.total')}</span>
               <span>{formatEur(lineTotal)}</span>
             </div>
           </div>
@@ -207,14 +203,18 @@ function AddEditLineModal({ isOpen, onClose, onSuccess, line, invoiceId }) {
               onClick={onClose}
               className="h-9 px-4 bg-white text-grey-700 border border-grey-300 rounded-md text-sm font-semibold hover:bg-grey-50 transition-colors"
             >
-              Cancel
+              {t('invoices:lineModal.buttons.cancel')}
             </button>
             <button
               type="submit"
               disabled={submitting}
               className="h-9 px-4 bg-green-500 text-white rounded-md text-sm font-semibold hover:bg-green-700 disabled:opacity-50 transition-colors"
             >
-              {submitting ? 'Saving...' : isEdit ? 'Update' : 'Add'}
+              {submitting
+                ? t('invoices:lineModal.buttons.saving')
+                : isEdit
+                ? t('invoices:lineModal.buttons.update')
+                : t('invoices:lineModal.buttons.add')}
             </button>
           </div>
         </form>
@@ -227,6 +227,7 @@ function AddEditLineModal({ isOpen, onClose, onSuccess, line, invoiceId }) {
    InvoiceDetailPage
    ───────────────────────────────────────────── */
 export default function InvoiceDetailPage() {
+  const { t } = useTranslation(['invoices', 'common']);
   const { id } = useParams();
   const navigate = useNavigate();
   const userRole = useAuthStore((s) => s.user?.role);
@@ -243,12 +244,12 @@ export default function InvoiceDetailPage() {
       const res = await getInvoice(id);
       setInvoice(res.data.data);
     } catch {
-      toast.error('Failed to load invoice');
+      toast.error(t('invoices:toast.invoiceLoadFailed'));
       navigate('/invoices');
     } finally {
       setLoading(false);
     }
-  }, [id, navigate]);
+  }, [id, navigate, t]);
 
   useEffect(() => {
     fetchInvoice();
@@ -258,10 +259,10 @@ export default function InvoiceDetailPage() {
   const handleStatusChange = async (newStatus) => {
     try {
       await updateInvoiceStatus(id, newStatus);
-      toast.success('Invoice status updated');
+      toast.success(t('invoices:toast.invoiceStatusUpdated'));
       fetchInvoice();
     } catch (err) {
-      toast.error(err.response?.data?.error || 'Failed to update status');
+      toast.error(err.response?.data?.error || t('invoices:toast.invoiceStatusFailed'));
     }
   };
 
@@ -272,19 +273,19 @@ export default function InvoiceDetailPage() {
       const blob = new Blob([res.data], { type: 'application/pdf' });
       window.open(URL.createObjectURL(blob), '_blank');
     } catch {
-      toast.error('Failed to generate PDF');
+      toast.error(t('invoices:toast.pdfFailed'));
     }
   };
 
   /* ── Delete line ── */
   const handleDeleteLine = async (lineId) => {
-    if (!window.confirm('Remove this line item?')) return;
+    if (!window.confirm(t('invoices:detail.confirm.removeLine'))) return;
     try {
       await deleteInvoiceLine(lineId);
-      toast.success('Line item removed');
+      toast.success(t('invoices:toast.lineRemoved'));
       fetchInvoice();
     } catch (err) {
-      toast.error(err.response?.data?.error || 'Failed to remove line item');
+      toast.error(err.response?.data?.error || t('invoices:toast.lineRemoveFailed'));
     }
   };
 
@@ -315,7 +316,7 @@ export default function InvoiceDetailPage() {
   }, [invoice]);
 
   /* ── Loading / empty guards ── */
-  if (loading) return <div className="text-center py-12 text-grey-400">Loading...</div>;
+  if (loading) return <div className="text-center py-12 text-grey-400">{t('invoices:detail.loading')}</div>;
   if (!invoice) return null;
 
   const isDraft = invoice.status === 'DRAFT';
@@ -328,7 +329,7 @@ export default function InvoiceDetailPage() {
           to="/invoices"
           className="inline-flex items-center gap-1.5 text-sm text-grey-500 hover:text-grey-700 mb-3"
         >
-          <ArrowLeft size={14} /> Back to Invoices
+          <ArrowLeft size={14} /> {t('invoices:detail.backToInvoices')}
         </Link>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -344,7 +345,7 @@ export default function InvoiceDetailPage() {
               onClick={handlePdf}
               className="flex items-center gap-1.5 h-9 px-4 bg-white text-grey-700 border border-grey-300 rounded-md text-sm font-semibold hover:bg-grey-50 transition-colors"
             >
-              <Download size={14} /> Download PDF
+              <Download size={14} /> {t('invoices:detail.downloadPdf')}
             </button>
             {canWrite && isDraft && (
               <button
@@ -354,7 +355,7 @@ export default function InvoiceDetailPage() {
                 }}
                 className="flex items-center gap-1.5 h-9 px-4 bg-green-500 text-white rounded-md text-sm font-semibold hover:bg-green-700 transition-colors"
               >
-                <Plus size={14} /> Add Line
+                <Plus size={14} /> {t('invoices:detail.addLine')}
               </button>
             )}
           </div>
@@ -363,28 +364,32 @@ export default function InvoiceDetailPage() {
 
       {/* Invoice Info Grid */}
       <div className="bg-white rounded-lg border border-grey-200 shadow-sm p-5 mb-6">
-        <h2 className="text-sm font-semibold text-grey-900 mb-4">Invoice Details</h2>
+        <h2 className="text-sm font-semibold text-grey-900 mb-4">{t('invoices:detail.sections.invoiceDetails')}</h2>
         <div className="grid grid-cols-2 gap-y-4 gap-x-6 text-sm">
           {/* Left column */}
           <div className="space-y-4">
             <div>
-              <p className="text-grey-500 mb-0.5">Invoice Date</p>
+              <p className="text-grey-500 mb-0.5">{t('invoices:detail.fields.invoiceDate')}</p>
               <p className="text-grey-900 font-medium">{formatDate(invoice.invoice_date)}</p>
             </div>
             <div>
-              <p className="text-grey-500 mb-0.5">Due Date</p>
+              <p className="text-grey-500 mb-0.5">{t('invoices:detail.fields.dueDate')}</p>
               <p className="text-grey-900 font-medium">{formatDate(invoice.due_date)}</p>
             </div>
             <div>
-              <p className="text-grey-500 mb-0.5">Currency</p>
+              <p className="text-grey-500 mb-0.5">{t('invoices:detail.fields.currency')}</p>
               <p className="text-grey-900">EUR</p>
             </div>
             <div>
-              <p className="text-grey-500 mb-0.5">Payment Terms</p>
-              <p className="text-grey-900">{invoice.payment_term_days ? `${invoice.payment_term_days} days` : '\u2014'}</p>
+              <p className="text-grey-500 mb-0.5">{t('invoices:detail.fields.paymentTerms')}</p>
+              <p className="text-grey-900">
+                {invoice.payment_term_days
+                  ? t('invoices:detail.fields.paymentTermsDays', { days: invoice.payment_term_days })
+                  : '\u2014'}
+              </p>
             </div>
             <div>
-              <p className="text-grey-500 mb-0.5">Contract</p>
+              <p className="text-grey-500 mb-0.5">{t('invoices:detail.fields.contract')}</p>
               {invoice.contract ? (
                 <Link
                   to={`/contracts/${invoice.contract_id}`}
@@ -401,19 +406,19 @@ export default function InvoiceDetailPage() {
           {/* Right column */}
           <div className="space-y-4">
             <div>
-              <p className="text-grey-500 mb-0.5">Supplier</p>
+              <p className="text-grey-500 mb-0.5">{t('invoices:detail.fields.supplier')}</p>
               <p className="text-grey-900 font-medium">{invoice.supplier?.name || '\u2014'}</p>
             </div>
             <div>
-              <p className="text-grey-500 mb-0.5">Address</p>
+              <p className="text-grey-500 mb-0.5">{t('invoices:detail.fields.address')}</p>
               <p className="text-grey-900">{invoice.supplier?.address || '\u2014'}</p>
             </div>
             <div>
-              <p className="text-grey-500 mb-0.5">KvK</p>
+              <p className="text-grey-500 mb-0.5">{t('invoices:detail.fields.kvk')}</p>
               <p className="text-grey-900">{invoice.supplier?.kvk_number || '\u2014'}</p>
             </div>
             <div>
-              <p className="text-grey-500 mb-0.5">BTW</p>
+              <p className="text-grey-500 mb-0.5">{t('invoices:detail.fields.btw')}</p>
               <p className="text-grey-900">{invoice.supplier?.btw_number || '\u2014'}</p>
             </div>
           </div>
@@ -424,7 +429,7 @@ export default function InvoiceDetailPage() {
       <div className="bg-white rounded-lg border border-grey-200 shadow-sm mb-6">
         <div className="px-5 py-3 border-b border-grey-200">
           <h2 className="text-sm font-semibold text-grey-900">
-            Line Items ({invoice.lines?.length || 0})
+            {t('invoices:detail.sections.lineItems', { count: invoice.lines?.length || 0 })}
           </h2>
         </div>
         <div className="overflow-x-auto">
@@ -432,34 +437,34 @@ export default function InvoiceDetailPage() {
             <thead>
               <tr className="bg-grey-50 border-b border-grey-200">
                 <th className="text-left px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide w-10">
-                  #
+                  {t('invoices:detail.lineItems.table.num')}
                 </th>
                 <th className="text-left px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide">
-                  Description
+                  {t('invoices:detail.lineItems.table.description')}
                 </th>
                 <th className="text-left px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide">
-                  Type
+                  {t('invoices:detail.lineItems.table.type')}
                 </th>
                 <th className="text-right px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide">
-                  Qty
+                  {t('invoices:detail.lineItems.table.qty')}
                 </th>
                 <th className="text-left px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide">
-                  Unit
+                  {t('invoices:detail.lineItems.table.unit')}
                 </th>
                 <th className="text-right px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide">
-                  Unit Rate (&euro;)
+                  {t('invoices:detail.lineItems.table.unitRate')}
                 </th>
                 <th className="text-right px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide">
-                  BTW%
+                  {t('invoices:detail.lineItems.table.btwPct')}
                 </th>
                 <th className="text-right px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide">
-                  Subtotal (&euro;)
+                  {t('invoices:detail.lineItems.table.subtotal')}
                 </th>
                 <th className="text-right px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide">
-                  BTW (&euro;)
+                  {t('invoices:detail.lineItems.table.btwAmount')}
                 </th>
                 <th className="text-right px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide">
-                  Total (&euro;)
+                  {t('invoices:detail.lineItems.table.total')}
                 </th>
                 {canWrite && isDraft && (
                   <th className="w-10 px-4 py-3" />
@@ -473,7 +478,7 @@ export default function InvoiceDetailPage() {
                     colSpan={canWrite && isDraft ? 11 : 10}
                     className="px-4 py-4 text-center text-grey-400 text-xs"
                   >
-                    No line items {'\u2014'}
+                    {t('invoices:detail.lineItems.empty')}
                   </td>
                 </tr>
               ) : (
@@ -491,7 +496,9 @@ export default function InvoiceDetailPage() {
                         {line.description || '\u2014'}
                       </td>
                       <td className="px-4 py-3 text-grey-700">
-                        {LINE_TYPE_LABELS[line.line_type] || line.line_type || '\u2014'}
+                        {t(`invoices:detail.lineItems.lineTypes.${line.line_type}`, {
+                          defaultValue: line.line_type || '\u2014',
+                        })}
                       </td>
                       <td className="px-4 py-3 text-right text-grey-900">
                         {Number(line.quantity).toLocaleString('nl-NL', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
@@ -517,7 +524,7 @@ export default function InvoiceDetailPage() {
                           <RowActionMenu
                             actions={[
                               {
-                                label: 'Edit',
+                                label: t('invoices:detail.lineItems.actions.edit'),
                                 icon: Pencil,
                                 onClick: () => {
                                   setEditLine(line);
@@ -525,7 +532,7 @@ export default function InvoiceDetailPage() {
                                 },
                               },
                               {
-                                label: 'Delete',
+                                label: t('invoices:detail.lineItems.actions.delete'),
                                 icon: Trash2,
                                 onClick: () => handleDeleteLine(line.id),
                                 variant: 'danger',
@@ -546,12 +553,12 @@ export default function InvoiceDetailPage() {
       {/* BTW Summary */}
       {btwSummary.length > 0 && (
         <div className="bg-white rounded-lg border border-grey-200 shadow-sm p-5 mb-6">
-          <h2 className="text-sm font-semibold text-grey-900 mb-3">BTW Summary</h2>
+          <h2 className="text-sm font-semibold text-grey-900 mb-3">{t('invoices:detail.sections.btwSummary')}</h2>
           <div className="space-y-2 text-sm">
             {btwSummary.map((entry) => (
               <div key={entry.rate} className="flex items-center gap-4 text-grey-700">
-                <span className="font-medium text-grey-900">BTW {entry.rate}%:</span>
-                <span>Subtotal {formatEur(entry.subtotal)}</span>
+                <span className="font-medium text-grey-900">{t('invoices:detail.btwSummary.btwLabel', { rate: entry.rate })}:</span>
+                <span>{t('invoices:detail.btwSummary.subtotal', { value: formatEur(entry.subtotal) })}</span>
                 <span className="text-grey-400">&rarr;</span>
                 <span>BTW {formatEur(entry.btw)}</span>
               </div>
@@ -565,15 +572,15 @@ export default function InvoiceDetailPage() {
         <div className="flex justify-end">
           <div className="w-full max-w-xs space-y-2 text-sm border-t border-grey-200 pt-4">
             <div className="flex justify-between text-grey-700">
-              <span>Subtotal excl. BTW</span>
+              <span>{t('invoices:detail.totals.subtotalExclBtw')}</span>
               <span>{formatEur(totals.subtotal)}</span>
             </div>
             <div className="flex justify-between text-grey-700">
-              <span>BTW Total</span>
+              <span>{t('invoices:detail.totals.btwTotal')}</span>
               <span>{formatEur(totals.btw)}</span>
             </div>
             <div className="flex justify-between font-semibold text-base text-grey-900 pt-2 border-t border-grey-200">
-              <span>Total incl. BTW</span>
+              <span>{t('invoices:detail.totals.totalInclBtw')}</span>
               <span>{formatEur(totals.total)}</span>
             </div>
           </div>

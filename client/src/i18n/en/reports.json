@@ -1,0 +1,140 @@
+{
+  "title": "Reports",
+  "subtitle": "Generate and download compliance reports",
+  "scheduledReports": "Scheduled Reports",
+  "reportType": "Report Type",
+  "recentReports": "Recent Reports",
+  "noReports": "No reports generated yet",
+  "loadingReports": "Loading reports...",
+  "totalCount": "{{count}} total",
+  "generatedSuccessfully": "Report generated successfully",
+  "types": {
+    "RPT-01": {
+      "name": "Supplier Circularity Statement",
+      "description": "Per-supplier recycling and recovery rates"
+    },
+    "RPT-02": {
+      "name": "Material Recovery Summary",
+      "description": "Aggregate recovery by product category"
+    },
+    "RPT-03": {
+      "name": "Chain of Custody",
+      "description": "Full traceability per consignment"
+    },
+    "RPT-04": {
+      "name": "Inbound Weight Register",
+      "description": "Weighing events with carrier/stream subtotals"
+    },
+    "RPT-05": {
+      "name": "Waste Stream Analysis",
+      "description": "Breakdown by waste stream and category"
+    },
+    "RPT-06": {
+      "name": "Container Asset Utilisation",
+      "description": "Asset usage, counts, and top containers"
+    },
+    "RPT-07": {
+      "name": "Downstream Material Statement",
+      "description": "Material and fraction level downstream declaration"
+    }
+  },
+  "fields": {
+    "supplier": "Supplier",
+    "selectSupplier": "Select supplier...",
+    "material": "Material",
+    "selectMaterial": "Select material...",
+    "dateFrom": "Date From",
+    "dateTo": "Date To",
+    "productCategories": "Product Categories (optional)",
+    "wasteStreams": "Waste Streams (optional)",
+    "wasteStream": "Waste Stream (optional)",
+    "carrier": "Carrier (optional)",
+    "allCarriers": "All carriers",
+    "allStreams": "All streams",
+    "containerType": "Container Type (optional)",
+    "allTypes": "All types",
+    "mode": "Mode",
+    "orderId": "Order ID",
+    "orderIdPlaceholder": "Enter order ID...",
+    "recipientEmails": "Recipient Emails",
+    "recipientEmailsPlaceholder": "email1@example.com, email2@example.com",
+    "recipientEmailsHint": "Comma-separated email addresses",
+    "frequency": "Frequency",
+    "reportTypeField": "Report Type",
+    "outputFormat": "Output Format",
+    "dayOfWeek": "Day of Week",
+    "dayOfMonth": "Day of Month (1-28)",
+    "holdCtrlHint": "Hold Cmd/Ctrl to select multiple. Leave empty for all."
+  },
+  "modes": {
+    "singleOrder": "Single Order",
+    "batchDateRange": "Batch (Date Range)"
+  },
+  "containerTypes": {
+    "OPEN_TOP": "Open Top",
+    "CLOSED": "Closed",
+    "ROLL_ON": "Roll-on",
+    "COMPACTOR": "Compactor",
+    "WHEELIE_BIN": "Wheelie Bin",
+    "PALLET_BOX": "Pallet Box",
+    "IBC": "IBC",
+    "OTHER": "Other"
+  },
+  "buttons": {
+    "generatePdf": "Generate PDF",
+    "generateXlsx": "Generate XLSX",
+    "generateBoth": "Generate Both"
+  },
+  "table": {
+    "type": "Type",
+    "name": "Name",
+    "generated": "Generated",
+    "by": "By",
+    "files": "Files",
+    "actions": "Actions"
+  },
+  "toast": {
+    "generated": "Report generated",
+    "generationFailed": "Generation failed",
+    "downloadFailed": "Download failed",
+    "deleted": "Report deleted",
+    "deleteFailed": "Delete failed"
+  },
+  "confirm": {
+    "deleteReport": "Delete this report permanently?"
+  },
+  "schedules": {
+    "title": "Scheduled Reports",
+    "subtitle": "Automated recurring report generation",
+    "newSchedule": "New Schedule",
+    "editSchedule": "Edit Schedule",
+    "createFirstSchedule": "Create First Schedule",
+    "noSchedules": "No scheduled reports yet",
+    "loadingSchedules": "Loading schedules...",
+    "updateSchedule": "Update Schedule",
+    "createSchedule": "Create Schedule",
+    "table": {
+      "reportType": "Report Type",
+      "frequency": "Frequency",
+      "nextRun": "Next Run",
+      "recipients": "Recipients",
+      "format": "Format",
+      "status": "Status",
+      "actions": "Actions"
+    },
+    "dayOf": "Day {{day}}",
+    "toast": {
+      "updated": "Schedule updated",
+      "created": "Schedule created",
+      "deactivated": "Schedule deactivated",
+      "saveFailed": "Save failed",
+      "deleteFailed": "Delete failed"
+    },
+    "confirm": {
+      "deactivate": "Deactivate this schedule?"
+    },
+    "validation": {
+      "emailRequired": "At least one recipient email is required"
+    }
+  }
+}

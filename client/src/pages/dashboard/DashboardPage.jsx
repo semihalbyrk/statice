@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Truck, ClipboardList, Loader2, CheckCircle2, Calendar, Scale, FileBarChart } from 'lucide-react';
 import { format } from 'date-fns';
+import { useTranslation } from 'react-i18next';
 import useAuthStore from '../../store/authStore';
 import { getDashboardStats } from '../../api/dashboard';
 import StatusBadge from '../../components/ui/StatusBadge';
@@ -50,6 +51,7 @@ function formatDateTime(dateStr) {
 
 export default function DashboardPage() {
   const navigate = useNavigate();
+  const { t } = useTranslation('dashboard');
   const user = useAuthStore((state) => state.user);
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -75,14 +77,10 @@ export default function DashboardPage() {
     <div>
       <div className="mb-8">
         <h1 className="text-xl font-semibold text-grey-900">
-          Welcome, {user?.full_name}
+          {t('welcome', { name: user?.full_name })}
         </h1>
         <p className="text-grey-500 text-sm mt-1">
-          You are signed in as{' '}
-          <span className="font-medium text-grey-600">
-            {ROLE_LABELS[user?.role] || user?.role}
-          </span>
-          .
+          {t('roleMessage', { role: ROLE_LABELS[user?.role] || user?.role })}
         </p>
       </div>
 
@@ -95,37 +93,37 @@ export default function DashboardPage() {
           {/* Stat Cards — 6 cards, responsive grid */}
           <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-4 mb-8">
             <StatCard
-              label="Today's Arrivals"
+              label={t('stats.todayArrivals')}
               value={stats?.todayArrivals ?? 0}
               icon={Truck}
               iconBg="bg-blue-50 text-blue-600"
             />
             <StatCard
-              label="Planned Orders"
+              label={t('stats.plannedOrders')}
               value={stats?.plannedOrders ?? 0}
               icon={ClipboardList}
               iconBg="bg-grey-100 text-grey-600"
             />
             <StatCard
-              label="In Progress"
+              label={t('stats.inProgress')}
               value={stats?.inProgressOrders ?? 0}
               icon={Loader2}
               iconBg="bg-orange-50 text-orange-600"
             />
             <StatCard
-              label="Completed Today"
+              label={t('stats.completedToday')}
               value={stats?.completedToday ?? 0}
               icon={CheckCircle2}
               iconBg="bg-green-25 text-green-600"
             />
             <StatCard
-              label="Tomorrow's Orders"
+              label={t('stats.tomorrowOrders')}
               value={stats?.tomorrowOrders ?? 0}
               icon={Calendar}
               iconBg="bg-purple-50 text-purple-600"
             />
             <StatCard
-              label="Active Inbounds"
+              label={t('stats.activeInbounds')}
               value={stats?.activeInbounds ?? 0}
               icon={Scale}
               iconBg="bg-yellow-50 text-yellow-600"
@@ -137,19 +135,19 @@ export default function DashboardPage() {
             {/* Left column — Today's Arrivals table (spans 2 cols) */}
             <div className="lg:col-span-2 bg-white rounded-lg border border-grey-200 shadow-sm overflow-hidden">
               <div className="flex items-center justify-between px-5 py-4 border-b border-grey-200">
-                <h2 className="text-base font-semibold text-grey-900">Today&apos;s Arrivals</h2>
+                <h2 className="text-base font-semibold text-grey-900">{t('todayArrivals')}</h2>
               </div>
               {stats?.todayInboundsTable?.length > 0 ? (
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="border-b border-grey-200 bg-grey-50">
-                        <th className="text-left px-5 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide">Vehicle Plate</th>
-                        <th className="text-left px-5 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide">Carrier</th>
-                        <th className="text-left px-5 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide">Supplier</th>
-                        <th className="text-left px-5 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide">Order #</th>
-                        <th className="text-left px-5 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide">Parcels</th>
-                        <th className="text-left px-5 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide">Arrived At</th>
+                        <th className="text-left px-5 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide">{t('table.vehiclePlate')}</th>
+                        <th className="text-left px-5 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide">{t('table.carrier')}</th>
+                        <th className="text-left px-5 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide">{t('table.supplier')}</th>
+                        <th className="text-left px-5 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide">{t('table.orderNumber')}</th>
+                        <th className="text-left px-5 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide">{t('table.parcels')}</th>
+                        <th className="text-left px-5 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide">{t('table.arrivedAt')}</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-grey-100">
@@ -173,7 +171,7 @@ export default function DashboardPage() {
                 </div>
               ) : (
                 <div className="px-5 py-8 text-center text-sm text-grey-400">
-                  No arrivals recorded today
+                  {t('empty.noArrivals')}
                 </div>
               )}
             </div>
@@ -183,7 +181,7 @@ export default function DashboardPage() {
               {/* Recent Orders */}
               <div className="bg-white rounded-lg border border-grey-200 shadow-sm overflow-hidden">
                 <div className="flex items-center justify-between px-5 py-4 border-b border-grey-200">
-                  <h2 className="text-base font-semibold text-grey-900">Recent Orders</h2>
+                  <h2 className="text-base font-semibold text-grey-900">{t('recentOrders')}</h2>
                 </div>
                 {stats?.recentOrders?.length > 0 ? (
                   <div className="divide-y divide-grey-100">
@@ -207,7 +205,7 @@ export default function DashboardPage() {
                   </div>
                 ) : (
                   <div className="px-5 py-8 text-center text-sm text-grey-400">
-                    No orders yet
+                    {t('empty.noOrders')}
                   </div>
                 )}
               </div>
@@ -215,7 +213,7 @@ export default function DashboardPage() {
               {/* Recent Reports */}
               <div className="bg-white rounded-lg border border-grey-200 shadow-sm overflow-hidden">
                 <div className="flex items-center justify-between px-5 py-4 border-b border-grey-200">
-                  <h2 className="text-base font-semibold text-grey-900">Recent Reports</h2>
+                  <h2 className="text-base font-semibold text-grey-900">{t('recentReports')}</h2>
                 </div>
                 {stats?.recentReports?.length > 0 ? (
                   <div className="divide-y divide-grey-100">
@@ -236,7 +234,7 @@ export default function DashboardPage() {
                   </div>
                 ) : (
                   <div className="px-5 py-8 text-center text-sm text-grey-400">
-                    No reports generated yet
+                    {t('empty.noReports')}
                   </div>
                 )}
               </div>

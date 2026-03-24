@@ -1,0 +1,165 @@
+{
+  "title": "Invoices",
+  "newInvoice": "New Invoice",
+  "searchPlaceholder": "Search invoices...",
+  "allStatuses": "All Statuses",
+  "from": "From",
+  "to": "To",
+  "table": {
+    "invoiceNumber": "Invoice Number",
+    "status": "Status",
+    "supplier": "Supplier",
+    "invoiceDate": "Invoice Date",
+    "dueDate": "Due Date",
+    "total": "Total"
+  },
+  "actions": {
+    "view": "View",
+    "downloadPdf": "Download PDF",
+    "cancel": "Cancel"
+  },
+  "status": {
+    "DRAFT": "Draft",
+    "FINALIZED": "Finalized",
+    "CANCELLED": "Cancelled"
+  },
+  "empty": "No invoices found.",
+  "loading": "Loading...",
+  "pagination": {
+    "pageOf": "Page {{page}} of {{total}}",
+    "previous": "Previous",
+    "next": "Next"
+  },
+  "toast": {
+    "statusUpdated": "Status updated",
+    "statusFailed": "Failed to update status",
+    "pdfFailed": "Failed to generate PDF",
+    "ordersFailed": "Failed to load orders",
+    "invoiceLoadFailed": "Failed to load invoice",
+    "lineUpdated": "Line item updated",
+    "lineAdded": "Line item added",
+    "lineSaveFailed": "Failed to save line item",
+    "lineRemoved": "Line item removed",
+    "lineRemoveFailed": "Failed to remove line item",
+    "invoiceStatusUpdated": "Invoice status updated",
+    "invoiceStatusFailed": "Failed to update status"
+  },
+  "create": {
+    "title": "Create Invoice",
+    "breadcrumb": "Create Invoice",
+    "stepSupplier": {
+      "heading": "Select Supplier",
+      "label": "Supplier",
+      "placeholder": "Select supplier..."
+    },
+    "stepOrders": {
+      "heading": "Completed Orders",
+      "loading": "Loading orders...",
+      "empty": "No completed orders found for this supplier.",
+      "table": {
+        "orderNumber": "Order Number",
+        "plannedDate": "Planned Date",
+        "wasteStream": "Waste Stream",
+        "netWeight": "Net Weight",
+        "status": "Status"
+      },
+      "selectedCount_one": "{{count}} order selected",
+      "selectedCount_other": "{{count}} orders selected"
+    },
+    "buttons": {
+      "cancel": "Cancel",
+      "generate": "Generate Invoice",
+      "generating": "Generating..."
+    },
+    "validation": {
+      "selectOrder": "Select at least one order"
+    },
+    "toast": {
+      "created": "Invoice created",
+      "failed": "Failed to generate invoice"
+    }
+  },
+  "detail": {
+    "backToInvoices": "Back to Invoices",
+    "downloadPdf": "Download PDF",
+    "addLine": "Add Line",
+    "loading": "Loading...",
+    "sections": {
+      "invoiceDetails": "Invoice Details",
+      "lineItems": "Line Items ({{count}})",
+      "btwSummary": "BTW Summary",
+      "grandTotal": "Grand Total"
+    },
+    "fields": {
+      "invoiceDate": "Invoice Date",
+      "dueDate": "Due Date",
+      "currency": "Currency",
+      "paymentTerms": "Payment Terms",
+      "paymentTermsDays": "{{days}} days",
+      "contract": "Contract",
+      "supplier": "Supplier",
+      "address": "Address",
+      "kvk": "KvK",
+      "btw": "BTW"
+    },
+    "lineItems": {
+      "empty": "No line items —",
+      "table": {
+        "num": "#",
+        "description": "Description",
+        "type": "Type",
+        "qty": "Qty",
+        "unit": "Unit",
+        "unitRate": "Unit Rate (€)",
+        "btwPct": "BTW%",
+        "subtotal": "Subtotal (€)",
+        "btwAmount": "BTW (€)",
+        "total": "Total (€)"
+      },
+      "lineTypes": {
+        "material": "Material",
+        "contamination_fee": "Contamination Fee",
+        "manual": "Manual"
+      },
+      "actions": {
+        "edit": "Edit",
+        "delete": "Delete"
+      }
+    },
+    "btwSummary": {
+      "subtotal": "Subtotal {{value}}",
+      "btwLabel": "BTW {{rate}}%"
+    },
+    "totals": {
+      "subtotalExclBtw": "Subtotal excl. BTW",
+      "btwTotal": "BTW Total",
+      "totalInclBtw": "Total incl. BTW"
+    },
+    "confirm": {
+      "removeLine": "Remove this line item?"
+    }
+  },
+  "lineModal": {
+    "titleAdd": "Add Line Item",
+    "titleEdit": "Edit Line Item",
+    "fields": {
+      "description": "Description",
+      "descriptionPlaceholder": "Line item description",
+      "quantity": "Quantity",
+      "unit": "Unit",
+      "unitRate": "Unit Rate (€)",
+      "btwRate": "BTW Rate (%)"
+    },
+    "preview": {
+      "subtotal": "Subtotal",
+      "btw": "BTW ({{rate}}%)",
+      "total": "Total"
+    },
+    "buttons": {
+      "cancel": "Cancel",
+      "add": "Add",
+      "update": "Update",
+      "saving": "Saving..."
+    }
+  }
+}

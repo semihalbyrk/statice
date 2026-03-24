@@ -1,0 +1,166 @@
+{
+  "buttons": {
+    "save": "Opslaan",
+    "cancel": "Annuleren",
+    "delete": "Verwijderen",
+    "edit": "Bewerken",
+    "create": "Aanmaken",
+    "close": "Sluiten",
+    "confirm": "Bevestigen",
+    "back": "Terug",
+    "next": "Volgende",
+    "search": "Zoeken",
+    "add": "Toevoegen",
+    "remove": "Verwijderen",
+    "update": "Bijwerken",
+    "submit": "Indienen",
+    "loading": "Laden...",
+    "saving": "Opslaan...",
+    "creating": "Aanmaken...",
+    "updating": "Bijwerken...",
+    "download": "Downloaden",
+    "print": "Afdrukken",
+    "dismiss": "Sluiten",
+    "report": "Rapporteren",
+    "reset": "Resetten",
+    "apply": "Toepassen",
+    "retry": "Opnieuw proberen"
+  },
+  "status": {
+    "PLANNED": "Gepland",
+    "ARRIVED": "Aangekomen",
+    "IN_PROGRESS": "In Behandeling",
+    "COMPLETED": "Afgerond",
+    "CANCELLED": "Geannuleerd",
+    "DISPUTE": "Geschil",
+    "INVOICED": "Gefactureerd",
+    "WEIGHED_IN": "Ingewogen",
+    "WEIGHED_OUT": "Uitgewogen",
+    "READY_FOR_SORTING": "Klaar voor Sortering",
+    "SORTED": "Gesorteerd",
+    "ACTIVE": "Actief",
+    "INACTIVE": "Inactief",
+    "DRAFT": "Concept",
+    "EXPIRED": "Verlopen",
+    "NOT_STARTED": "Niet Gestart",
+    "FINALIZED": "Definitief",
+    "CONFIRMED": "Bevestigd",
+    "SUPERSEDED": "Vervangen"
+  },
+  "roles": {
+    "ADMIN": "Beheerder",
+    "LOGISTICS_PLANNER": "Logistiek Planner",
+    "GATE_OPERATOR": "Poortoperator",
+    "REPORTING_MANAGER": "Rapportage Manager",
+    "SORTING_EMPLOYEE": "Sorteermedewerker",
+    "COMPLIANCE_OFFICER": "Compliance Officer",
+    "LOGISTICS_COORDINATOR": "Logistiek Coördinator",
+    "FINANCE_MANAGER": "Financieel Manager",
+    "FINANCE_USER": "Financieel Gebruiker",
+    "SALES": "Verkoop",
+    "QC_INSPECTOR": "Kwaliteitscontroleur"
+  },
+  "containerTypes": {
+    "OPEN_TOP": "Open Top",
+    "CLOSED_TOP": "Gesloten Top",
+    "GITTERBOX": "Gitterbox",
+    "PALLET": "Pallet",
+    "OTHER": "Overig"
+  },
+  "supplierTypes": {
+    "PRO": "PRO",
+    "THIRD_PARTY": "Derde Partij",
+    "PRIVATE_INDIVIDUAL": "Particulier"
+  },
+  "pricingModels": {
+    "WEIGHT": "Per Gewicht (kg)",
+    "QUANTITY": "Per Aantal",
+    "WEIGHT_AND_QUANTITY": "Per Gewicht en Aantal"
+  },
+  "rateTypes": {
+    "FIXED": "Vast",
+    "PERCENTAGE": "Percentage",
+    "PER_KG": "Per kg",
+    "PER_HOUR": "Per uur"
+  },
+  "feeTypes": {
+    "CONTAMINATION_SURCHARGE": "Verontreinigingstoeslag",
+    "CONTAMINATION_FLAT_FEE": "Verontreinigingstarief (vast)",
+    "CONTAMINATION_PERCENTAGE": "Verontreinigingspercentage",
+    "SORTING_SURCHARGE": "Sorteertoeslag",
+    "HAZARDOUS_MATERIAL": "Gevaarlijk Materiaal",
+    "REJECTION_FEE": "Afkeuringskosten"
+  },
+  "frequencies": {
+    "WEEKLY": "Wekelijks",
+    "MONTHLY": "Maandelijks",
+    "QUARTERLY": "Per Kwartaal",
+    "ANNUALLY": "Jaarlijks"
+  },
+  "currencies": {
+    "EUR": "EUR (€)",
+    "USD": "USD ($)",
+    "GBP": "GBP (£)"
+  },
+  "weeeCategories": {
+    "CAT_1": "Cat. 1 — Grote Huishoudelijke Apparaten",
+    "CAT_2": "Cat. 2 — Kleine Huishoudelijke Apparaten",
+    "CAT_3": "Cat. 3 — IT- en Telecommunicatieapparatuur",
+    "CAT_4": "Cat. 4 — Consumentenapparatuur",
+    "CAT_5": "Cat. 5 — Verlichtingsapparatuur",
+    "CAT_6": "Cat. 6 — Elektrisch en Elektronisch Gereedschap",
+    "CAT_7": "Cat. 7 — Speelgoed, Vrije Tijd en Sport",
+    "CAT_8": "Cat. 8 — Medische Apparaten",
+    "CAT_9": "Cat. 9 — Meet- en Controle-instrumenten",
+    "CAT_10": "Cat. 10 — Automaten"
+  },
+  "incidentTypes": {
+    "DAMAGE": "Schade",
+    "DISPUTE": "Geschil",
+    "SPECIAL_HANDLING": "Speciale Behandeling",
+    "DRIVER_INSTRUCTION": "Chauffeursinstructie"
+  },
+  "contaminationTypes": {
+    "NON_WEEE": "Niet-AEEA Materiaal",
+    "HAZARDOUS": "Gevaarlijk Materiaal",
+    "EXCESSIVE_MOISTURE": "Overmatig Vocht",
+    "SORTING_REQUIRED": "Sortering Vereist"
+  },
+  "table": {
+    "loading": "Laden...",
+    "noData": "Geen gegevens gevonden",
+    "totalCount": "{{count}} totaal",
+    "pageOf": "Pagina {{page}} van {{total}}",
+    "perPage": "{{count}} / pagina",
+    "status": "Status"
+  },
+  "confirm": {
+    "areYouSure": "Weet u het zeker?",
+    "cannotUndo": "Deze actie kan niet ongedaan worden gemaakt.",
+    "deleteConfirm": "Weet u zeker dat u dit wilt verwijderen?"
+  },
+  "toast": {
+    "created": "{{entity}} aangemaakt",
+    "updated": "{{entity}} bijgewerkt",
+    "deleted": "{{entity}} verwijderd",
+    "failed": "Kan {{action}} niet uitvoeren",
+    "statusUpdated": "Status bijgewerkt naar {{status}}"
+  },
+  "fields": {
+    "name": "Naam",
+    "email": "E-mail",
+    "phone": "Telefoon",
+    "status": "Status",
+    "notes": "Opmerkingen",
+    "optional": "Optioneel",
+    "required": "Verplicht",
+    "active": "Actief",
+    "description": "Beschrijving"
+  },
+  "empty": "—",
+  "yes": "Ja",
+  "no": "Nee",
+  "all": "Alle",
+  "total": "Totaal",
+  "or": "of"
+}

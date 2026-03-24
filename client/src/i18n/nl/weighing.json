@@ -1,0 +1,160 @@
+{
+  "progress": {
+    "arrived": "Aangekomen",
+    "weighing": "Weging",
+    "weighedOut": "Uitgewogen",
+    "readyForSorting": "Klaar voor Sortering",
+    "sorted": "Gesorteerd"
+  },
+  "info": {
+    "carrier": "Vervoerder",
+    "supplier": "Leverancier",
+    "vehiclePlate": "Kenteken",
+    "wasteStreams": "Afvalstro(o)m(en)",
+    "arrivedAt": "Aangekomen Op",
+    "contract": "Contract",
+    "orderName": "Ordernaam",
+    "notes": "Opmerkingen"
+  },
+  "weighingFlow": {
+    "weighingProcess": "Weegproces",
+    "gross": "Bruto",
+    "tare": "Tarra",
+    "net": "Netto",
+    "firstWeighing": "Eerste Weging (Bruto)",
+    "nextWeighing": "Volgende Weging",
+    "finalWeighing": "Laatste Weging (Tarra)",
+    "override": "Overschrijven",
+    "firstWeighingLabel": "Eerste weging",
+    "tareWeighingLabel": "Tarraweging",
+    "weighingLabel": "Weging",
+    "typeGross": "Bruto",
+    "typeTare": "Tarra",
+    "typeWeighing": "Weging {{sequence}}",
+    "manual": "(handmatig)",
+    "confirmed": "Bevestigd"
+  },
+  "manualWeighing": {
+    "title": "Handmatige Gewichtsinvoer",
+    "weightKg": "Gewicht (kg)",
+    "reason": "Reden",
+    "pfisterUnavailable": "Pfister niet beschikbaar",
+    "communicationError": "Communicatiefout",
+    "calibrationInProgress": "Kalibratie bezig",
+    "other": "Overig",
+    "thisIsTare": "Dit is de tarra",
+    "recording": "Opslaan...",
+    "recordWeight": "Gewicht Opslaan"
+  },
+  "parcelRegistration": {
+    "registerCargo": "Geloste Lading Registreren",
+    "newContainer": "Nieuwe Container",
+    "existingContainer": "Bestaande Container",
+    "noContainer": "Geen Container",
+    "containerId": "Container-ID",
+    "containerType": "Containertype",
+    "tareWeight": "Tarragewicht (kg)",
+    "volume": "Volume (m³)",
+    "wasteStream": "Afvalstroom",
+    "notes": "Opmerkingen",
+    "continueNextWeighing": "Doorgaan Volgende Weging",
+    "finalizeWeighing": "Weging Afronden",
+    "lastParcelWarning": "Laatste pakket — voertuig staat maximaal {{max}} pakketten toe",
+    "searching": "Zoeken...",
+    "found": "Gevonden: {{label}} — {{type}}",
+    "containerNotFound": "Container niet gevonden",
+    "select": "Selecteer...",
+    "auto": "Automatisch",
+    "optional": "Optioneel"
+  },
+  "parcelConfirmation": {
+    "parcelRegistered": "Pakket Geregistreerd",
+    "writeIdOnCargo": "Schrijf dit ID op de verpakking voor tracking",
+    "printLabel": "Label Afdrukken"
+  },
+  "parcelsTable": {
+    "parcels": "Pakketten",
+    "parcelId": "Pakket-ID",
+    "container": "Container",
+    "cargoNet": "Netto Lading (kg)",
+    "containerTare": "Container Tarra (kg)",
+    "materialNet": "Materiaal Netto (kg)",
+    "noParcels": "Nog geen pakketten geregistreerd",
+    "total": "Totaal",
+    "parcelCount": "{{count}} pakket(ten)"
+  },
+  "excessWeighing": {
+    "maxParcelsReached": "Maximum aantal pakketten bereikt ({{max}})",
+    "excessWeighingMessage": "Er is een extra weging geactiveerd, maar er kunnen geen pakketten meer worden geregistreerd. U kunt het weegproces nu afronden.",
+    "finalizeTare": "Weging Afronden (Tarra)"
+  },
+  "actionsFooter": {
+    "readyForSorting": "Klaar voor Sortering",
+    "downloadWeightTicket": "Weegbon Downloaden",
+    "viewSortingProcess": "Sorteerproces Bekijken"
+  },
+  "overrideDialog": {
+    "title": "Gewicht Overschrijven",
+    "weighing": "Weging",
+    "weighingOption": "Weging {{sequence}} ({{type}}) — {{weight}} kg",
+    "typeIntermediate": "Tussenliggend",
+    "newWeight": "Nieuw Gewicht (kg)",
+    "reasonCode": "Redencode",
+    "selectReason": "Selecteer reden...",
+    "calibrationError": "Kalibratiefout",
+    "equipmentMalfunction": "Apparaatstoring",
+    "incorrectReading": "Onjuiste Aflezing",
+    "other": "Overig",
+    "saving": "Opslaan...",
+    "override": "Overschrijven"
+  },
+  "incident": {
+    "reportIncident": "Incident Melden",
+    "selectIncident": "Selecteer incidenttype...",
+    "damage": "Schade",
+    "dispute": "Geschil",
+    "specialHandling": "Speciale Behandeling",
+    "driverInstruction": "Chauffeursinstructie",
+    "notesPlaceholder": "Opmerkingen..."
+  },
+  "lzv": {
+    "lzvVehicle": "LZV-voertuig"
+  },
+  "toast": {
+    "parcelRegistered": "Pakket geregistreerd",
+    "weighingComplete": "{{label}} voltooid",
+    "tareComplete": "Tarraweging voltooid — weging afgerond",
+    "nextWeighingComplete": "Volgende weging voltooid",
+    "statusUpdated": "Status bijgewerkt naar {{status}}",
+    "weighingConfirmed": "Weging bevestigd",
+    "incidentReported": "Incident gemeld",
+    "parcelDeleted": "Pakket verwijderd",
+    "deleteParcelConfirm": "Pakket {{label}} verwijderen?",
+    "manualWeightRecorded": "Handmatig gewicht opgeslagen",
+    "weightOverridden": "Gewicht overschreven",
+    "readyForSorting": "Inbound klaar voor sortering — sorteerproces aangemaakt",
+    "failedToLoad": "Laden van inbound mislukt",
+    "failedToUpdateStatus": "Status bijwerken mislukt",
+    "failedToReportIncident": "Incident melden mislukt",
+    "failedToConfirmWeighing": "Weging bevestigen mislukt",
+    "weighingFailed": "Weging mislukt",
+    "weighingFailedManual": "Weging mislukt — handmatig registreren",
+    "failedToRegisterParcel": "Pakket registreren mislukt",
+    "tareWeighingFailed": "Tarraweging mislukt — handmatig activeren",
+    "failedToDelete": "Verwijderen mislukt",
+    "manualEntryFailed": "Handmatige invoer mislukt",
+    "overrideFailed": "Overschrijven mislukt",
+    "failedToDownloadPdf": "PDF downloaden mislukt"
+  },
+  "printLabel": {
+    "assetLabel": "STATICE ASSET LABEL",
+    "order": "Order",
+    "type": "Type",
+    "category": "Categorie",
+    "date": "Datum",
+    "container": "Container",
+    "material": "Materiaal",
+    "wasteStream": "Afvalstroom",
+    "grossTarePair": "Bruto/Tarra Paar"
+  }
+}

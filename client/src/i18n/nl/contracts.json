@@ -1,0 +1,200 @@
+{
+  "title": "Contracten",
+  "newContract": "Nieuw Contract",
+  "editContract": "Contract Bewerken",
+  "searchPlaceholder": "Contracten zoeken...",
+  "rag": {
+    "onTrack": "Op Schema",
+    "onTrackDesc": ">60 dagen tot verloopdatum",
+    "expiringSoon": "Bijna Verlopen",
+    "expiringSoonDesc": "30–60 dagen tot verloopdatum",
+    "critical": "Kritiek / Verlopen",
+    "criticalDesc": "<30 dagen of verlopen"
+  },
+  "tabs": {
+    "all": "Alle",
+    "active": "Actief",
+    "expired": "Verlopen",
+    "inactive": "Inactief"
+  },
+  "table": {
+    "contractNumber": "Contract #",
+    "status": "Status",
+    "supplier": "Leverancier",
+    "carrier": "Transporteur",
+    "name": "Naam",
+    "effective": "Ingangsdatum",
+    "expiry": "Einddatum",
+    "rag": "RAG"
+  },
+  "loading": "Laden...",
+  "noContracts": "Geen contracten gevonden",
+  "actions": {
+    "edit": "Bewerken",
+    "delete": "Verwijderen",
+    "manage": "Beheren",
+    "addMaterial": "Materiaal Toevoegen",
+    "addRateLine": "Tariefregel Toevoegen",
+    "removeWasteStream": "Afvalstroom Verwijderen"
+  },
+  "toast": {
+    "loadFailed": "Laden van contracten mislukt",
+    "loadContractFailed": "Laden van contract mislukt",
+    "statusUpdated": "Contractstatus bijgewerkt",
+    "statusFailed": "Bijwerken van status mislukt",
+    "rateLineRemoved": "Tariefregel verwijderd",
+    "rateLineRemoveFailed": "Verwijderen van tariefregel mislukt",
+    "wasteStreamRemoved": "Afvalstroom verwijderd",
+    "wasteStreamRemoveFailed": "Verwijderen van afvalstroom mislukt",
+    "rateLineAdded": "Tariefregel toegevoegd",
+    "rateLineAddedBoth": "2 tariefregels toegevoegd (Gewicht + Hoeveelheid)",
+    "rateLineUpdated": "Tariefregel bijgewerkt (vorige versie bewaard)",
+    "rateLineSaveFailed": "Opslaan van tariefregel mislukt",
+    "penaltiesUpdated": "Boetes bijgewerkt",
+    "penaltiesUpdateFailed": "Bijwerken van boetes mislukt",
+    "penaltiesLoadFailed": "Laden van vergoedingen mislukt",
+    "created": "Contract aangemaakt",
+    "updated": "Contract bijgewerkt",
+    "saveFailed": "Opslaan van contract mislukt",
+    "atLeastOneWasteStream": "Voeg minimaal één afvalstroom toe met een Afvalstroomnummer",
+    "atLeastOneMaterial": "Voeg minimaal één materiaal toe aan \"{{name}}\"",
+    "allMaterialsRequired": "Alle materiaalregels moeten een materiaal en tarief hebben"
+  },
+  "detail": {
+    "backToContracts": "Terug naar Contracten",
+    "contractDetails": "Contractgegevens",
+    "fields": {
+      "name": "Naam",
+      "supplier": "Leverancier",
+      "carrier": "Transporteur",
+      "receiver": "Ontvanger",
+      "effectiveDate": "Ingangsdatum",
+      "expiryDate": "Einddatum",
+      "paymentTerms": "Betalingstermijn",
+      "paymentTermsDays": "{{days}} dagen",
+      "invoicingFrequency": "Factureringsfrequentie",
+      "currency": "Valuta",
+      "contaminationTolerance": "Verontreinigingstolerantie"
+    },
+    "wasteStream": {
+      "material": "Materiaal",
+      "cbsCode": "CBS-code",
+      "weeelabex": "WEEELABEX",
+      "euralCode": "EURAL-code",
+      "processingMethod": "Verwerkingsmethode",
+      "pricing": "Prijsstelling",
+      "unitRate": "Eenheidstarief",
+      "btwPct": "BTW %",
+      "noMaterials": "Geen materialen"
+    },
+    "rateLines": "Tariefregels ({{count}})",
+    "penalties": "Verontreinigingsboetes ({{count}})",
+    "noPenalties": "Geen boetes gekoppeld",
+    "confirmRemoveRateLine": "Deze tariefregel verwijderen?",
+    "confirmRemoveWasteStream": "Deze afvalstroom en alle bijbehorende tariefregels uit het contract verwijderen?"
+  },
+  "create": {
+    "breadcrumbNew": "Nieuw Contract",
+    "contractDetails": "Contractgegevens",
+    "paymentDetails": "Betalingsgegevens",
+    "contaminationDetails": "Verontreinigingsgegevens",
+    "managePenalties": "Boetes Beheren ({{count}})",
+    "selectedPenalties": "Geselecteerde Boetes",
+    "wasteStreams": "Afvalstromen",
+    "addWasteStream": "Afvalstroom Toevoegen",
+    "noWasteStreams": "Nog geen afvalstromen toegevoegd",
+    "materialLines": "Materiaalregels",
+    "addMaterial": "Materiaal Toevoegen",
+    "selectWasteStream": "Afvalstroom selecteren...",
+    "fields": {
+      "contractName": "Contractnaam",
+      "namePlaceholder": "bijv. 2026 WEEE-verwerkingsovereenkomst",
+      "supplier": "Leverancier",
+      "selectSupplier": "Leverancier selecteren...",
+      "carrier": "Transporteur",
+      "selectCarrier": "Transporteur selecteren...",
+      "effectiveDate": "Ingangsdatum",
+      "expiryDate": "Einddatum",
+      "receiver": "Ontvanger",
+      "paymentTermDays": "Betalingstermijn (dagen)",
+      "invoicingFrequency": "Factureringsfrequentie",
+      "currency": "Valuta",
+      "invoiceDelivery": "Factuurlevering",
+      "invoiceDeliveryPlaceholder": "bijv. E-MAIL",
+      "tolerancePct": "Tolerantie (%)",
+      "wasteStream": "Afvalstroom",
+      "afvalstroomnummer": "Afvalstroomnummer",
+      "material": "Materiaal",
+      "euralCode": "EURAL-code",
+      "processingMethod": "Verwerkingsmethode",
+      "pricing": "Prijsstelling",
+      "unitRate": "Eenheidstarief",
+      "btwPct": "BTW %",
+      "selectMaterial": "Materiaal...",
+      "selectProcessingMethod": "Selecteer...",
+      "rate": "Tarief"
+    },
+    "buttons": {
+      "cancel": "Annuleren",
+      "create": "Contract Aanmaken",
+      "update": "Contract Bijwerken",
+      "saving": "Opslaan..."
+    }
+  },
+  "rateLineModal": {
+    "addTitle": "Tariefregel Toevoegen",
+    "editTitle": "Tariefregel Bewerken",
+    "fields": {
+      "material": "Materiaal",
+      "selectMaterial": "Materiaal selecteren...",
+      "pricingModel": "Prijsmodel",
+      "weightRate": "Gewichtstarief ({{symbol}})",
+      "quantityRate": "Hoeveelheidstarief ({{symbol}})",
+      "unitRate": "Eenheidstarief ({{symbol}})",
+      "btwRate": "BTW (%)"
+    },
+    "buttons": {
+      "cancel": "Annuleren",
+      "add": "Toevoegen",
+      "addBoth": "Beide Toevoegen",
+      "update": "Bijwerken",
+      "saving": "Opslaan..."
+    }
+  },
+  "penaltyModal": {
+    "title": "Verontreinigingsboetes Beheren",
+    "loadingFees": "Vergoedingen laden...",
+    "noActiveFees": "Geen actieve vergoedingen gevonden",
+    "buttons": {
+      "cancel": "Annuleren",
+      "save": "Opslaan ({{count}} geselecteerd)",
+      "saving": "Opslaan..."
+    }
+  },
+  "formModal": {
+    "newTitle": "Nieuw Contract",
+    "editTitle": "Contract Bewerken",
+    "paymentTerms": "Betalingsvoorwaarden",
+    "contamination": "Verontreiniging",
+    "fields": {
+      "supplier": "Leverancier",
+      "selectSupplier": "Leverancier selecteren...",
+      "contractName": "Contractnaam",
+      "namePlaceholder": "bijv. 2026 WEEE-verwerkingsovereenkomst",
+      "effectiveDate": "Ingangsdatum",
+      "expiryDate": "Einddatum",
+      "paymentTermDays": "Betalingstermijn (dagen)",
+      "invoicingFrequency": "Factureringsfrequentie",
+      "currency": "Valuta",
+      "invoiceDelivery": "Factuurlevering",
+      "invoiceDeliveryPlaceholder": "bijv. E-MAIL",
+      "tolerancePct": "Tolerantie (%)"
+    },
+    "buttons": {
+      "cancel": "Annuleren",
+      "create": "Aanmaken",
+      "update": "Bijwerken",
+      "saving": "Opslaan..."
+    }
+  }
+}

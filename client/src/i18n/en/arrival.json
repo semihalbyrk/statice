@@ -1,0 +1,47 @@
+{
+  "title": "Arrival Registration",
+  "subtitle": "Scan or enter the vehicle license plate",
+  "description": "The system will match the plate against planned orders",
+  "countryCode": "NL",
+  "platePlaceholder": "XX-999-XX",
+  "matchingOrders": "Matching Orders",
+  "candidates": "{{count}} candidate(s)",
+  "search": {
+    "searching": "Searching orders..."
+  },
+  "match": {
+    "exactPlateToday": {
+      "title": "Exact Plate, Today",
+      "description": "Highest confidence candidates for immediate registration."
+    },
+    "exactPlateNearby": {
+      "title": "Exact Plate, +/- 7 Days",
+      "description": "Same plate found on nearby planning dates. Check order details before continuing."
+    },
+    "manualOverride": {
+      "title": "Manual Override Candidates",
+      "description": "No exact plate match is required here. Use only after visual/operator confirmation."
+    },
+    "noMatch": {
+      "message": "No orders match plate \"{{plate}}\"",
+      "plateExactRequired": "The plate must exactly match the one registered on the order"
+    }
+  },
+  "actions": {
+    "registerArrival": "Register Arrival",
+    "useManualOverride": "Use Manual Override",
+    "createAdHocOrder": "Create Ad-hoc Order",
+    "createAdHocOrderInstead": "Create Ad-hoc Order Instead"
+  },
+  "fields": {
+    "carrier": "Carrier",
+    "supplier": "Supplier",
+    "wasteStream": "Waste Stream",
+    "parcelProgress": "Parcel Progress",
+    "partialDelivery": "Partial delivery in progress"
+  },
+  "toast": {
+    "inboundCreated": "Inbound created",
+    "inboundFailed": "Failed to create inbound"
+  }
+}

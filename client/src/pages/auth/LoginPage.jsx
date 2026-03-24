@@ -1,11 +1,13 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
+import { useTranslation } from 'react-i18next';
 import api from '../../api/axios';
 import useAuthStore from '../../store/authStore';
 
 export default function LoginPage() {
   const navigate = useNavigate();
+  const { t } = useTranslation('auth');
   const setAuth = useAuthStore((state) => state.setAuth);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -22,8 +24,8 @@ export default function LoginPage() {
       setAuth(data.accessToken, data.user);
       navigate('/dashboard');
     } catch (err) {
-      const message =
-        err.response?.data?.error || 'Login failed. Please try again.';
+      const message = err.response?.data?.error
+        || (err.code === 'ERR_NETWORK' ? t('networkError') : t('loginFailed'));
       setError(message);
       toast.error(message);
     } finally {
@@ -40,10 +42,10 @@ export default function LoginPage() {
               <span className="text-white font-bold text-lg">S</span>
             </div>
             <h1 className="text-2xl font-bold text-grey-900 tracking-tight">
-              STATICE MRF
+              {t('title')}
             </h1>
             <p className="text-sm text-grey-500 mt-1">
-              Material Recovery Facility Dashboard
+              {t('subtitle')}
             </p>
           </div>
 
@@ -59,7 +61,7 @@ export default function LoginPage() {
                 htmlFor="email"
                 className="block text-sm font-medium text-grey-700 mb-1.5"
               >
-                Email address
+                {t('emailLabel')}
               </label>
               <input
                 id="email"
@@ -68,7 +70,7 @@ export default function LoginPage() {
                 onChange={(e) => setEmail(e.target.value)}
                 required
                 autoComplete="email"
-                placeholder="you@statice.nl"
+                placeholder={t('emailPlaceholder')}
                 className="w-full h-10 px-3.5 rounded-md border border-grey-300 text-grey-900 placeholder:text-grey-400 text-sm focus:border-green-500 focus:ring-[3px] focus:ring-green-500/15 outline-none transition-colors"
               />
             </div>
@@ -78,7 +80,7 @@ export default function LoginPage() {
                 htmlFor="password"
                 className="block text-sm font-medium text-grey-700 mb-1.5"
               >
-                Password
+                {t('passwordLabel')}
               </label>
               <input
                 id="password"
@@ -87,7 +89,7 @@ export default function LoginPage() {
                 onChange={(e) => setPassword(e.target.value)}
                 required
                 autoComplete="current-password"
-                placeholder="••••••••"
+                placeholder={t('passwordPlaceholder')}
                 className="w-full h-10 px-3.5 rounded-md border border-grey-300 text-grey-900 placeholder:text-grey-400 text-sm focus:border-green-500 focus:ring-[3px] focus:ring-green-500/15 outline-none transition-colors"
               />
             </div>
@@ -97,13 +99,13 @@ export default function LoginPage() {
               disabled={loading}
               className="w-full h-9 px-4 bg-green-500 text-white rounded-md text-sm font-semibold hover:bg-green-700 disabled:opacity-50 transition-colors"
             >
-              {loading ? 'Signing in...' : 'Sign In'}
+              {loading ? t('signingIn') : t('signIn')}
             </button>
           </form>
         </div>
 
         <p className="text-center text-xs text-grey-400 mt-6">
-          Statice B.V. — Internal Use Only
+          {t('footer')}
         </p>
       </div>
     </div>

@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import {
   FileBarChart, FileText, FileSpreadsheet, Download, Trash2, Loader2, CheckCircle2,
   ClipboardList, Recycle, Link2, Scale, BarChart3, Box, Calendar, CalendarClock,
@@ -10,15 +11,17 @@ import useMasterDataStore from '../../store/masterDataStore';
 import useAuthStore from '../../store/authStore';
 import { downloadReport } from '../../api/reports';
 
-const REPORT_TYPES = [
-  { code: 'RPT-01', name: 'Supplier Circularity Statement', icon: ClipboardList, description: 'Per-supplier recycling and recovery rates' },
-  { code: 'RPT-02', name: 'Material Recovery Summary', icon: Recycle, description: 'Aggregate recovery by product category' },
-  { code: 'RPT-03', name: 'Chain of Custody', icon: Link2, description: 'Full traceability per consignment' },
-  { code: 'RPT-04', name: 'Inbound Weight Register', icon: Scale, description: 'Weighing events with carrier/stream subtotals' },
-  { code: 'RPT-05', name: 'Waste Stream Analysis', icon: BarChart3, description: 'Breakdown by waste stream and category' },
-  { code: 'RPT-06', name: 'Container Asset Utilisation', icon: Box, description: 'Asset usage, counts, and top containers' },
-  { code: 'RPT-07', name: 'Downstream Material Statement', icon: FileText, description: 'Material and fraction level downstream declaration' },
-];
+const REPORT_TYPE_ICONS = {
+  'RPT-01': ClipboardList,
+  'RPT-02': Recycle,
+  'RPT-03': Link2,
+  'RPT-04': Scale,
+  'RPT-05': BarChart3,
+  'RPT-06': Box,
+  'RPT-07': FileText,
+};
+
+const REPORT_TYPE_CODES = ['RPT-01', 'RPT-02', 'RPT-03', 'RPT-04', 'RPT-05', 'RPT-06', 'RPT-07'];
 
 const inputClass = 'w-full h-10 px-3.5 rounded-md border border-grey-300 text-sm text-grey-900 focus:border-green-500 focus:ring-[3px] focus:ring-green-500/15 outline-none transition-colors';
 const selectClass = `${inputClass} bg-white`;
@@ -37,15 +40,16 @@ function monthAgo() {
 
 // ---- Report Type Nav ----
 function ReportTypeNav({ selected, onSelect }) {
+  const { t } = useTranslation('reports');
   return (
     <div className="space-y-0.5">
-      {REPORT_TYPES.map((rt) => {
-        const Icon = rt.icon;
-        const active = selected === rt.code;
+      {REPORT_TYPE_CODES.map((code) => {
+        const Icon = REPORT_TYPE_ICONS[code];
+        const active = selected === code;
         return (
           <button
-            key={rt.code}
-            onClick={() => onSelect(rt.code)}
+            key={code}
+            onClick={() => onSelect(code)}
             className={`w-full flex items-start gap-3 px-3 py-2.5 rounded-md text-left transition-colors ${
               active
                 ? 'bg-green-500/10 text-green-700 font-semibold'
@@ -54,8 +58,8 @@ function ReportTypeNav({ selected, onSelect }) {
           >
             <Icon size={18} strokeWidth={1.5} className="mt-0.5 shrink-0" />
             <div>
-              <div className="text-sm leading-tight">{rt.code}</div>
-              <div className={`text-xs mt-0.5 ${active ? 'text-green-600' : 'text-grey-400'}`}>{rt.name}</div>
+              <div className="text-sm leading-tight">{code}</div>
+              <div className={`text-xs mt-0.5 ${active ? 'text-green-600' : 'text-grey-400'}`}>{t(`types.${code}.name`)}</div>
             </div>
           </button>
         );
@@ -66,27 +70,28 @@ function ReportTypeNav({ selected, onSelect }) {
 
 // ---- Config Forms ----
 function RPT01Config({ params, onChange, suppliers, categories }) {
+  const { t } = useTranslation('reports');
   return (
     <div className="space-y-4">
       <div>
-        <label className={labelClass}>Supplier *</label>
+        <label className={labelClass}>{t('fields.supplier')} *</label>
         <select className={selectClass} value={params.supplierId || ''} onChange={(e) => onChange({ ...params, supplierId: e.target.value })}>
-          <option value="">Select supplier...</option>
+          <option value="">{t('fields.selectSupplier')}</option>
           {suppliers.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
         </select>
       </div>
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <label className={labelClass}>Date From *</label>
+          <label className={labelClass}>{t('fields.dateFrom')} *</label>
           <input type="date" className={inputClass} value={params.dateFrom || ''} onChange={(e) => onChange({ ...params, dateFrom: e.target.value })} />
         </div>
         <div>
-          <label className={labelClass}>Date To *</label>
+          <label className={labelClass}>{t('fields.dateTo')} *</label>
           <input type="date" className={inputClass} value={params.dateTo || ''} onChange={(e) => onChange({ ...params, dateTo: e.target.value })} />
         </div>
       </div>
       <div>
-        <label className={labelClass}>Product Categories (optional)</label>
+        <label className={labelClass}>{t('fields.productCategories')}</label>
         <select
           className={selectClass}
           multiple
@@ -96,27 +101,28 @@ function RPT01Config({ params, onChange, suppliers, categories }) {
         >
           {categories.map((c) => <option key={c.id} value={c.id}>{c.code_cbs} — {c.description_en}</option>)}
         </select>
-        <p className="text-xs text-grey-400 mt-1">Hold Cmd/Ctrl to select multiple. Leave empty for all.</p>
+        <p className="text-xs text-grey-400 mt-1">{t('fields.holdCtrlHint')}</p>
       </div>
     </div>
   );
 }
 
 function RPT02Config({ params, onChange, wasteStreams }) {
+  const { t } = useTranslation('reports');
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <label className={labelClass}>Date From *</label>
+          <label className={labelClass}>{t('fields.dateFrom')} *</label>
           <input type="date" className={inputClass} value={params.dateFrom || ''} onChange={(e) => onChange({ ...params, dateFrom: e.target.value })} />
         </div>
         <div>
-          <label className={labelClass}>Date To *</label>
+          <label className={labelClass}>{t('fields.dateTo')} *</label>
           <input type="date" className={inputClass} value={params.dateTo || ''} onChange={(e) => onChange({ ...params, dateTo: e.target.value })} />
         </div>
       </div>
       <div>
-        <label className={labelClass}>Waste Streams (optional)</label>
+        <label className={labelClass}>{t('fields.wasteStreams')}</label>
         <select
           className={selectClass}
           multiple
@@ -132,35 +138,36 @@ function RPT02Config({ params, onChange, wasteStreams }) {
 }
 
 function RPT03Config({ params, onChange }) {
+  const { t } = useTranslation('reports');
   const mode = params.orderId ? 'single' : 'batch';
   return (
     <div className="space-y-4">
       <div>
-        <label className={labelClass}>Mode</label>
+        <label className={labelClass}>{t('fields.mode')}</label>
         <div className="flex gap-4">
           <label className="flex items-center gap-2 text-sm text-grey-700 cursor-pointer">
             <input type="radio" name="rpt03mode" checked={mode === 'single'} onChange={() => onChange({ orderId: '', dateFrom: '', dateTo: '' })} className="text-green-500" />
-            Single Order
+            {t('modes.singleOrder')}
           </label>
           <label className="flex items-center gap-2 text-sm text-grey-700 cursor-pointer">
             <input type="radio" name="rpt03mode" checked={mode === 'batch'} onChange={() => onChange({ dateFrom: monthAgo(), dateTo: today() })} className="text-green-500" />
-            Batch (Date Range)
+            {t('modes.batchDateRange')}
           </label>
         </div>
       </div>
       {mode === 'single' ? (
         <div>
-          <label className={labelClass}>Order ID *</label>
-          <input type="text" className={inputClass} placeholder="Enter order ID..." value={params.orderId || ''} onChange={(e) => onChange({ ...params, orderId: e.target.value })} />
+          <label className={labelClass}>{t('fields.orderId')} *</label>
+          <input type="text" className={inputClass} placeholder={t('fields.orderIdPlaceholder')} value={params.orderId || ''} onChange={(e) => onChange({ ...params, orderId: e.target.value })} />
         </div>
       ) : (
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className={labelClass}>Date From *</label>
+            <label className={labelClass}>{t('fields.dateFrom')} *</label>
             <input type="date" className={inputClass} value={params.dateFrom || ''} onChange={(e) => onChange({ ...params, dateFrom: e.target.value })} />
           </div>
           <div>
-            <label className={labelClass}>Date To *</label>
+            <label className={labelClass}>{t('fields.dateTo')} *</label>
             <input type="date" className={inputClass} value={params.dateTo || ''} onChange={(e) => onChange({ ...params, dateTo: e.target.value })} />
           </div>
         </div>
@@ -170,30 +177,31 @@ function RPT03Config({ params, onChange }) {
 }
 
 function RPT04Config({ params, onChange, carriers, wasteStreams }) {
+  const { t } = useTranslation('reports');
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <label className={labelClass}>Date From *</label>
+          <label className={labelClass}>{t('fields.dateFrom')} *</label>
           <input type="date" className={inputClass} value={params.dateFrom || ''} onChange={(e) => onChange({ ...params, dateFrom: e.target.value })} />
         </div>
         <div>
-          <label className={labelClass}>Date To *</label>
+          <label className={labelClass}>{t('fields.dateTo')} *</label>
           <input type="date" className={inputClass} value={params.dateTo || ''} onChange={(e) => onChange({ ...params, dateTo: e.target.value })} />
         </div>
       </div>
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <label className={labelClass}>Carrier (optional)</label>
+          <label className={labelClass}>{t('fields.carrier')}</label>
           <select className={selectClass} value={params.carrierId || ''} onChange={(e) => onChange({ ...params, carrierId: e.target.value })}>
-            <option value="">All carriers</option>
+            <option value="">{t('fields.allCarriers')}</option>
             {carriers.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
           </select>
         </div>
         <div>
-          <label className={labelClass}>Waste Stream (optional)</label>
+          <label className={labelClass}>{t('fields.wasteStream')}</label>
           <select className={selectClass} value={params.wasteStreamId || ''} onChange={(e) => onChange({ ...params, wasteStreamId: e.target.value })}>
-            <option value="">All streams</option>
+            <option value="">{t('fields.allStreams')}</option>
             {wasteStreams.map((ws) => <option key={ws.id} value={ws.id}>{ws.code} — {ws.name}</option>)}
           </select>
         </div>
@@ -203,20 +211,21 @@ function RPT04Config({ params, onChange, carriers, wasteStreams }) {
 }
 
 function RPT05Config({ params, onChange, wasteStreams }) {
+  const { t } = useTranslation('reports');
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <label className={labelClass}>Date From *</label>
+          <label className={labelClass}>{t('fields.dateFrom')} *</label>
           <input type="date" className={inputClass} value={params.dateFrom || ''} onChange={(e) => onChange({ ...params, dateFrom: e.target.value })} />
         </div>
         <div>
-          <label className={labelClass}>Date To *</label>
+          <label className={labelClass}>{t('fields.dateTo')} *</label>
           <input type="date" className={inputClass} value={params.dateTo || ''} onChange={(e) => onChange({ ...params, dateTo: e.target.value })} />
         </div>
       </div>
       <div>
-        <label className={labelClass}>Waste Streams (optional)</label>
+        <label className={labelClass}>{t('fields.wasteStreams')}</label>
         <select
           className={selectClass}
           multiple
@@ -232,30 +241,31 @@ function RPT05Config({ params, onChange, wasteStreams }) {
 }
 
 function RPT06Config({ params, onChange }) {
+  const { t } = useTranslation('reports');
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <label className={labelClass}>Date From *</label>
+          <label className={labelClass}>{t('fields.dateFrom')} *</label>
           <input type="date" className={inputClass} value={params.dateFrom || ''} onChange={(e) => onChange({ ...params, dateFrom: e.target.value })} />
         </div>
         <div>
-          <label className={labelClass}>Date To *</label>
+          <label className={labelClass}>{t('fields.dateTo')} *</label>
           <input type="date" className={inputClass} value={params.dateTo || ''} onChange={(e) => onChange({ ...params, dateTo: e.target.value })} />
         </div>
       </div>
       <div>
-        <label className={labelClass}>Container Type (optional)</label>
+        <label className={labelClass}>{t('fields.containerType')}</label>
         <select className={selectClass} value={params.skipType || ''} onChange={(e) => onChange({ ...params, skipType: e.target.value })}>
-          <option value="">All types</option>
-          <option value="OPEN_TOP">Open Top</option>
-          <option value="CLOSED">Closed</option>
-          <option value="ROLL_ON">Roll-on</option>
-          <option value="COMPACTOR">Compactor</option>
-          <option value="WHEELIE_BIN">Wheelie Bin</option>
-          <option value="PALLET_BOX">Pallet Box</option>
-          <option value="IBC">IBC</option>
-          <option value="OTHER">Other</option>
+          <option value="">{t('fields.allTypes')}</option>
+          <option value="OPEN_TOP">{t('containerTypes.OPEN_TOP')}</option>
+          <option value="CLOSED">{t('containerTypes.CLOSED')}</option>
+          <option value="ROLL_ON">{t('containerTypes.ROLL_ON')}</option>
+          <option value="COMPACTOR">{t('containerTypes.COMPACTOR')}</option>
+          <option value="WHEELIE_BIN">{t('containerTypes.WHEELIE_BIN')}</option>
+          <option value="PALLET_BOX">{t('containerTypes.PALLET_BOX')}</option>
+          <option value="IBC">{t('containerTypes.IBC')}</option>
+          <option value="OTHER">{t('containerTypes.OTHER')}</option>
         </select>
       </div>
     </div>
@@ -263,31 +273,32 @@ function RPT06Config({ params, onChange }) {
 }
 
 function RPT07Config({ params, onChange, suppliers, materials }) {
+  const { t } = useTranslation('reports');
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
-          <label className={labelClass}>Supplier *</label>
+          <label className={labelClass}>{t('fields.supplier')} *</label>
           <select className={selectClass} value={params.supplierId || ''} onChange={(e) => onChange({ ...params, supplierId: e.target.value })}>
-            <option value="">Select supplier...</option>
+            <option value="">{t('fields.selectSupplier')}</option>
             {suppliers.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
           </select>
         </div>
         <div>
-          <label className={labelClass}>Material *</label>
+          <label className={labelClass}>{t('fields.material')} *</label>
           <select className={selectClass} value={params.materialId || ''} onChange={(e) => onChange({ ...params, materialId: e.target.value })}>
-            <option value="">Select material...</option>
+            <option value="">{t('fields.selectMaterial')}</option>
             {materials.map((material) => <option key={material.id} value={material.id}>{material.code} — {material.name}</option>)}
           </select>
         </div>
       </div>
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <label className={labelClass}>Date From *</label>
+          <label className={labelClass}>{t('fields.dateFrom')} *</label>
           <input type="date" className={inputClass} value={params.dateFrom || ''} onChange={(e) => onChange({ ...params, dateFrom: e.target.value })} />
         </div>
         <div>
-          <label className={labelClass}>Date To *</label>
+          <label className={labelClass}>{t('fields.dateTo')} *</label>
           <input type="date" className={inputClass} value={params.dateTo || ''} onChange={(e) => onChange({ ...params, dateTo: e.target.value })} />
         </div>
       </div>
@@ -297,19 +308,20 @@ function RPT07Config({ params, onChange, suppliers, materials }) {
 
 // ---- Generate Buttons ----
 function GenerateButtons({ generating, onGenerate }) {
+  const { t } = useTranslation('reports');
   return (
     <div className="flex items-center gap-3 pt-4 border-t border-grey-200">
       <button className={btnPrimary} disabled={generating} onClick={() => onGenerate('pdf')}>
         {generating ? <Loader2 size={16} className="animate-spin" /> : <FileText size={16} />}
-        Generate PDF
+        {t('buttons.generatePdf')}
       </button>
       <button className={btnSecondary} disabled={generating} onClick={() => onGenerate('xlsx')}>
         {generating ? <Loader2 size={16} className="animate-spin" /> : <FileSpreadsheet size={16} />}
-        Generate XLSX
+        {t('buttons.generateXlsx')}
       </button>
       <button className={btnSecondary} disabled={generating} onClick={() => onGenerate('both')}>
         {generating ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />}
-        Generate Both
+        {t('buttons.generateBoth')}
       </button>
     </div>
   );
@@ -317,13 +329,14 @@ function GenerateButtons({ generating, onGenerate }) {
 
 // ---- Success Banner ----
 function SuccessBanner({ report, onDownload, onDismiss }) {
+  const { t } = useTranslation(['reports', 'common']);
   if (!report) return null;
   return (
     <div className="bg-green-50 border border-green-200 rounded-lg p-4 flex items-center justify-between">
       <div className="flex items-center gap-3">
         <CheckCircle2 size={20} className="text-green-600" />
         <div>
-          <p className="text-sm font-medium text-green-800">Report generated successfully</p>
+          <p className="text-sm font-medium text-green-800">{t('reports:generatedSuccessfully')}</p>
           <p className="text-xs text-green-600 mt-0.5">{report.typeName} — {new Date(report.generatedAt).toLocaleString()}</p>
         </div>
       </div>
@@ -338,7 +351,7 @@ function SuccessBanner({ report, onDownload, onDismiss }) {
             <FileSpreadsheet size={14} /> XLSX
           </button>
         )}
-        <button className="text-grey-400 hover:text-grey-600 text-xs ml-2" onClick={onDismiss}>Dismiss</button>
+        <button className="text-grey-400 hover:text-grey-600 text-xs ml-2" onClick={onDismiss}>{t('common:buttons.dismiss')}</button>
       </div>
     </div>
   );
@@ -346,10 +359,11 @@ function SuccessBanner({ report, onDownload, onDismiss }) {
 
 // ---- Recent Reports Table ----
 function RecentReportsTable({ reports, loading, onDownload, onDelete, userRole }) {
+  const { t } = useTranslation('reports');
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12 text-grey-400">
-        <Loader2 size={20} className="animate-spin mr-2" /> Loading reports...
+        <Loader2 size={20} className="animate-spin mr-2" /> {t('loadingReports')}
       </div>
     );
   }
@@ -357,7 +371,7 @@ function RecentReportsTable({ reports, loading, onDownload, onDelete, userRole }
     return (
       <div className="flex flex-col items-center justify-center py-12 text-grey-400">
         <FileBarChart size={32} strokeWidth={1.5} className="mb-2" />
-        <p className="text-sm">No reports generated yet</p>
+        <p className="text-sm">{t('noReports')}</p>
       </div>
     );
   }
@@ -367,12 +381,12 @@ function RecentReportsTable({ reports, loading, onDownload, onDelete, userRole }
       <table className="w-full text-sm">
         <thead>
           <tr className="bg-grey-50 border-b border-grey-200">
-            <th className="text-left px-4 py-2.5 text-xs font-medium text-grey-500 uppercase tracking-wide">Type</th>
-            <th className="text-left px-4 py-2.5 text-xs font-medium text-grey-500 uppercase tracking-wide">Name</th>
-            <th className="text-left px-4 py-2.5 text-xs font-medium text-grey-500 uppercase tracking-wide">Generated</th>
-            <th className="text-left px-4 py-2.5 text-xs font-medium text-grey-500 uppercase tracking-wide">By</th>
-            <th className="text-left px-4 py-2.5 text-xs font-medium text-grey-500 uppercase tracking-wide">Files</th>
-            <th className="text-right px-4 py-2.5 text-xs font-medium text-grey-500 uppercase tracking-wide">Actions</th>
+            <th className="text-left px-4 py-2.5 text-xs font-medium text-grey-500 uppercase tracking-wide">{t('table.type')}</th>
+            <th className="text-left px-4 py-2.5 text-xs font-medium text-grey-500 uppercase tracking-wide">{t('table.name')}</th>
+            <th className="text-left px-4 py-2.5 text-xs font-medium text-grey-500 uppercase tracking-wide">{t('table.generated')}</th>
+            <th className="text-left px-4 py-2.5 text-xs font-medium text-grey-500 uppercase tracking-wide">{t('table.by')}</th>
+            <th className="text-left px-4 py-2.5 text-xs font-medium text-grey-500 uppercase tracking-wide">{t('table.files')}</th>
+            <th className="text-right px-4 py-2.5 text-xs font-medium text-grey-500 uppercase tracking-wide">{t('table.actions')}</th>
           </tr>
         </thead>
         <tbody>
@@ -413,6 +427,7 @@ function RecentReportsTable({ reports, loading, onDownload, onDelete, userRole }
 
 // ---- Main Page ----
 export default function ReportsPage() {
+  const { t } = useTranslation('reports');
   const navigate = useNavigate();
   const user = useAuthStore((s) => s.user);
   const { selectedType, setSelectedType, reports, totalCount, loading, generating, generatedReport, clearGenerated, fetchReports, deleteReport: deleteReportAction } = useReportsStore();
@@ -434,11 +449,11 @@ export default function ReportsPage() {
   const handleGenerate = useCallback(async (format) => {
     try {
       await generateReport({ type: selectedType, format, parameters: params });
-      toast.success('Report generated');
+      toast.success(t('toast.generated'));
     } catch (err) {
-      toast.error(err.response?.data?.error || 'Generation failed');
+      toast.error(err.response?.data?.error || t('toast.generationFailed'));
     }
-  }, [selectedType, params, generateReport]);
+  }, [selectedType, params, generateReport, t]);
 
   const handleDownload = useCallback(async (id, format) => {
     try {
@@ -452,21 +467,22 @@ export default function ReportsPage() {
       a.remove();
       window.URL.revokeObjectURL(url);
     } catch {
-      toast.error('Download failed');
+      toast.error(t('toast.downloadFailed'));
     }
-  }, []);
+  }, [t]);
 
   const handleDelete = useCallback(async (id) => {
-    if (!window.confirm('Delete this report permanently?')) return;
+    if (!window.confirm(t('confirm.deleteReport'))) return;
     try {
       await deleteReportAction(id);
-      toast.success('Report deleted');
+      toast.success(t('toast.deleted'));
     } catch {
-      toast.error('Delete failed');
+      toast.error(t('toast.deleteFailed'));
     }
-  }, [deleteReportAction]);
+  }, [deleteReportAction, t]);
 
-  const currentType = REPORT_TYPES.find((rt) => rt.code === selectedType);
+  const currentTypeCode = selectedType;
+  const CurrentIcon = REPORT_TYPE_ICONS[currentTypeCode];
 
   const configForm = (() => {
     switch (selectedType) {
@@ -486,11 +502,11 @@ export default function ReportsPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-semibold text-grey-900">Reports</h1>
-          <p className="text-sm text-grey-500 mt-0.5">Generate and download compliance reports</p>
+          <h1 className="text-xl font-semibold text-grey-900">{t('title')}</h1>
+          <p className="text-sm text-grey-500 mt-0.5">{t('subtitle')}</p>
         </div>
         <button className={btnSecondary} onClick={() => navigate('/reports/schedules')}>
-          <CalendarClock size={16} /> Scheduled Reports
+          <CalendarClock size={16} /> {t('scheduledReports')}
         </button>
       </div>
 
@@ -502,7 +518,7 @@ export default function ReportsPage() {
         {/* Left nav */}
         <div className="w-[260px] bg-grey-50 border-r border-grey-200 p-3 shrink-0">
           <div className="px-3 pb-2 mb-2 border-b border-grey-200">
-            <span className="text-[10px] font-semibold text-grey-500 uppercase tracking-wider">Report Type</span>
+            <span className="text-[10px] font-semibold text-grey-500 uppercase tracking-wider">{t('reportType')}</span>
           </div>
           <ReportTypeNav selected={selectedType} onSelect={setSelectedType} />
         </div>
@@ -510,10 +526,10 @@ export default function ReportsPage() {
         {/* Right config */}
         <div className="flex-1 p-6">
           <div className="flex items-center gap-3 mb-5">
-            {currentType && <currentType.icon size={20} className="text-green-600" />}
+            {CurrentIcon && <CurrentIcon size={20} className="text-green-600" />}
             <div>
-              <h2 className="text-base font-semibold text-grey-900">{currentType?.name}</h2>
-              <p className="text-xs text-grey-500">{currentType?.description}</p>
+              <h2 className="text-base font-semibold text-grey-900">{currentTypeCode ? t(`types.${currentTypeCode}.name`) : ''}</h2>
+              <p className="text-xs text-grey-500">{currentTypeCode ? t(`types.${currentTypeCode}.description`) : ''}</p>
             </div>
           </div>
 
@@ -526,8 +542,8 @@ export default function ReportsPage() {
       {/* Recent Reports */}
       <div className="bg-white rounded-lg border border-grey-200 shadow-sm">
         <div className="px-4 py-3 border-b border-grey-200 flex items-center justify-between">
-          <h3 className="text-sm font-semibold text-grey-900">Recent Reports</h3>
-          <span className="text-xs text-grey-400">{totalCount} total</span>
+          <h3 className="text-sm font-semibold text-grey-900">{t('recentReports')}</h3>
+          <span className="text-xs text-grey-400">{t('totalCount', { count: totalCount })}</span>
         </div>
         <RecentReportsTable
           reports={reports}

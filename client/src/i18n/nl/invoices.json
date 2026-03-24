@@ -1,0 +1,165 @@
+{
+  "title": "Facturen",
+  "newInvoice": "Nieuwe Factuur",
+  "searchPlaceholder": "Facturen zoeken...",
+  "allStatuses": "Alle Statussen",
+  "from": "Van",
+  "to": "Tot",
+  "table": {
+    "invoiceNumber": "Factuurnummer",
+    "status": "Status",
+    "supplier": "Leverancier",
+    "invoiceDate": "Factuurdatum",
+    "dueDate": "Vervaldatum",
+    "total": "Totaal"
+  },
+  "actions": {
+    "view": "Bekijken",
+    "downloadPdf": "PDF Downloaden",
+    "cancel": "Annuleren"
+  },
+  "status": {
+    "DRAFT": "Concept",
+    "FINALIZED": "Gefinaliseerd",
+    "CANCELLED": "Geannuleerd"
+  },
+  "empty": "Geen facturen gevonden.",
+  "loading": "Laden...",
+  "pagination": {
+    "pageOf": "Pagina {{page}} van {{total}}",
+    "previous": "Vorige",
+    "next": "Volgende"
+  },
+  "toast": {
+    "statusUpdated": "Status bijgewerkt",
+    "statusFailed": "Statuswijziging mislukt",
+    "pdfFailed": "PDF genereren mislukt",
+    "ordersFailed": "Orders laden mislukt",
+    "invoiceLoadFailed": "Factuur laden mislukt",
+    "lineUpdated": "Regelitem bijgewerkt",
+    "lineAdded": "Regelitem toegevoegd",
+    "lineSaveFailed": "Regelitem opslaan mislukt",
+    "lineRemoved": "Regelitem verwijderd",
+    "lineRemoveFailed": "Regelitem verwijderen mislukt",
+    "invoiceStatusUpdated": "Factuurstatus bijgewerkt",
+    "invoiceStatusFailed": "Statuswijziging mislukt"
+  },
+  "create": {
+    "title": "Factuur Aanmaken",
+    "breadcrumb": "Factuur Aanmaken",
+    "stepSupplier": {
+      "heading": "Leverancier Selecteren",
+      "label": "Leverancier",
+      "placeholder": "Selecteer leverancier..."
+    },
+    "stepOrders": {
+      "heading": "Voltooide Orders",
+      "loading": "Orders laden...",
+      "empty": "Geen voltooide orders gevonden voor deze leverancier.",
+      "table": {
+        "orderNumber": "Ordernummer",
+        "plannedDate": "Geplande Datum",
+        "wasteStream": "Afvalstroom",
+        "netWeight": "Nettogewicht",
+        "status": "Status"
+      },
+      "selectedCount_one": "{{count}} order geselecteerd",
+      "selectedCount_other": "{{count}} orders geselecteerd"
+    },
+    "buttons": {
+      "cancel": "Annuleren",
+      "generate": "Factuur Genereren",
+      "generating": "Genereren..."
+    },
+    "validation": {
+      "selectOrder": "Selecteer minimaal één order"
+    },
+    "toast": {
+      "created": "Factuur aangemaakt",
+      "failed": "Factuur genereren mislukt"
+    }
+  },
+  "detail": {
+    "backToInvoices": "Terug naar Facturen",
+    "downloadPdf": "PDF Downloaden",
+    "addLine": "Regel Toevoegen",
+    "loading": "Laden...",
+    "sections": {
+      "invoiceDetails": "Factuurgegevens",
+      "lineItems": "Regelitems ({{count}})",
+      "btwSummary": "BTW-overzicht",
+      "grandTotal": "Eindtotaal"
+    },
+    "fields": {
+      "invoiceDate": "Factuurdatum",
+      "dueDate": "Vervaldatum",
+      "currency": "Valuta",
+      "paymentTerms": "Betalingstermijn",
+      "paymentTermsDays": "{{days}} dagen",
+      "contract": "Contract",
+      "supplier": "Leverancier",
+      "address": "Adres",
+      "kvk": "KvK",
+      "btw": "BTW"
+    },
+    "lineItems": {
+      "empty": "Geen regelitems —",
+      "table": {
+        "num": "#",
+        "description": "Omschrijving",
+        "type": "Type",
+        "qty": "Aantal",
+        "unit": "Eenheid",
+        "unitRate": "Eenheidsprijs (€)",
+        "btwPct": "BTW%",
+        "subtotal": "Subtotaal (€)",
+        "btwAmount": "BTW (€)",
+        "total": "Totaal (€)"
+      },
+      "lineTypes": {
+        "material": "Materiaal",
+        "contamination_fee": "Vervuilingstoeslag",
+        "manual": "Handmatig"
+      },
+      "actions": {
+        "edit": "Bewerken",
+        "delete": "Verwijderen"
+      }
+    },
+    "btwSummary": {
+      "subtotal": "Subtotaal {{value}}",
+      "btwLabel": "BTW {{rate}}%"
+    },
+    "totals": {
+      "subtotalExclBtw": "Subtotaal excl. BTW",
+      "btwTotal": "BTW Totaal",
+      "totalInclBtw": "Totaal incl. BTW"
+    },
+    "confirm": {
+      "removeLine": "Dit regelitem verwijderen?"
+    }
+  },
+  "lineModal": {
+    "titleAdd": "Regelitem Toevoegen",
+    "titleEdit": "Regelitem Bewerken",
+    "fields": {
+      "description": "Omschrijving",
+      "descriptionPlaceholder": "Omschrijving regelitem",
+      "quantity": "Hoeveelheid",
+      "unit": "Eenheid",
+      "unitRate": "Eenheidsprijs (€)",
+      "btwRate": "BTW-tarief (%)"
+    },
+    "preview": {
+      "subtotal": "Subtotaal",
+      "btw": "BTW ({{rate}}%)",
+      "total": "Totaal"
+    },
+    "buttons": {
+      "cancel": "Annuleren",
+      "add": "Toevoegen",
+      "update": "Bijwerken",
+      "saving": "Opslaan..."
+    }
+  }
+}

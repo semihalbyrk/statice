@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Plus, Pencil, Search } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { useTranslation } from 'react-i18next';
 import { getCarriers, createCarrier, updateCarrier, toggleCarrierStatus } from '../../api/carriers';
 import ClickableStatusBadge from '../../components/ui/ClickableStatusBadge';
 import RowActionMenu from '../../components/ui/RowActionMenu';
@@ -8,6 +9,7 @@ import RowActionMenu from '../../components/ui/RowActionMenu';
 const inputClass = "w-full h-10 px-3.5 rounded-md border border-grey-300 text-sm text-grey-900 focus:border-green-500 focus:ring-[3px] focus:ring-green-500/15 outline-none transition-colors";
 
 function CarrierFormModal({ carrier, onClose, onSuccess }) {
+  const { t } = useTranslation(['admin', 'common']);
   const isEdit = !!carrier;
   const [form, setForm] = useState({
     name: carrier?.name || '',
@@ -29,14 +31,14 @@ function CarrierFormModal({ carrier, onClose, onSuccess }) {
     try {
       if (isEdit) {
         await updateCarrier(carrier.id, form);
-        toast.success('Carrier updated');
+        toast.success(t('carriers.carrierUpdated'));
       } else {
         await createCarrier(form);
-        toast.success('Carrier created');
+        toast.success(t('carriers.carrierCreated'));
       }
       onSuccess();
     } catch (err) {
-      toast.error(err.response?.data?.error || 'Failed to save carrier');
+      toast.error(err.response?.data?.error || t('carriers.failedSaveCarrier'));
     } finally {
       setSubmitting(false);
     }
@@ -47,37 +49,37 @@ function CarrierFormModal({ carrier, onClose, onSuccess }) {
       <div className="app-modal-panel max-w-md max-h-[90vh] flex flex-col">
         <div className="flex items-center justify-between px-5 py-3 border-b border-grey-200 shrink-0">
           <h2 className="text-lg font-semibold text-grey-900">
-            {isEdit ? 'Edit Carrier' : 'New Carrier'}
+            {isEdit ? t('carriers.editCarrier') : t('carriers.newCarrier')}
           </h2>
           <button onClick={onClose} className="p-1 rounded-md hover:bg-grey-50 transition-colors text-grey-400">&times;</button>
         </div>
         <form onSubmit={handleSubmit} className="px-5 py-4 space-y-4 flex-1 overflow-y-auto">
           <div>
-            <label className="block text-sm font-medium text-grey-700 mb-1.5">Name <span className="text-red-500">*</span></label>
+            <label className="block text-sm font-medium text-grey-700 mb-1.5">{t('carriers.name')} <span className="text-red-500">*</span></label>
             <input name="name" value={form.name} onChange={handleChange} required className={inputClass} />
           </div>
           <div>
-            <label className="block text-sm font-medium text-grey-700 mb-1.5">KVK Number</label>
+            <label className="block text-sm font-medium text-grey-700 mb-1.5">{t('carriers.kvkNumber')}</label>
             <input name="kvk_number" value={form.kvk_number} onChange={handleChange} className={inputClass} />
           </div>
           <div>
-            <label className="block text-sm font-medium text-grey-700 mb-1.5">Contact Name</label>
+            <label className="block text-sm font-medium text-grey-700 mb-1.5">{t('carriers.contactName')}</label>
             <input name="contact_name" value={form.contact_name} onChange={handleChange} className={inputClass} />
           </div>
           <div>
-            <label className="block text-sm font-medium text-grey-700 mb-1.5">Contact Email</label>
+            <label className="block text-sm font-medium text-grey-700 mb-1.5">{t('carriers.contactEmail')}</label>
             <input name="contact_email" type="email" value={form.contact_email} onChange={handleChange} className={inputClass} />
           </div>
           <div>
-            <label className="block text-sm font-medium text-grey-700 mb-1.5">Contact Phone</label>
+            <label className="block text-sm font-medium text-grey-700 mb-1.5">{t('carriers.contactPhone')}</label>
             <input name="contact_phone" value={form.contact_phone} onChange={handleChange} className={inputClass} />
           </div>
           <div className="flex justify-end gap-3 pt-2">
             <button type="button" onClick={onClose}
-              className="h-9 px-4 bg-white text-grey-700 border border-grey-300 rounded-md text-sm font-semibold hover:bg-grey-50 transition-colors">Cancel</button>
+              className="h-9 px-4 bg-white text-grey-700 border border-grey-300 rounded-md text-sm font-semibold hover:bg-grey-50 transition-colors">{t('common:buttons.cancel')}</button>
             <button type="submit" disabled={submitting}
               className="h-9 px-4 bg-green-500 text-white rounded-md text-sm font-semibold hover:bg-green-700 disabled:opacity-50 transition-colors">
-              {submitting ? 'Saving...' : isEdit ? 'Update' : 'Create'}
+              {submitting ? t('common:buttons.saving') : isEdit ? t('common:buttons.update') : t('common:buttons.create')}
             </button>
           </div>
         </form>
@@ -87,6 +89,7 @@ function CarrierFormModal({ carrier, onClose, onSuccess }) {
 }
 
 export default function CarriersPage() {
+  const { t } = useTranslation(['admin', 'common']);
   const [carriers, setCarriers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -99,11 +102,11 @@ export default function CarriersPage() {
       const { data } = await getCarriers({ limit: 100, search: search || undefined });
       setCarriers(data.data);
     } catch {
-      toast.error('Failed to load carriers');
+      toast.error(t('carriers.failedLoadCarriers'));
     } finally {
       setLoading(false);
     }
-  }, [search]);
+  }, [search, t]);
 
   useEffect(() => {
     const timer = setTimeout(fetchData, 300);
@@ -114,26 +117,26 @@ export default function CarriersPage() {
     const isActive = newStatus === 'ACTIVE';
     try {
       await toggleCarrierStatus(carrierId, isActive);
-      toast.success(isActive ? 'Carrier activated' : 'Carrier deactivated');
+      toast.success(isActive ? t('carriers.carrierActivated') : t('carriers.carrierDeactivated'));
       fetchData();
     } catch (err) {
-      toast.error(err.response?.data?.error || 'Failed to update status');
+      toast.error(err.response?.data?.error || t('carriers.failedUpdateStatus'));
     }
   }
 
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-xl font-semibold text-grey-900">Carriers</h1>
+        <h1 className="text-xl font-semibold text-grey-900">{t('carriers.title')}</h1>
         <button onClick={() => { setEditCarrier(null); setShowModal(true); }}
           className="flex items-center gap-2 h-9 px-4 bg-green-500 text-white rounded-md text-sm font-semibold hover:bg-green-700 transition-colors">
-          <Plus size={16} strokeWidth={2} /> Add Carrier
+          <Plus size={16} strokeWidth={2} /> {t('carriers.addCarrier')}
         </button>
       </div>
 
       <div className="relative max-w-xs mb-4">
         <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-grey-400" />
-        <input type="text" placeholder="Search carriers..." value={search} onChange={(e) => setSearch(e.target.value)}
+        <input type="text" placeholder={t('carriers.searchPlaceholder')} value={search} onChange={(e) => setSearch(e.target.value)}
           className="w-full h-10 pl-9 pr-3 rounded-md border border-grey-300 text-sm text-grey-900 placeholder:text-grey-400 focus:border-green-500 focus:ring-[3px] focus:ring-green-500/15 outline-none transition-colors" />
       </div>
 
@@ -141,20 +144,20 @@ export default function CarriersPage() {
         <table className="w-full text-sm">
           <thead>
             <tr className="bg-grey-50 border-b border-grey-200">
-              <th className="text-left px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide">Name</th>
-              <th className="text-left px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide">Status</th>
-              <th className="text-left px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide">KVK</th>
-              <th className="text-left px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide">Contact Name</th>
-              <th className="text-left px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide">Contact Email</th>
-              <th className="text-left px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide">Contact Phone</th>
+              <th className="text-left px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide">{t('carriers.name')}</th>
+              <th className="text-left px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide">{t('common:table.status')}</th>
+              <th className="text-left px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide">{t('carriers.kvk')}</th>
+              <th className="text-left px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide">{t('carriers.contactName')}</th>
+              <th className="text-left px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide">{t('carriers.contactEmail')}</th>
+              <th className="text-left px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide">{t('carriers.contactPhone')}</th>
               <th className="w-10 px-4 py-3"></th>
             </tr>
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={7} className="px-4 py-8 text-center text-grey-400">Loading...</td></tr>
+              <tr><td colSpan={7} className="px-4 py-8 text-center text-grey-400">{t('common:table.loading')}</td></tr>
             ) : carriers.length === 0 ? (
-              <tr><td colSpan={7} className="px-4 py-8 text-center text-grey-400">No carriers found</td></tr>
+              <tr><td colSpan={7} className="px-4 py-8 text-center text-grey-400">{t('carriers.noCarriersFound')}</td></tr>
             ) : carriers.map((c) => (
               <tr key={c.id} className="border-b border-grey-100 hover:bg-grey-50 transition-colors">
                 <td className="px-4 py-3 font-medium text-green-700">{c.name}</td>
@@ -170,7 +173,7 @@ export default function CarriersPage() {
                 <td className="px-4 py-3 text-grey-700">{c.contact_email || '\u2014'}</td>
                 <td className="px-4 py-3 text-grey-700">{c.contact_phone || '\u2014'}</td>
                 <td className="px-4 py-3">
-                  <RowActionMenu actions={[{ label: 'Edit', icon: Pencil, onClick: () => { setEditCarrier(c); setShowModal(true); } }]} />
+                  <RowActionMenu actions={[{ label: t('common:buttons.edit'), icon: Pencil, onClick: () => { setEditCarrier(c); setShowModal(true); } }]} />
                 </td>
               </tr>
             ))}

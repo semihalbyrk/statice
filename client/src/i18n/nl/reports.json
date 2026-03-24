@@ -1,0 +1,140 @@
+{
+  "title": "Rapporten",
+  "subtitle": "Genereer en download compliance rapporten",
+  "scheduledReports": "Geplande Rapporten",
+  "reportType": "Rapporttype",
+  "recentReports": "Recente Rapporten",
+  "noReports": "Nog geen rapporten gegenereerd",
+  "loadingReports": "Rapporten laden...",
+  "totalCount": "{{count}} totaal",
+  "generatedSuccessfully": "Rapport succesvol gegenereerd",
+  "types": {
+    "RPT-01": {
+      "name": "Leverancier Circulariteitsverklaring",
+      "description": "Recycling- en terugwinningspercentages per leverancier"
+    },
+    "RPT-02": {
+      "name": "Materiaalterugwinning Samenvatting",
+      "description": "Geaggregeerde terugwinning per productcategorie"
+    },
+    "RPT-03": {
+      "name": "Keten van Bewaring",
+      "description": "Volledige traceerbaarheid per zending"
+    },
+    "RPT-04": {
+      "name": "Inkomend Gewichtsregister",
+      "description": "Weegevenementen met subtotalen per vervoerder/stroom"
+    },
+    "RPT-05": {
+      "name": "Afvalstroomanalyse",
+      "description": "Uitsplitsing per afvalstroom en categorie"
+    },
+    "RPT-06": {
+      "name": "Container Gebruik",
+      "description": "Gebruik, aantallen en top containers"
+    },
+    "RPT-07": {
+      "name": "Downstream Materiaalverklaring",
+      "description": "Downstream verklaring op materiaal- en fractieniveau"
+    }
+  },
+  "fields": {
+    "supplier": "Leverancier",
+    "selectSupplier": "Selecteer leverancier...",
+    "material": "Materiaal",
+    "selectMaterial": "Selecteer materiaal...",
+    "dateFrom": "Datum Van",
+    "dateTo": "Datum Tot",
+    "productCategories": "Productcategorieën (optioneel)",
+    "wasteStreams": "Afvalstromen (optioneel)",
+    "wasteStream": "Afvalstroom (optioneel)",
+    "carrier": "Vervoerder (optioneel)",
+    "allCarriers": "Alle vervoerders",
+    "allStreams": "Alle stromen",
+    "containerType": "Containertype (optioneel)",
+    "allTypes": "Alle types",
+    "mode": "Modus",
+    "orderId": "Order ID",
+    "orderIdPlaceholder": "Voer order ID in...",
+    "recipientEmails": "Ontvanger E-mailadressen",
+    "recipientEmailsPlaceholder": "email1@voorbeeld.com, email2@voorbeeld.com",
+    "recipientEmailsHint": "E-mailadressen gescheiden door komma's",
+    "frequency": "Frequentie",
+    "reportTypeField": "Rapporttype",
+    "outputFormat": "Uitvoerformaat",
+    "dayOfWeek": "Dag van de Week",
+    "dayOfMonth": "Dag van de Maand (1-28)",
+    "holdCtrlHint": "Houd Cmd/Ctrl ingedrukt voor meerdere selecties. Leeg laten voor alles."
+  },
+  "modes": {
+    "singleOrder": "Enkele Order",
+    "batchDateRange": "Batch (Datumbereik)"
+  },
+  "containerTypes": {
+    "OPEN_TOP": "Open Top",
+    "CLOSED": "Gesloten",
+    "ROLL_ON": "Roll-on",
+    "COMPACTOR": "Compactor",
+    "WHEELIE_BIN": "Rolcontainer",
+    "PALLET_BOX": "Palletbox",
+    "IBC": "IBC",
+    "OTHER": "Overig"
+  },
+  "buttons": {
+    "generatePdf": "PDF Genereren",
+    "generateXlsx": "XLSX Genereren",
+    "generateBoth": "Beide Genereren"
+  },
+  "table": {
+    "type": "Type",
+    "name": "Naam",
+    "generated": "Gegenereerd",
+    "by": "Door",
+    "files": "Bestanden",
+    "actions": "Acties"
+  },
+  "toast": {
+    "generated": "Rapport gegenereerd",
+    "generationFailed": "Genereren mislukt",
+    "downloadFailed": "Downloaden mislukt",
+    "deleted": "Rapport verwijderd",
+    "deleteFailed": "Verwijderen mislukt"
+  },
+  "confirm": {
+    "deleteReport": "Dit rapport permanent verwijderen?"
+  },
+  "schedules": {
+    "title": "Geplande Rapporten",
+    "subtitle": "Geautomatiseerde terugkerende rapportgeneratie",
+    "newSchedule": "Nieuwe Planning",
+    "editSchedule": "Planning Bewerken",
+    "createFirstSchedule": "Eerste Planning Aanmaken",
+    "noSchedules": "Nog geen geplande rapporten",
+    "loadingSchedules": "Planningen laden...",
+    "updateSchedule": "Planning Bijwerken",
+    "createSchedule": "Planning Aanmaken",
+    "table": {
+      "reportType": "Rapporttype",
+      "frequency": "Frequentie",
+      "nextRun": "Volgende Uitvoering",
+      "recipients": "Ontvangers",
+      "format": "Formaat",
+      "status": "Status",
+      "actions": "Acties"
+    },
+    "dayOf": "Dag {{day}}",
+    "toast": {
+      "updated": "Planning bijgewerkt",
+      "created": "Planning aangemaakt",
+      "deactivated": "Planning gedeactiveerd",
+      "saveFailed": "Opslaan mislukt",
+      "deleteFailed": "Verwijderen mislukt"
+    },
+    "confirm": {
+      "deactivate": "Deze planning deactiveren?"
+    },
+    "validation": {
+      "emailRequired": "Minimaal één ontvanger e-mailadres is vereist"
+    }
+  }
+}

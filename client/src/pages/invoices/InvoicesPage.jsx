@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Eye, Download, XCircle, Plus, Search } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { useTranslation } from 'react-i18next';
 import useInvoicesStore from '../../store/invoicesStore';
 import useAuthStore from '../../store/authStore';
 import ClickableStatusBadge from '../../components/ui/ClickableStatusBadge';
@@ -33,6 +34,7 @@ function formatCurrency(amount) {
 }
 
 export default function InvoicesPage() {
+  const { t } = useTranslation(['invoices', 'common']);
   const navigate = useNavigate();
   const user = useAuthStore((s) => s.user);
   const canWrite = ['ADMIN', 'FINANCE_MANAGER', 'FINANCE_USER'].includes(user?.role);
@@ -60,13 +62,13 @@ export default function InvoicesPage() {
     async (id, newStatus) => {
       try {
         await updateInvoiceStatus(id, newStatus);
-        toast.success('Status updated');
+        toast.success(t('invoices:toast.statusUpdated'));
         fetchInvoices();
       } catch (err) {
-        toast.error(err.response?.data?.error || 'Failed to update status');
+        toast.error(err.response?.data?.error || t('invoices:toast.statusFailed'));
       }
     },
-    [fetchInvoices],
+    [fetchInvoices, t],
   );
 
   const handleDownloadPdf = useCallback(async (invoice) => {
@@ -76,18 +78,18 @@ export default function InvoicesPage() {
       const url = URL.createObjectURL(blob);
       window.open(url, '_blank');
     } catch {
-      toast.error('Failed to generate PDF');
+      toast.error(t('invoices:toast.pdfFailed'));
     }
-  }, []);
+  }, [t]);
 
   function getRowActions(invoice) {
     const actions = [
-      { label: 'View', icon: Eye, onClick: () => navigate(`/invoices/${invoice.id}`) },
-      { label: 'Download PDF', icon: Download, onClick: () => handleDownloadPdf(invoice) },
+      { label: t('invoices:actions.view'), icon: Eye, onClick: () => navigate(`/invoices/${invoice.id}`) },
+      { label: t('invoices:actions.downloadPdf'), icon: Download, onClick: () => handleDownloadPdf(invoice) },
     ];
     if (canWrite && invoice.status === 'DRAFT') {
       actions.push({
-        label: 'Cancel',
+        label: t('invoices:actions.cancel'),
         icon: XCircle,
         variant: 'danger',
         onClick: () => handleStatusChange(invoice.id, 'CANCELLED'),
@@ -100,13 +102,13 @@ export default function InvoicesPage() {
     <div>
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-xl font-semibold text-grey-900">Invoices</h1>
+        <h1 className="text-xl font-semibold text-grey-900">{t('invoices:title')}</h1>
         {canWrite && (
           <button
             onClick={() => navigate('/invoices/new')}
             className="flex items-center gap-2 bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors"
           >
-            <Plus size={16} strokeWidth={2} /> New Invoice
+            <Plus size={16} strokeWidth={2} /> {t('invoices:newInvoice')}
           </button>
         )}
       </div>
@@ -119,10 +121,10 @@ export default function InvoicesPage() {
             onChange={(e) => setFilters({ status: e.target.value })}
             className={selectClass}
           >
-            <option value="">All Statuses</option>
-            <option value="DRAFT">Draft</option>
-            <option value="FINALIZED">Finalized</option>
-            <option value="CANCELLED">Cancelled</option>
+            <option value="">{t('invoices:allStatuses')}</option>
+            <option value="DRAFT">{t('invoices:status.DRAFT')}</option>
+            <option value="FINALIZED">{t('invoices:status.FINALIZED')}</option>
+            <option value="CANCELLED">{t('invoices:status.CANCELLED')}</option>
           </select>
         </div>
 
@@ -130,7 +132,7 @@ export default function InvoicesPage() {
           <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-grey-400" />
           <input
             type="text"
-            placeholder="Search invoices..."
+            placeholder={t('invoices:searchPlaceholder')}
             value={searchInput}
             onChange={(e) => setSearchInput(e.target.value)}
             className="w-full h-10 pl-9 pr-3 rounded-md border border-grey-300 text-sm text-grey-900 placeholder:text-grey-400 focus:border-green-500 focus:ring-[3px] focus:ring-green-500/15 outline-none transition-colors"
@@ -138,7 +140,7 @@ export default function InvoicesPage() {
         </div>
 
         <div className="flex items-center gap-2">
-          <label className="text-sm text-grey-500">From</label>
+          <label className="text-sm text-grey-500">{t('invoices:from')}</label>
           <input
             type="date"
             value={filters.date_from}
@@ -148,7 +150,7 @@ export default function InvoicesPage() {
         </div>
 
         <div className="flex items-center gap-2">
-          <label className="text-sm text-grey-500">To</label>
+          <label className="text-sm text-grey-500">{t('invoices:to')}</label>
           <input
             type="date"
             value={filters.date_to}
@@ -164,22 +166,22 @@ export default function InvoicesPage() {
           <thead>
             <tr className="bg-grey-50 border-b border-grey-200">
               <th className="text-left px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide">
-                Invoice Number
+                {t('invoices:table.invoiceNumber')}
               </th>
               <th className="text-left px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide">
-                Status
+                {t('invoices:table.status')}
               </th>
               <th className="text-left px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide">
-                Supplier
+                {t('invoices:table.supplier')}
               </th>
               <th className="text-left px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide">
-                Invoice Date
+                {t('invoices:table.invoiceDate')}
               </th>
               <th className="text-left px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide">
-                Due Date
+                {t('invoices:table.dueDate')}
               </th>
               <th className="text-left px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide">
-                Total
+                {t('invoices:table.total')}
               </th>
               <th className="w-10 px-4 py-3"></th>
             </tr>
@@ -188,13 +190,13 @@ export default function InvoicesPage() {
             {loading ? (
               <tr>
                 <td colSpan={7} className="px-4 py-8 text-center text-grey-400">
-                  Loading...
+                  {t('invoices:loading')}
                 </td>
               </tr>
             ) : invoices.length === 0 ? (
               <tr>
                 <td colSpan={7} className="px-4 py-8 text-center text-grey-400">
-                  No invoices found.
+                  {t('invoices:empty')}
                 </td>
               </tr>
             ) : (
@@ -236,7 +238,7 @@ export default function InvoicesPage() {
       {!loading && invoices.length > 0 && (
         <div className="flex items-center justify-between mt-4">
           <p className="text-sm text-grey-500">
-            Page {filters.page} of {totalPages}
+            {t('invoices:pagination.pageOf', { page: filters.page, total: totalPages })}
           </p>
           <div className="flex items-center gap-2">
             <button
@@ -244,14 +246,14 @@ export default function InvoicesPage() {
               onClick={() => setFilters({ page: filters.page - 1 })}
               className="h-9 px-3 rounded-md border border-grey-300 text-sm font-medium text-grey-700 hover:bg-grey-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Previous
+              {t('invoices:pagination.previous')}
             </button>
             <button
               disabled={filters.page >= totalPages}
               onClick={() => setFilters({ page: filters.page + 1 })}
               className="h-9 px-3 rounded-md border border-grey-300 text-sm font-medium text-grey-700 hover:bg-grey-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Next
+              {t('invoices:pagination.next')}
             </button>
           </div>
         </div>

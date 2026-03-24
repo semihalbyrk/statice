@@ -1,20 +1,13 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { ArrowLeft, Plus, Pencil, Trash2, Loader2, CalendarClock, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 import useReportsStore from '../../store/reportsStore';
 import { createSchedule, updateSchedule, deleteSchedule } from '../../api/reports';
 import AppStatusBadge from '../../components/ui/StatusBadge';
 
-const REPORT_TYPES = [
-  { code: 'RPT-01', name: 'Supplier Circularity Statement' },
-  { code: 'RPT-02', name: 'Material Recovery Summary' },
-  { code: 'RPT-03', name: 'Chain of Custody' },
-  { code: 'RPT-04', name: 'Inbound Weight Register' },
-  { code: 'RPT-05', name: 'Waste Stream Analysis' },
-  { code: 'RPT-06', name: 'Skip Asset Utilisation' },
-  { code: 'RPT-07', name: 'Downstream Material Statement' },
-];
+const REPORT_TYPE_CODES = ['RPT-01', 'RPT-02', 'RPT-03', 'RPT-04', 'RPT-05', 'RPT-06', 'RPT-07'];
 
 const FREQUENCIES = ['DAILY', 'WEEKLY', 'MONTHLY'];
 const FORMATS = ['PDF', 'XLSX', 'BOTH'];
@@ -41,6 +34,7 @@ function FrequencyBadge({ frequency }) {
 
 // ---- Schedule Form Modal ----
 function ScheduleFormModal({ schedule, onClose, onSuccess }) {
+  const { t } = useTranslation('reports');
   const isEdit = !!schedule;
   const [form, setForm] = useState({
     report_type: schedule?.report_type || 'RPT-01',
@@ -62,7 +56,7 @@ function ScheduleFormModal({ schedule, onClose, onSuccess }) {
 
     const emails = form.recipient_emails.split(',').map((e) => e.trim()).filter(Boolean);
     if (!emails.length) {
-      toast.error('At least one recipient email is required');
+      toast.error(t('schedules.validation.emailRequired'));
       return;
     }
 
@@ -80,14 +74,14 @@ function ScheduleFormModal({ schedule, onClose, onSuccess }) {
 
       if (isEdit) {
         await updateSchedule(schedule.id, payload);
-        toast.success('Schedule updated');
+        toast.success(t('schedules.toast.updated'));
       } else {
         await createSchedule(payload);
-        toast.success('Schedule created');
+        toast.success(t('schedules.toast.created'));
       }
       onSuccess();
     } catch (err) {
-      toast.error(err.response?.data?.error || 'Save failed');
+      toast.error(err.response?.data?.error || t('schedules.toast.saveFailed'));
     } finally {
       setSubmitting(false);
     }
@@ -97,20 +91,22 @@ function ScheduleFormModal({ schedule, onClose, onSuccess }) {
     <div className="app-modal-overlay" onClick={onClose}>
       <div className="app-modal-panel max-w-lg" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between px-5 py-4 border-b border-grey-200">
-          <h3 className="text-base font-semibold text-grey-900">{isEdit ? 'Edit Schedule' : 'New Schedule'}</h3>
+          <h3 className="text-base font-semibold text-grey-900">{isEdit ? t('schedules.editSchedule') : t('schedules.newSchedule')}</h3>
           <button onClick={onClose} className="text-grey-400 hover:text-grey-600"><X size={18} /></button>
         </div>
 
         <form onSubmit={handleSubmit} className="p-5 space-y-4">
           <div>
-            <label className={labelClass}>Report Type</label>
+            <label className={labelClass}>{t('fields.reportTypeField')}</label>
             <select name="report_type" className={selectClass} value={form.report_type} onChange={handleChange}>
-              {REPORT_TYPES.map((rt) => <option key={rt.code} value={rt.code}>{rt.code} — {rt.name}</option>)}
+              {REPORT_TYPE_CODES.map((code) => (
+                <option key={code} value={code}>{code} — {t(`types.${code}.name`)}</option>
+              ))}
             </select>
           </div>
 
           <div>
-            <label className={labelClass}>Frequency</label>
+            <label className={labelClass}>{t('fields.frequency')}</label>
             <div className="flex gap-3">
               {FREQUENCIES.map((f) => (
                 <label key={f} className="flex items-center gap-2 text-sm text-grey-700 cursor-pointer">
@@ -123,7 +119,7 @@ function ScheduleFormModal({ schedule, onClose, onSuccess }) {
 
           {form.frequency === 'WEEKLY' && (
             <div>
-              <label className={labelClass}>Day of Week</label>
+              <label className={labelClass}>{t('fields.dayOfWeek')}</label>
               <select name="day_of_week" className={selectClass} value={form.day_of_week} onChange={handleChange}>
                 {DAY_NAMES.map((name, i) => <option key={i} value={i}>{name}</option>)}
               </select>
@@ -132,7 +128,7 @@ function ScheduleFormModal({ schedule, onClose, onSuccess }) {
 
           {form.frequency === 'MONTHLY' && (
             <div>
-              <label className={labelClass}>Day of Month (1-28)</label>
+              <label className={labelClass}>{t('fields.dayOfMonth')}</label>
               <input
                 type="number"
                 name="day_of_month"
@@ -146,20 +142,20 @@ function ScheduleFormModal({ schedule, onClose, onSuccess }) {
           )}
 
           <div>
-            <label className={labelClass}>Recipient Emails</label>
+            <label className={labelClass}>{t('fields.recipientEmails')}</label>
             <input
               type="text"
               name="recipient_emails"
               className={inputClass}
-              placeholder="email1@example.com, email2@example.com"
+              placeholder={t('fields.recipientEmailsPlaceholder')}
               value={form.recipient_emails}
               onChange={handleChange}
             />
-            <p className="text-xs text-grey-400 mt-1">Comma-separated email addresses</p>
+            <p className="text-xs text-grey-400 mt-1">{t('fields.recipientEmailsHint')}</p>
           </div>
 
           <div>
-            <label className={labelClass}>Output Format</label>
+            <label className={labelClass}>{t('fields.outputFormat')}</label>
             <div className="flex gap-3">
               {FORMATS.map((f) => (
                 <label key={f} className="flex items-center gap-2 text-sm text-grey-700 cursor-pointer">
@@ -171,10 +167,10 @@ function ScheduleFormModal({ schedule, onClose, onSuccess }) {
           </div>
 
           <div className="flex justify-end gap-3 pt-4 border-t border-grey-200">
-            <button type="button" className={btnSecondary} onClick={onClose}>Cancel</button>
+            <button type="button" className={btnSecondary} onClick={onClose}>{t('common:buttons.cancel', 'Cancel')}</button>
             <button type="submit" className={btnPrimary} disabled={submitting}>
               {submitting ? <Loader2 size={16} className="animate-spin" /> : null}
-              {isEdit ? 'Update' : 'Create'} Schedule
+              {isEdit ? t('schedules.updateSchedule') : t('schedules.createSchedule')}
             </button>
           </div>
         </form>
@@ -185,6 +181,7 @@ function ScheduleFormModal({ schedule, onClose, onSuccess }) {
 
 // ---- Main Page ----
 export default function SchedulesPage() {
+  const { t } = useTranslation('reports');
   const navigate = useNavigate();
   const { schedules, schedulesLoading, fetchSchedules } = useReportsStore();
   const [showModal, setShowModal] = useState(false);
@@ -201,15 +198,15 @@ export default function SchedulesPage() {
   }, [fetchSchedules]);
 
   const handleDelete = useCallback(async (id) => {
-    if (!window.confirm('Deactivate this schedule?')) return;
+    if (!window.confirm(t('schedules.confirm.deactivate'))) return;
     try {
       await deleteSchedule(id);
-      toast.success('Schedule deactivated');
+      toast.success(t('schedules.toast.deactivated'));
       fetchSchedules();
     } catch {
-      toast.error('Delete failed');
+      toast.error(t('schedules.toast.deleteFailed'));
     }
-  }, [fetchSchedules]);
+  }, [fetchSchedules, t]);
 
   const handleEdit = useCallback((schedule) => {
     setEditSchedule(schedule);
@@ -225,12 +222,12 @@ export default function SchedulesPage() {
             <ArrowLeft size={20} />
           </button>
           <div>
-            <h1 className="text-xl font-semibold text-grey-900">Scheduled Reports</h1>
-            <p className="text-sm text-grey-500 mt-0.5">Automated recurring report generation</p>
+            <h1 className="text-xl font-semibold text-grey-900">{t('schedules.title')}</h1>
+            <p className="text-sm text-grey-500 mt-0.5">{t('schedules.subtitle')}</p>
           </div>
         </div>
         <button className={btnPrimary} onClick={() => { setEditSchedule(null); setShowModal(true); }}>
-          <Plus size={16} /> New Schedule
+          <Plus size={16} /> {t('schedules.newSchedule')}
         </button>
       </div>
 
@@ -238,14 +235,14 @@ export default function SchedulesPage() {
       <div className="bg-white rounded-lg border border-grey-200 shadow-sm">
         {schedulesLoading ? (
           <div className="flex items-center justify-center py-16 text-grey-400">
-            <Loader2 size={20} className="animate-spin mr-2" /> Loading schedules...
+            <Loader2 size={20} className="animate-spin mr-2" /> {t('schedules.loadingSchedules')}
           </div>
         ) : !schedules.length ? (
           <div className="flex flex-col items-center justify-center py-16 text-grey-400">
             <CalendarClock size={32} strokeWidth={1.5} className="mb-2" />
-            <p className="text-sm">No scheduled reports yet</p>
+            <p className="text-sm">{t('schedules.noSchedules')}</p>
             <button className={`${btnPrimary} mt-4`} onClick={() => setShowModal(true)}>
-              <Plus size={16} /> Create First Schedule
+              <Plus size={16} /> {t('schedules.createFirstSchedule')}
             </button>
           </div>
         ) : (
@@ -253,18 +250,18 @@ export default function SchedulesPage() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="bg-grey-50 border-b border-grey-200">
-                  <th className="text-left px-4 py-2.5 text-xs font-medium text-grey-500 uppercase tracking-wide">Report Type</th>
-                  <th className="text-left px-4 py-2.5 text-xs font-medium text-grey-500 uppercase tracking-wide">Frequency</th>
-                  <th className="text-left px-4 py-2.5 text-xs font-medium text-grey-500 uppercase tracking-wide">Next Run</th>
-                  <th className="text-left px-4 py-2.5 text-xs font-medium text-grey-500 uppercase tracking-wide">Recipients</th>
-                  <th className="text-left px-4 py-2.5 text-xs font-medium text-grey-500 uppercase tracking-wide">Format</th>
-                  <th className="text-left px-4 py-2.5 text-xs font-medium text-grey-500 uppercase tracking-wide">Status</th>
-                  <th className="text-right px-4 py-2.5 text-xs font-medium text-grey-500 uppercase tracking-wide">Actions</th>
+                  <th className="text-left px-4 py-2.5 text-xs font-medium text-grey-500 uppercase tracking-wide">{t('schedules.table.reportType')}</th>
+                  <th className="text-left px-4 py-2.5 text-xs font-medium text-grey-500 uppercase tracking-wide">{t('schedules.table.frequency')}</th>
+                  <th className="text-left px-4 py-2.5 text-xs font-medium text-grey-500 uppercase tracking-wide">{t('schedules.table.nextRun')}</th>
+                  <th className="text-left px-4 py-2.5 text-xs font-medium text-grey-500 uppercase tracking-wide">{t('schedules.table.recipients')}</th>
+                  <th className="text-left px-4 py-2.5 text-xs font-medium text-grey-500 uppercase tracking-wide">{t('schedules.table.format')}</th>
+                  <th className="text-left px-4 py-2.5 text-xs font-medium text-grey-500 uppercase tracking-wide">{t('schedules.table.status')}</th>
+                  <th className="text-right px-4 py-2.5 text-xs font-medium text-grey-500 uppercase tracking-wide">{t('schedules.table.actions')}</th>
                 </tr>
               </thead>
               <tbody>
                 {schedules.map((s) => {
-                  const typeName = REPORT_TYPES.find((rt) => rt.code === s.report_type)?.name || s.report_type;
+                  const typeName = t(`types.${s.report_type}.name`, s.report_type);
                   return (
                     <tr key={s.id} className="border-b border-grey-100 hover:bg-grey-50 transition-colors">
                       <td className="px-4 py-3">
@@ -274,7 +271,7 @@ export default function SchedulesPage() {
                       <td className="px-4 py-3">
                         <FrequencyBadge frequency={s.frequency} />
                         {s.frequency === 'WEEKLY' && <span className="text-xs text-grey-500 ml-1.5">{DAY_NAMES[s.day_of_week]}</span>}
-                        {s.frequency === 'MONTHLY' && <span className="text-xs text-grey-500 ml-1.5">Day {s.day_of_month}</span>}
+                        {s.frequency === 'MONTHLY' && <span className="text-xs text-grey-500 ml-1.5">{t('schedules.dayOf', { day: s.day_of_month })}</span>}
                       </td>
                       <td className="px-4 py-3 text-grey-600">
                         {s.next_run_at ? new Date(s.next_run_at).toLocaleString() : '—'}

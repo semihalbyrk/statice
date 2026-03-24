@@ -1,0 +1,138 @@
+{
+  "title": "Orders",
+  "newOrder": "New Order",
+  "tabs": {
+    "allOrders": "All Orders",
+    "today": "Today"
+  },
+  "searchPlaceholder": "Search by order name...",
+  "allStatuses": "All statuses",
+  "allCarriers": "All carriers",
+  "allSuppliers": "All suppliers",
+  "allSupplierTypes": "All supplier types",
+  "allWasteStreams": "All waste streams",
+  "table": {
+    "orderName": "Order #",
+    "status": "Status",
+    "vehiclePlate": "Vehicle Plate",
+    "carrier": "Carrier",
+    "supplier": "Supplier",
+    "wasteStream": "Waste Stream",
+    "plannedDate": "Planned Date",
+    "parcels": "Parcels"
+  },
+  "pagination": {
+    "totalOrders": "{{count}} total orders"
+  },
+  "empty": {
+    "noOrders": "No orders found"
+  },
+  "toast": {
+    "statusUpdated": "Order status updated to {{status}}",
+    "statusFailed": "Failed to update order status",
+    "created": "Order created",
+    "createFailed": "Failed to create order",
+    "incidentReported": "Incident reported",
+    "incidentFailed": "Failed to report incident",
+    "statusUpdateFailed": "Failed to update status",
+    "boardFailed": "Failed to load planning board"
+  },
+  "detail": {
+    "adHoc": "Ad-hoc",
+    "actions": "Actions",
+    "editOrder": "Edit Order",
+    "fields": {
+      "carrier": "Carrier",
+      "supplier": "Supplier",
+      "wasteStreams": "Waste Streams",
+      "plannedDate": "Planned Date",
+      "expectedParcels": "Expected Parcels",
+      "createdBy": "Created By",
+      "linkedContract": "Linked Contract",
+      "vehiclePlate": "Vehicle Plate",
+      "afvalstroomnummer": "Afvalstroomnummer",
+      "notes": "Notes",
+      "clientReference": "Client Reference",
+      "contactPerson": "Contact Person",
+      "idReference": "ID Reference",
+      "vehicleType": "Vehicle Type",
+      "incident": "Incident"
+    },
+    "inbounds": {
+      "title": "Inbounds",
+      "description": "Each order can contain multiple inbound records. This section keeps the inbound status and operational details together.",
+      "openInbound": "Open inbound",
+      "sortingAvailable": "Sorting process available",
+      "notStarted": "Not started",
+      "noInbounds": "No inbounds yet",
+      "vehiclePlate": "Vehicle Plate",
+      "arrivedAt": "Arrived At",
+      "wasteStream": "Waste Stream",
+      "sorting": "Sorting"
+    },
+    "incident": {
+      "title": "Report Incident",
+      "selectType": "Select incident type...",
+      "notesPlaceholder": "Notes...",
+      "reportBtn": "Report"
+    }
+  },
+  "create": {
+    "title": "New Order",
+    "breadcrumb": "New Order",
+    "fields": {
+      "supplier": "Supplier",
+      "supplierPlaceholder": "Select supplier...",
+      "carrier": "Carrier",
+      "carrierPlaceholder": "Select carrier...",
+      "wasteStreams": "Waste Streams",
+      "noWasteStreams": "No waste streams available",
+      "selectWasteStreams": "Select waste streams...",
+      "nSelected": "{{count}} selected",
+      "searchingContract": "Searching for active contract...",
+      "noContract": "No active contract found for this supplier + carrier combination",
+      "afvalstroomnummer": "Afvalstroomnummer",
+      "plannedDate": "Planned Date",
+      "timeWindowStart": "Time Window Start",
+      "timeWindowEnd": "Time Window End",
+      "vehiclePlate": "Vehicle Plate",
+      "vehiclePlatePlaceholder": "AB-123-CD",
+      "expectedParcels": "Expected Parcels",
+      "lzvLabel": "LZV Vehicle (up to 3 containers)",
+      "clientReference": "Client Reference",
+      "clientRefPlaceholder": "Client PO/reference number",
+      "notes": "Notes",
+      "notesPlaceholder": "Optional notes..."
+    },
+    "buttons": {
+      "cancel": "Cancel",
+      "createOrder": "Create Order",
+      "creating": "Creating..."
+    },
+    "validation": {
+      "selectWasteStream": "Please select at least one waste stream",
+      "vehiclePlateRequired": "Vehicle plate is required"
+    }
+  },
+  "planningBoard": {
+    "title": "Daily Planning Board",
+    "todayBtn": "Today",
+    "noTimeWindow": "No time window",
+    "card": {
+      "carrier": "Carrier",
+      "supplier": "Supplier",
+      "wasteStream": "Waste Stream",
+      "vehiclePlate": "Vehicle",
+      "timeWindow": "Time Window",
+      "expectedParcels": "Expected Parcels",
+      "completedInbounds": "Inbounds",
+      "totalNetWeight": "Total Net Weight",
+      "incident": "Incident"
+    },
+    "empty": {
+      "noDeliveries": "No deliveries planned for this date"
+    },
+    "summary": "{{count}} delivery for {{date}}",
+    "summaryPlural": "{{count}} deliveries for {{date}}"
+  }
+}

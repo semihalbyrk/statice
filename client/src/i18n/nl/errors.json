@@ -1,0 +1,15 @@
+{
+  "notFound": {
+    "title": "404",
+    "message": "Pagina niet gevonden",
+    "description": "De pagina die u zoekt bestaat niet of is verplaatst.",
+    "goHome": "Ga naar Dashboard"
+  },
+  "unauthorized": {
+    "title": "403",
+    "message": "Toegang Geweigerd",
+    "description": "U heeft geen toestemming om deze pagina te bekijken.",
+    "goBack": "Ga Terug",
+    "dashboard": "Dashboard"
+  }
+}

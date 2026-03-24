@@ -1,0 +1,23 @@
+{
+  "main": "Main",
+  "dashboard": "Dashboard",
+  "orders": "Orders",
+  "planningBoard": "Planning Board",
+  "arrival": "Arrival",
+  "inbounds": "Inbounds",
+  "process": "Process",
+  "reports": "Reports",
+  "contracts": "Contracts",
+  "invoices": "Invoices",
+  "admin": "Admin",
+  "users": "Users",
+  "carriers": "Carriers",
+  "suppliers": "Suppliers",
+  "materials": "Materials",
+  "feeMaster": "Fee Master",
+  "auditLog": "Audit Log",
+  "settings": "Settings",
+  "logout": "Logout",
+  "signedOut": "Signed out",
+  "language": "Language"
+}

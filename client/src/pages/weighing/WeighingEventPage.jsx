@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback, Fragment } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { Loader2, Scale, Download, Pencil, Trash2, Plus, AlertTriangle, ExternalLink, Package, Box, Check } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { useTranslation } from 'react-i18next';
 import useAuthStore from '../../store/authStore';
 import ClickableStatusBadge from '../../components/ui/ClickableStatusBadge';
 import SupplierTypeBadge from '../../components/ui/SupplierTypeBadge';
@@ -31,21 +32,17 @@ const MANUAL_TRANSITIONS = {
   WEIGHED_OUT: ['READY_FOR_SORTING'],
 };
 
-const PROGRESS_STEPS = [
-  { key: 'ARRIVED', label: 'Arrived' },
-  { key: 'WEIGHED_IN', label: 'Weighing' },
-  { key: 'WEIGHED_OUT', label: 'Weighed Out' },
-  { key: 'READY_FOR_SORTING', label: 'Ready for Sorting' },
-  { key: 'SORTED', label: 'Sorted' },
-];
-
 function formatDateTime(value, pattern = 'dd MMM yyyy HH:mm') {
   return value ? format(new Date(value), pattern) : '—';
 }
 
-function printAssetLabel(asset) {
+function printAssetLabel(asset, t) {
   const printWindow = window.open('', '_blank', 'width=420,height=320');
   if (!printWindow) return;
+
+  const typeLabel = asset.parcel_type === 'CONTAINER'
+    ? (CONTAINER_TYPE_LABELS[asset.container_type] || asset.container_type || t('printLabel.container'))
+    : t('printLabel.material');
 
   printWindow.document.write(`
     <html>
@@ -61,12 +58,12 @@ function printAssetLabel(asset) {
       </head>
       <body>
         <div class="label">
-          <div class="title">STATICE ASSET LABEL</div>
+          <div class="title">${t('printLabel.assetLabel')}</div>
           <div class="code">${asset.asset_label}</div>
           <div class="meta">
-            <div>Type: ${asset.parcel_type === 'CONTAINER' ? (CONTAINER_TYPE_LABELS[asset.container_type] || asset.container_type || 'Container') : 'Material'}</div>
-            <div>Waste Stream: ${asset.waste_stream?.name || '—'}</div>
-            <div>Gross/Tare Pair: ${asset.gross_weight_kg != null ? Number(asset.gross_weight_kg).toLocaleString() : '—'} / ${asset.tare_weight_kg != null ? Number(asset.tare_weight_kg).toLocaleString() : '—'} kg</div>
+            <div>${t('printLabel.type')}: ${typeLabel}</div>
+            <div>${t('printLabel.wasteStream')}: ${asset.waste_stream?.name || '—'}</div>
+            <div>${t('printLabel.grossTarePair')}: ${asset.gross_weight_kg != null ? Number(asset.gross_weight_kg).toLocaleString() : '—'} / ${asset.tare_weight_kg != null ? Number(asset.tare_weight_kg).toLocaleString() : '—'} kg</div>
           </div>
         </div>
       </body>
@@ -79,6 +76,7 @@ function printAssetLabel(asset) {
 
 export default function InboundDetailPage() {
   const { inboundId } = useParams();
+  const { t } = useTranslation(['weighing', 'common']);
   const user = useAuthStore((s) => s.user);
   const isAdmin = user?.role === 'ADMIN';
 
@@ -88,17 +86,25 @@ export default function InboundDetailPage() {
   const [incidentCategory, setIncidentCategory] = useState('');
   const [incidentNotes, setIncidentNotes] = useState('');
 
+  const progressSteps = [
+    { key: 'ARRIVED', label: t('progress.arrived') },
+    { key: 'WEIGHED_IN', label: t('progress.weighing') },
+    { key: 'WEIGHED_OUT', label: t('progress.weighedOut') },
+    { key: 'READY_FOR_SORTING', label: t('progress.readyForSorting') },
+    { key: 'SORTED', label: t('progress.sorted') },
+  ];
+
   const fetchInbound = useCallback(async (id) => {
     setIsLoading(true);
     try {
       const { data } = await getInboundApi(id);
       setInbound(data.data);
     } catch (err) {
-      toast.error(err.response?.data?.error || 'Failed to load inbound');
+      toast.error(err.response?.data?.error || t('toast.failedToLoad'));
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     fetchInbound(inboundId);
@@ -108,31 +114,31 @@ export default function InboundDetailPage() {
     try {
       const { data } = await updateInboundStatus(inboundId, newStatus);
       setInbound(data.data);
-      toast.success(`Status updated to ${newStatus.replace(/_/g, ' ')}`);
+      toast.success(t('toast.statusUpdated', { status: newStatus.replace(/_/g, ' ') }));
     } catch (err) {
-      toast.error(err.response?.data?.error || 'Failed to update status');
+      toast.error(err.response?.data?.error || t('toast.failedToUpdateStatus'));
     }
-  }, [inboundId]);
+  }, [inboundId, t]);
 
   const handleIncident = async () => {
     try {
       await setInboundIncident(inboundId, { incident_category: incidentCategory, notes: incidentNotes });
-      toast.success('Incident reported');
+      toast.success(t('toast.incidentReported'));
       setIncidentCategory('');
       setIncidentNotes('');
       fetchInbound(inboundId);
     } catch (err) {
-      toast.error(err.response?.data?.error || 'Failed to report incident');
+      toast.error(err.response?.data?.error || t('toast.failedToReportIncident'));
     }
   };
 
   const handleConfirmWeighing = async (sequence) => {
     try {
       await confirmWeighing(inboundId, sequence);
-      toast.success('Weighing confirmed');
+      toast.success(t('toast.weighingConfirmed'));
       fetchInbound(inboundId);
     } catch (err) {
-      toast.error(err.response?.data?.error || 'Failed to confirm weighing');
+      toast.error(err.response?.data?.error || t('toast.failedToConfirmWeighing'));
     }
   };
 
@@ -171,51 +177,51 @@ export default function InboundDetailPage() {
             onTransition={handleStatusChange}
           />
           {inbound.order?.is_lzv && (
-            <span className="text-sm font-medium text-grey-700 ml-2">LZV Vehicle</span>
+            <span className="text-sm font-medium text-grey-700 ml-2">{t('lzv.lzvVehicle')}</span>
           )}
           {inbound.incident_category && (
             <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-800">
-              Incident: {inbound.incident_category.replace('_', ' ')}
+              {inbound.incident_category.replace('_', ' ')}
             </span>
           )}
         </div>
       </div>
 
       {/* Progress Bar */}
-      <ProgressBar status={inbound.status} />
+      <ProgressBar status={inbound.status} steps={progressSteps} />
 
       {/* Info Card */}
       <div className="bg-white rounded-lg border border-grey-200 shadow-sm p-4 mb-4">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div className="grid flex-1 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-y-3 gap-x-6 min-w-0">
-            <InfoField label="Carrier">
+            <InfoField label={t('info.carrier')}>
               <p className="text-sm font-medium text-grey-900 mt-0.5 truncate" title={order?.carrier?.name || '—'}>{order?.carrier?.name || '—'}</p>
             </InfoField>
-            <InfoField label="Supplier">
+            <InfoField label={t('info.supplier')}>
               <div className="flex items-center gap-1.5 mt-0.5 min-w-0">
                 <span className="text-sm font-medium text-grey-900 truncate" title={order?.supplier?.name || '—'}>{order?.supplier?.name || '—'}</span>
                 <SupplierTypeBadge className="flex-shrink-0" type={order?.supplier?.supplier_type} />
               </div>
             </InfoField>
-            <InfoField label="Vehicle Plate">
+            <InfoField label={t('info.vehiclePlate')}>
               <span className="font-mono text-sm font-bold tracking-wider text-grey-900">
                 {inbound.vehicle?.registration_plate || '—'}
               </span>
             </InfoField>
-            <InfoField label="Waste Stream(s)">
+            <InfoField label={t('info.wasteStreams')}>
               <p className="text-sm font-medium text-grey-900 mt-0.5 truncate" title={orderWasteStreams.map((ws) => `${ws.name} (${ws.code})`).join(', ') || '—'}>{orderWasteStreams.map((ws) => `${ws.name} (${ws.code})`).join(', ') || '—'}</p>
             </InfoField>
-            <InfoField label="Arrived At" value={formatDateTime(inbound.arrived_at)} />
-            <InfoField label="Contract">
+            <InfoField label={t('info.arrivedAt')} value={formatDateTime(inbound.arrived_at)} />
+            <InfoField label={t('info.contract')}>
               {inbound.linked_contract ? (
                 <Link to={`/contracts/${inbound.linked_contract.id}`} className="text-sm font-medium text-green-700 hover:underline mt-0.5 block">
                   {inbound.linked_contract.contract_number}
                 </Link>
               ) : <p className="text-sm text-grey-400 mt-0.5">—</p>}
             </InfoField>
-            {inbound.notes && <InfoField className="sm:col-span-2 lg:col-span-4" label="Notes" value={inbound.notes} />}
+            {inbound.notes && <InfoField className="sm:col-span-2 lg:col-span-4" label={t('info.notes')} value={inbound.notes} />}
           </div>
-          <InfoField className="lg:min-w-[180px] lg:text-right" label="Order Name">
+          <InfoField className="lg:min-w-[180px] lg:text-right" label={t('info.orderName')}>
             <Link
               to={`/orders/${inbound.order_id}`}
               className="inline-flex items-center gap-1 text-sm font-semibold text-green-600 hover:text-green-700 transition-colors"
@@ -229,22 +235,22 @@ export default function InboundDetailPage() {
         {/* Incident Section */}
         {!['READY_FOR_SORTING', 'SORTED'].includes(inbound.status) && (
           <div className="mt-4 pt-4 border-t border-grey-200">
-            <h4 className="text-sm font-medium text-grey-700 mb-2">Report Incident</h4>
+            <h4 className="text-sm font-medium text-grey-700 mb-2">{t('incident.reportIncident')}</h4>
             <div className="flex gap-2">
               <select
                 value={incidentCategory}
                 onChange={e => setIncidentCategory(e.target.value)}
                 className="h-10 px-3.5 rounded-md border border-grey-300 text-sm text-grey-900 bg-white focus:border-green-500 focus:ring-[3px] focus:ring-green-500/15 outline-none transition-colors"
               >
-                <option value="">Select incident type...</option>
-                <option value="DAMAGE">Damage</option>
-                <option value="DISPUTE">Dispute</option>
-                <option value="SPECIAL_HANDLING">Special Handling</option>
-                <option value="DRIVER_INSTRUCTION">Driver Instruction</option>
+                <option value="">{t('incident.selectIncident')}</option>
+                <option value="DAMAGE">{t('incident.damage')}</option>
+                <option value="DISPUTE">{t('incident.dispute')}</option>
+                <option value="SPECIAL_HANDLING">{t('incident.specialHandling')}</option>
+                <option value="DRIVER_INSTRUCTION">{t('incident.driverInstruction')}</option>
               </select>
               <input
                 type="text"
-                placeholder="Notes..."
+                placeholder={t('incident.notesPlaceholder')}
                 value={incidentNotes}
                 onChange={e => setIncidentNotes(e.target.value)}
                 className="flex-1 h-10 px-3.5 rounded-md border border-grey-300 text-sm text-grey-900 focus:border-green-500 focus:ring-[3px] focus:ring-green-500/15 outline-none transition-colors"
@@ -254,7 +260,7 @@ export default function InboundDetailPage() {
                 disabled={!incidentCategory}
                 className="h-10 px-4 bg-red-500 text-white rounded-md text-sm font-semibold hover:bg-red-600 disabled:opacity-50 transition-colors"
               >
-                Report
+                {t('common:buttons.report')}
               </button>
             </div>
           </div>
@@ -298,13 +304,13 @@ export default function InboundDetailPage() {
 }
 
 /* ───── Progress Bar ───── */
-function ProgressBar({ status }) {
-  const currentIndex = PROGRESS_STEPS.findIndex((s) => s.key === status);
+function ProgressBar({ status, steps }) {
+  const currentIndex = steps.findIndex((s) => s.key === status);
 
   return (
     <div className="bg-white rounded-lg border border-grey-200 shadow-sm p-4 mb-4">
       <div className="flex items-center gap-2">
-        {PROGRESS_STEPS.map((step, i) => (
+        {steps.map((step, i) => (
           <Fragment key={step.key}>
             <div className="flex items-center gap-2">
               <div className={`w-7 h-7 rounded-full border-2 flex items-center justify-center text-[11px] font-semibold transition-colors ${
@@ -322,7 +328,7 @@ function ProgressBar({ status }) {
                 {step.label}
               </span>
             </div>
-            {i < PROGRESS_STEPS.length - 1 && (
+            {i < steps.length - 1 && (
               <div className={`flex-1 h-[2px] ${i < currentIndex ? 'bg-green-500' : 'bg-grey-200'}`} />
             )}
           </Fragment>
@@ -344,6 +350,7 @@ function InfoField({ label, value, children, className = '' }) {
 
 /* ───── Weighing Flow Section ───── */
 function WeighingFlowSection({ inbound, inboundId, weighings, assets, orderWasteStreams, isTriggering, setTriggering, setInbound, refreshInbound, isAdmin, user, onConfirmWeighing }) {
+  const { t } = useTranslation(['weighing', 'common']);
   const [showManualFallback, setShowManualFallback] = useState(false);
   const [showOverride, setShowOverride] = useState(false);
   const [registeredParcel, setRegisteredParcel] = useState(null);
@@ -355,15 +362,19 @@ function WeighingFlowSection({ inbound, inboundId, weighings, assets, orderWaste
     try {
       const { data } = await triggerNextWeighing(inboundId, { is_tare: isTare });
       setInbound(data.data);
-      const label = weighings.length === 0 ? 'First weighing' : isTare ? 'Tare weighing' : 'Weighing';
-      toast.success(`${label} complete`);
+      const label = weighings.length === 0
+        ? t('weighingFlow.firstWeighingLabel')
+        : isTare
+          ? t('weighingFlow.tareWeighingLabel')
+          : t('weighingFlow.weighingLabel');
+      toast.success(t('toast.weighingComplete', { label }));
     } catch (err) {
-      toast.error(err.response?.data?.error || 'Weighing failed');
+      toast.error(err.response?.data?.error || t('toast.weighingFailed'));
       setShowManualFallback(true);
     } finally {
       setTriggering(false);
     }
-  }, [inboundId, weighings.length, setTriggering, setInbound]);
+  }, [inboundId, weighings.length, setTriggering, setInbound, t]);
 
   const handleParcelRegistered = useCallback((parcel) => {
     setRegisteredParcel(parcel);
@@ -372,26 +383,26 @@ function WeighingFlowSection({ inbound, inboundId, weighings, assets, orderWaste
 
   return (
     <div className="bg-white rounded-lg border border-grey-200 shadow-sm p-4 self-start">
-      <h2 className="text-sm font-semibold text-grey-900 mb-2">Weighing Process</h2>
+      <h2 className="text-sm font-semibold text-grey-900 mb-2">{t('weighingFlow.weighingProcess')}</h2>
 
       {/* Summary stats */}
       {weighings.length > 0 && (
         <div className="flex items-center gap-3 flex-wrap mb-3">
           {inbound.gross_weight_kg && (
-            <span className="text-xs text-grey-500">Gross: <strong className="text-grey-700">{Number(inbound.gross_weight_kg).toLocaleString()} kg</strong></span>
+            <span className="text-xs text-grey-500">{t('weighingFlow.gross')}: <strong className="text-grey-700">{Number(inbound.gross_weight_kg).toLocaleString()} kg</strong></span>
           )}
           {inbound.tare_weight_kg && (
-            <span className="text-xs text-grey-500">Tare: <strong className="text-grey-700">{Number(inbound.tare_weight_kg).toLocaleString()} kg</strong></span>
+            <span className="text-xs text-grey-500">{t('weighingFlow.tare')}: <strong className="text-grey-700">{Number(inbound.tare_weight_kg).toLocaleString()} kg</strong></span>
           )}
           {inbound.net_weight_kg && (
-            <span className="text-xs text-green-600">Net: <strong>{Number(inbound.net_weight_kg).toLocaleString()} kg</strong></span>
+            <span className="text-xs text-green-600">{t('weighingFlow.net')}: <strong>{Number(inbound.net_weight_kg).toLocaleString()} kg</strong></span>
           )}
           {isAdmin && (
             <button
               onClick={() => setShowOverride(true)}
               className="h-7 px-2.5 flex items-center gap-1 border border-grey-300 rounded-md text-[11px] font-medium text-grey-700 hover:bg-grey-50 transition-colors"
             >
-              <Pencil size={11} /> Override
+              <Pencil size={11} /> {t('weighingFlow.override')}
             </button>
           )}
         </div>
@@ -411,7 +422,7 @@ function WeighingFlowSection({ inbound, inboundId, weighings, assets, orderWaste
             className="h-12 px-6 flex items-center gap-2 bg-green-500 text-white rounded-md font-semibold text-sm hover:bg-green-700 disabled:opacity-50 transition-colors"
           >
             {isTriggering ? <Loader2 className="animate-spin" size={18} /> : <Scale size={18} />}
-            First Weighing (Gross)
+            {t('weighingFlow.firstWeighing')}
           </button>
         </div>
       )}
@@ -435,11 +446,11 @@ function WeighingFlowSection({ inbound, inboundId, weighings, assets, orderWaste
           <div className="flex items-center gap-2 mb-2">
             <AlertTriangle size={16} className="text-amber-600" />
             <span className="text-sm font-semibold text-amber-800">
-              Maximum parcels reached ({inbound.max_parcels})
+              {t('excessWeighing.maxParcelsReached', { max: inbound.max_parcels })}
             </span>
           </div>
           <p className="text-xs text-amber-700 mb-3">
-            An extra weighing was triggered but no more parcels can be registered. You can finalize the weighing process now.
+            {t('excessWeighing.excessWeighingMessage')}
           </p>
           <button
             onClick={() => handleWeighing(true)}
@@ -447,7 +458,7 @@ function WeighingFlowSection({ inbound, inboundId, weighings, assets, orderWaste
             className="h-10 px-5 flex items-center gap-2 border-2 border-green-500 text-green-700 rounded-md font-semibold text-sm hover:bg-green-25 disabled:opacity-50 transition-colors"
           >
             {isTriggering ? <Loader2 className="animate-spin" size={16} /> : <Scale size={16} />}
-            Finalize Weighing (Tare)
+            {t('excessWeighing.finalizeTare')}
           </button>
         </div>
       )}
@@ -457,13 +468,13 @@ function WeighingFlowSection({ inbound, inboundId, weighings, assets, orderWaste
         <div className="mt-3 bg-green-25 border border-green-300 rounded-lg p-4">
           <div className="flex items-center gap-2 mb-1">
             <Check size={16} className="text-green-700" />
-            <span className="text-sm font-semibold text-green-700">Parcel Registered</span>
+            <span className="text-sm font-semibold text-green-700">{t('parcelConfirmation.parcelRegistered')}</span>
           </div>
           <p className="text-2xl font-mono font-bold text-green-700 tracking-wider">{registeredParcel.asset_label}</p>
-          <p className="text-xs text-green-600 mt-1">Write this ID on the cargo packaging for tracking</p>
+          <p className="text-xs text-green-600 mt-1">{t('parcelConfirmation.writeIdOnCargo')}</p>
           <div className="mt-3 flex gap-3">
-            <button onClick={() => printAssetLabel(registeredParcel)} className="text-xs font-semibold text-green-700 underline">Print Label</button>
-            <button onClick={() => setRegisteredParcel(null)} className="text-xs text-green-700 underline">Dismiss</button>
+            <button onClick={() => printAssetLabel(registeredParcel, t)} className="text-xs font-semibold text-green-700 underline">{t('parcelConfirmation.printLabel')}</button>
+            <button onClick={() => setRegisteredParcel(null)} className="text-xs text-green-700 underline">{t('common:buttons.dismiss')}</button>
           </div>
         </div>
       )}
@@ -477,7 +488,7 @@ function WeighingFlowSection({ inbound, inboundId, weighings, assets, orderWaste
             className="h-10 px-5 flex items-center gap-2 bg-green-500 text-white rounded-md font-semibold text-sm hover:bg-green-700 disabled:opacity-50 transition-colors"
           >
             {isTriggering ? <Loader2 className="animate-spin" size={16} /> : <Scale size={16} />}
-            Next Weighing
+            {t('weighingFlow.nextWeighing')}
           </button>
           <button
             onClick={() => handleWeighing(true)}
@@ -485,7 +496,7 @@ function WeighingFlowSection({ inbound, inboundId, weighings, assets, orderWaste
             className="h-10 px-5 flex items-center gap-2 border-2 border-green-500 text-green-700 rounded-md font-semibold text-sm hover:bg-green-25 disabled:opacity-50 transition-colors"
           >
             {isTriggering ? <Loader2 className="animate-spin" size={16} /> : <Scale size={16} />}
-            Final Weighing (Tare)
+            {t('weighingFlow.finalWeighing')}
           </button>
         </div>
       )}
@@ -515,6 +526,7 @@ function WeighingFlowSection({ inbound, inboundId, weighings, assets, orderWaste
 
 /* ───── Weighing Timeline ───── */
 function WeighingTimeline({ weighings, assets, user, onConfirmWeighing }) {
+  const { t } = useTranslation(['weighing']);
   // Build interleaved list: W1, P1, W2, P2, ... Wn
   const items = [];
   weighings.forEach((w) => {
@@ -529,16 +541,20 @@ function WeighingTimeline({ weighings, assets, user, onConfirmWeighing }) {
         if (item.type === 'weighing') {
           const w = item.data;
           const ticket = w.pfister_ticket;
-          const typeLabel = w.sequence === 1 ? 'Gross' : w.is_tare ? 'Tare' : `Weighing ${w.sequence}`;
+          const typeLabel = w.sequence === 1
+            ? t('weighingFlow.typeGross')
+            : w.is_tare
+              ? t('weighingFlow.typeTare')
+              : t('weighingFlow.typeWeighing', { sequence: w.sequence });
           return (
             <div key={w.id} className="inline-block bg-green-25 border border-green-200 rounded-lg px-4 py-2.5">
               <div className="flex items-center gap-2">
                 <Scale size={16} className="text-green-600 shrink-0" />
                 <span className="text-base font-semibold text-green-800">{typeLabel}</span>
                 <span className="text-base font-bold text-green-900 tabular-nums">{Number(w.weight_kg).toLocaleString()} kg</span>
-                {ticket?.is_manual_override && <span className="text-[10px] text-orange-600 font-medium">(manual)</span>}
+                {ticket?.is_manual_override && <span className="text-[10px] text-orange-600 font-medium">{t('weighingFlow.manual')}</span>}
                 {ticket?.is_confirmed && (
-                  <span className="text-xs text-green-600" title="Confirmed">&#x1f512;</span>
+                  <span className="text-xs text-green-600" title={t('weighingFlow.confirmed')}>&#x1f512;</span>
                 )}
               </div>
               {ticket && (
@@ -554,7 +570,7 @@ function WeighingTimeline({ weighings, assets, user, onConfirmWeighing }) {
         return (
           <div key={p.id} className="flex items-center gap-2 px-4 py-1.5 ml-4">
             <Package size={14} className="text-grey-400 shrink-0" />
-            <span className="text-xs font-medium text-grey-400 uppercase tracking-wide">Parcel</span>
+            <span className="text-xs font-medium text-grey-400 uppercase tracking-wide">{t('parcelsTable.parcels', { count: 1 }).replace(/\(.*\)/, '').trim()}</span>
             <span className="text-sm font-semibold text-grey-900">{p.asset_label}</span>
             <span className="text-xs text-grey-400">&middot;</span>
             <span className="text-xs text-grey-500">{carrierLabel}</span>
@@ -573,6 +589,7 @@ function WeighingTimeline({ weighings, assets, user, onConfirmWeighing }) {
 
 /* ───── Parcel Registration Form ───── */
 function ParcelRegistrationForm({ inboundId, orderWasteStreams, onSuccess, parcelCount = 0, maxParcels = 2 }) {
+  const { t } = useTranslation(['weighing', 'common']);
   const [registrationMode, setRegistrationMode] = useState('new_container'); // 'new_container' | 'existing_container' | 'no_container'
   const [form, setForm] = useState({
     container_label: '',
@@ -681,18 +698,18 @@ function ParcelRegistrationForm({ inboundId, orderWasteStreams, onSuccess, parce
     try {
       const payload = buildPayload();
       const { data } = await registerParcelApi(inboundId, payload);
-      toast.success('Parcel registered');
+      toast.success(t('toast.parcelRegistered'));
       // Trigger next weighing (non-tare)
       try {
         await triggerNextWeighing(inboundId, { is_tare: false });
-        toast.success('Next weighing complete');
+        toast.success(t('toast.nextWeighingComplete'));
       } catch (err) {
-        toast.error(err.response?.data?.error || 'Weighing failed — register manually');
+        toast.error(err.response?.data?.error || t('toast.weighingFailedManual'));
       }
       onSuccess(data.data);
       resetForm();
     } catch (err) {
-      toast.error(err.response?.data?.error || 'Failed to register parcel');
+      toast.error(err.response?.data?.error || t('toast.failedToRegisterParcel'));
     } finally {
       setSubmitting(false);
     }
@@ -705,17 +722,17 @@ function ParcelRegistrationForm({ inboundId, orderWasteStreams, onSuccess, parce
     try {
       const payload = buildPayload();
       const { data } = await registerParcelApi(inboundId, payload);
-      toast.success('Parcel registered');
+      toast.success(t('toast.parcelRegistered'));
       // Trigger tare weighing to finalize
       try {
         await triggerNextWeighing(inboundId, { is_tare: true });
-        toast.success('Tare weighing complete — weighing finalized');
+        toast.success(t('toast.tareComplete'));
       } catch (err) {
-        toast.error(err.response?.data?.error || 'Tare weighing failed — trigger manually');
+        toast.error(err.response?.data?.error || t('toast.tareWeighingFailed'));
       }
       onSuccess(data.data);
     } catch (err) {
-      toast.error(err.response?.data?.error || 'Failed to register parcel');
+      toast.error(err.response?.data?.error || t('toast.failedToRegisterParcel'));
     } finally {
       setSubmitting(false);
     }
@@ -729,14 +746,14 @@ function ParcelRegistrationForm({ inboundId, orderWasteStreams, onSuccess, parce
 
   return (
     <div className="bg-grey-50 rounded-lg border border-grey-200 p-4">
-      <h3 className="text-sm font-semibold text-grey-900 mb-3">Register Unloaded Cargo</h3>
+      <h3 className="text-sm font-semibold text-grey-900 mb-3">{t('parcelRegistration.registerCargo')}</h3>
 
       {/* 3-option radio */}
       <div className="flex gap-4 mb-4">
         {[
-          { value: 'new_container', icon: <Box size={14} />, label: 'New Container' },
-          { value: 'existing_container', icon: <Box size={14} />, label: 'Existing Container' },
-          { value: 'no_container', icon: <Package size={14} />, label: 'No Container' },
+          { value: 'new_container', icon: <Box size={14} />, label: t('parcelRegistration.newContainer') },
+          { value: 'existing_container', icon: <Box size={14} />, label: t('parcelRegistration.existingContainer') },
+          { value: 'no_container', icon: <Package size={14} />, label: t('parcelRegistration.noContainer') },
         ].map((opt) => (
           <label key={opt.value} className="flex items-center gap-2 text-sm text-grey-700 cursor-pointer">
             <input
@@ -757,7 +774,7 @@ function ParcelRegistrationForm({ inboundId, orderWasteStreams, onSuccess, parce
       {/* Container ID — New Container mode */}
       {registrationMode === 'new_container' && (
         <div className="mb-3">
-          <label className="block text-xs font-medium text-grey-700 mb-1">Container ID</label>
+          <label className="block text-xs font-medium text-grey-700 mb-1">{t('parcelRegistration.containerId')}</label>
           <input
             type="text"
             value={form.container_label}
@@ -771,7 +788,7 @@ function ParcelRegistrationForm({ inboundId, orderWasteStreams, onSuccess, parce
       {/* Container ID — Existing Container mode (lookup) */}
       {registrationMode === 'existing_container' && (
         <div className="mb-3">
-          <label className="block text-xs font-medium text-grey-700 mb-1">Container ID</label>
+          <label className="block text-xs font-medium text-grey-700 mb-1">{t('parcelRegistration.containerId')}</label>
           <input
             type="text"
             value={form.container_label}
@@ -783,12 +800,12 @@ function ParcelRegistrationForm({ inboundId, orderWasteStreams, onSuccess, parce
             placeholder="CNT-00001"
             className={`${inputClass} font-mono`}
           />
-          {lookupLoading && <p className="text-xs text-grey-400 mt-1">Searching...</p>}
+          {lookupLoading && <p className="text-xs text-grey-400 mt-1">{t('parcelRegistration.searching')}</p>}
           {lookupResult && (
-            <p className="text-xs text-green-600 mt-1">Found: {lookupResult.container_label} — {CONTAINER_TYPE_LABELS[lookupResult.container_type] || lookupResult.container_type}</p>
+            <p className="text-xs text-green-600 mt-1">{t('parcelRegistration.found', { label: lookupResult.container_label, type: CONTAINER_TYPE_LABELS[lookupResult.container_type] || lookupResult.container_type })}</p>
           )}
           {!lookupLoading && form.container_label.length >= 3 && !lookupResult && (
-            <p className="text-xs text-red-500 mt-1">Container not found</p>
+            <p className="text-xs text-red-500 mt-1">{t('parcelRegistration.containerNotFound')}</p>
           )}
         </div>
       )}
@@ -797,24 +814,24 @@ function ParcelRegistrationForm({ inboundId, orderWasteStreams, onSuccess, parce
       {isContainer && (
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-3">
           <div>
-            <label className="block text-xs font-medium text-grey-700 mb-1">Container Type <span className="text-red-500">*</span></label>
+            <label className="block text-xs font-medium text-grey-700 mb-1">{t('parcelRegistration.containerType')} <span className="text-red-500">*</span></label>
             <select
               value={form.container_type}
               onChange={(e) => handleContainerTypeChange(e.target.value)}
               disabled={isExisting}
               className={`${selectClass} ${isExisting ? 'bg-grey-100 text-grey-500 cursor-not-allowed' : ''}`}
             >
-              <option value="">Select...</option>
-              {CONTAINER_TYPES.map((t) => <option key={t} value={t}>{CONTAINER_TYPE_LABELS[t]}</option>)}
+              <option value="">{t('parcelRegistration.select')}</option>
+              {CONTAINER_TYPES.map((ct) => <option key={ct} value={ct}>{CONTAINER_TYPE_LABELS[ct]}</option>)}
             </select>
           </div>
           <div>
-            <label className="block text-xs font-medium text-grey-700 mb-1">Tare Weight (kg)</label>
+            <label className="block text-xs font-medium text-grey-700 mb-1">{t('parcelRegistration.tareWeight')}</label>
             <input
               type="number"
               step="1"
               min="0"
-              placeholder="Auto"
+              placeholder={t('parcelRegistration.auto')}
               value={form.estimated_tare_weight_kg}
               onChange={(e) => setForm((p) => ({ ...p, estimated_tare_weight_kg: e.target.value }))}
               disabled={isExisting}
@@ -822,12 +839,12 @@ function ParcelRegistrationForm({ inboundId, orderWasteStreams, onSuccess, parce
             />
           </div>
           <div>
-            <label className="block text-xs font-medium text-grey-700 mb-1">Volume (m³)</label>
+            <label className="block text-xs font-medium text-grey-700 mb-1">{t('parcelRegistration.volume')}</label>
             <input
               type="number"
               step="0.1"
               min="0"
-              placeholder="Optional"
+              placeholder={t('parcelRegistration.optional')}
               value={form.estimated_volume_m3}
               onChange={(e) => setForm((p) => ({ ...p, estimated_volume_m3: e.target.value }))}
               disabled={isExisting}
@@ -840,21 +857,21 @@ function ParcelRegistrationForm({ inboundId, orderWasteStreams, onSuccess, parce
       {/* Waste Stream + Notes — all modes */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
         <div>
-          <label className="block text-xs font-medium text-grey-700 mb-1">Waste Stream</label>
+          <label className="block text-xs font-medium text-grey-700 mb-1">{t('parcelRegistration.wasteStream')}</label>
           {orderWasteStreams.length <= 1 ? (
             <div className="h-10 bg-grey-50 border border-grey-200 rounded-md px-3.5 text-sm text-grey-700 flex items-center">
               {orderWasteStreams[0]?.name || '—'}
             </div>
           ) : (
             <select value={form.waste_stream_id} onChange={(e) => setForm((p) => ({ ...p, waste_stream_id: e.target.value }))} className={selectClass}>
-              <option value="">Select...</option>
+              <option value="">{t('parcelRegistration.select')}</option>
               {orderWasteStreams.map((ws) => <option key={ws.id} value={ws.id}>{ws.name} ({ws.code})</option>)}
             </select>
           )}
         </div>
         <div>
-          <label className="block text-xs font-medium text-grey-700 mb-1">Notes</label>
-          <input type="text" placeholder="Optional"
+          <label className="block text-xs font-medium text-grey-700 mb-1">{t('parcelRegistration.notes')}</label>
+          <input type="text" placeholder={t('parcelRegistration.optional')}
             value={form.notes}
             onChange={(e) => setForm((p) => ({ ...p, notes: e.target.value }))}
             className={inputClass} />
@@ -865,7 +882,7 @@ function ParcelRegistrationForm({ inboundId, orderWasteStreams, onSuccess, parce
       {isLastParcel && (
         <p className="text-xs text-amber-600 mb-2 flex items-center gap-1.5">
           <AlertTriangle size={12} />
-          Last parcel — vehicle allows max {maxParcels} parcels
+          {t('parcelRegistration.lastParcelWarning', { max: maxParcels })}
         </p>
       )}
       <div className="flex justify-end gap-2">
@@ -876,7 +893,7 @@ function ParcelRegistrationForm({ inboundId, orderWasteStreams, onSuccess, parce
           className="h-9 px-5 border-2 border-green-500 text-green-700 rounded-md font-semibold text-sm hover:bg-green-25 disabled:opacity-50 transition-colors flex items-center gap-2"
         >
           {submitting ? <Loader2 className="animate-spin" size={14} /> : <Scale size={14} />}
-          Finalize Weighing
+          {t('parcelRegistration.finalizeWeighing')}
         </button>
         {!isLastParcel && (
         <button
@@ -886,7 +903,7 @@ function ParcelRegistrationForm({ inboundId, orderWasteStreams, onSuccess, parce
           className="h-9 px-5 bg-green-500 text-white rounded-md font-semibold text-sm hover:bg-green-700 disabled:opacity-50 transition-colors flex items-center gap-2"
         >
           {submitting ? <Loader2 className="animate-spin" size={14} /> : <Scale size={14} />}
-          Continue Next Weighing
+          {t('parcelRegistration.continueNextWeighing')}
         </button>
         )}
       </div>
@@ -905,6 +922,7 @@ function getMaterialNetWeight(asset) {
 }
 
 function ParcelsTable({ inbound, assets, refreshInbound }) {
+  const { t } = useTranslation(['weighing', 'common']);
   const isTerminal = ['READY_FOR_SORTING', 'SORTED'].includes(inbound.status);
   const totalMaterialNet = assets.reduce((sum, a) => {
     const mnet = getMaterialNetWeight(a);
@@ -914,8 +932,8 @@ function ParcelsTable({ inbound, assets, refreshInbound }) {
   if (assets.length === 0) {
     return (
       <div className="bg-white rounded-lg border border-grey-200 shadow-sm p-4 self-start">
-        <h2 className="text-sm font-semibold text-grey-900 mb-3">Parcels</h2>
-        <p className="text-sm text-grey-400 py-4 text-center">No parcels registered yet</p>
+        <h2 className="text-sm font-semibold text-grey-900 mb-3">{t('parcelsTable.parcels')}</h2>
+        <p className="text-sm text-grey-400 py-4 text-center">{t('parcelsTable.noParcels')}</p>
       </div>
     );
   }
@@ -923,17 +941,17 @@ function ParcelsTable({ inbound, assets, refreshInbound }) {
   return (
     <div className="bg-white rounded-lg border border-grey-200 shadow-sm p-4 self-start">
       <h2 className="text-sm font-semibold text-grey-900 mb-3">
-        Parcels <span className="ml-1 text-xs font-normal text-grey-500">({assets.length})</span>
+        {t('parcelsTable.parcels')} <span className="ml-1 text-xs font-normal text-grey-500">({assets.length})</span>
       </h2>
       <div className="overflow-x-auto">
         <table className="w-full text-sm min-w-[540px]">
           <thead>
             <tr className="bg-grey-50 border-b border-grey-200">
-              <th className="px-2.5 py-2 text-left text-xs font-medium text-grey-500 uppercase tracking-wide">Parcel ID</th>
-              <th className="px-2.5 py-2 text-left text-xs font-medium text-grey-500 uppercase tracking-wide">Container</th>
-              <th className="px-2.5 py-2 text-right text-xs font-medium text-grey-500 uppercase tracking-wide">Cargo Net (kg)</th>
-              <th className="px-2.5 py-2 text-right text-xs font-medium text-grey-500 uppercase tracking-wide">Container Tare (kg)</th>
-              <th className="px-2.5 py-2 text-right text-xs font-medium text-grey-500 uppercase tracking-wide">Material Net (kg)</th>
+              <th className="px-2.5 py-2 text-left text-xs font-medium text-grey-500 uppercase tracking-wide">{t('parcelsTable.parcelId')}</th>
+              <th className="px-2.5 py-2 text-left text-xs font-medium text-grey-500 uppercase tracking-wide">{t('parcelsTable.container')}</th>
+              <th className="px-2.5 py-2 text-right text-xs font-medium text-grey-500 uppercase tracking-wide">{t('parcelsTable.cargoNet')}</th>
+              <th className="px-2.5 py-2 text-right text-xs font-medium text-grey-500 uppercase tracking-wide">{t('parcelsTable.containerTare')}</th>
+              <th className="px-2.5 py-2 text-right text-xs font-medium text-grey-500 uppercase tracking-wide">{t('parcelsTable.materialNet')}</th>
               <th className="px-2.5 py-2 w-8"></th>
             </tr>
           </thead>
@@ -968,13 +986,13 @@ function ParcelsTable({ inbound, assets, refreshInbound }) {
                   {!isTerminal && (
                     <button
                       onClick={async () => {
-                        if (!window.confirm(`Delete parcel ${asset.asset_label}?`)) return;
+                        if (!window.confirm(t('toast.deleteParcelConfirm', { label: asset.asset_label }))) return;
                         try {
                           await deleteAsset(asset.id);
-                          toast.success('Parcel deleted');
+                          toast.success(t('toast.parcelDeleted'));
                           await refreshInbound();
                         } catch (err) {
-                          toast.error(err.response?.data?.error || 'Failed to delete');
+                          toast.error(err.response?.data?.error || t('toast.failedToDelete'));
                         }
                       }}
                       className="p-1 rounded-md hover:bg-grey-100 text-grey-400 hover:text-red-600 opacity-0 group-hover:opacity-100 transition-opacity"
@@ -989,8 +1007,8 @@ function ParcelsTable({ inbound, assets, refreshInbound }) {
           </tbody>
           <tfoot>
             <tr className="border-t border-grey-300 bg-grey-50">
-              <td className="px-2.5 py-2 text-xs font-semibold text-grey-700">Total</td>
-              <td className="px-2.5 py-2 text-xs text-grey-500">{assets.length} parcel(s)</td>
+              <td className="px-2.5 py-2 text-xs font-semibold text-grey-700">{t('parcelsTable.total')}</td>
+              <td className="px-2.5 py-2 text-xs text-grey-500">{t('parcelsTable.parcelCount', { count: assets.length })}</td>
               <td></td>
               <td></td>
               <td className="px-2.5 py-2 text-right text-sm font-bold text-grey-900 tabular-nums">{totalMaterialNet ? totalMaterialNet.toLocaleString() : '—'}</td>
@@ -1005,18 +1023,20 @@ function ParcelsTable({ inbound, assets, refreshInbound }) {
 
 /* ───── Actions Footer ───── */
 function ActionsFooter({ inbound, inboundId, isTriggering, setTriggering, setInbound }) {
+  const { t } = useTranslation(['weighing', 'common']);
+
   const handleReadyForSorting = useCallback(async () => {
     setTriggering(true);
     try {
       const { data } = await updateInboundStatus(inboundId, 'READY_FOR_SORTING');
       setInbound(data.data);
-      toast.success('Inbound ready for sorting — sorting process created');
+      toast.success(t('toast.readyForSorting'));
     } catch (err) {
-      toast.error(err.response?.data?.error || 'Failed to update status');
+      toast.error(err.response?.data?.error || t('toast.failedToUpdateStatus'));
     } finally {
       setTriggering(false);
     }
-  }, [inboundId, setTriggering, setInbound]);
+  }, [inboundId, setTriggering, setInbound, t]);
 
   const handleDownloadPdf = useCallback(async () => {
     try {
@@ -1030,9 +1050,9 @@ function ActionsFooter({ inbound, inboundId, isTriggering, setTriggering, setInb
       link.remove();
       window.URL.revokeObjectURL(url);
     } catch {
-      toast.error('Failed to download PDF');
+      toast.error(t('toast.failedToDownloadPdf'));
     }
-  }, [inboundId, inbound.inbound_number]);
+  }, [inboundId, inbound.inbound_number, t]);
 
   return (
     <div className="flex flex-wrap items-center gap-3">
@@ -1042,7 +1062,7 @@ function ActionsFooter({ inbound, inboundId, isTriggering, setTriggering, setInb
           disabled={isTriggering}
           className="h-10 px-6 flex items-center gap-2 bg-green-500 text-white rounded-md font-semibold text-sm hover:bg-green-700 disabled:opacity-50 transition-colors"
         >
-          Ready for Sorting
+          {t('actionsFooter.readyForSorting')}
         </button>
       )}
 
@@ -1052,14 +1072,14 @@ function ActionsFooter({ inbound, inboundId, isTriggering, setTriggering, setInb
             onClick={handleDownloadPdf}
             className="h-9 px-4 flex items-center gap-2 border-2 border-green-500 text-green-700 rounded-md font-semibold text-sm hover:bg-green-25 transition-colors"
           >
-            <Download size={16} /> Download Weight Ticket
+            <Download size={16} /> {t('actionsFooter.downloadWeightTicket')}
           </button>
           {inbound.sorting_session && (
             <Link
               to={`/sorting/${inbound.sorting_session.id}`}
               className="h-9 px-4 flex items-center gap-2 border border-grey-300 rounded-md font-semibold text-sm text-grey-700 hover:bg-grey-50 transition-colors"
             >
-              View Sorting Process
+              {t('actionsFooter.viewSortingProcess')}
             </Link>
           )}
         </>
@@ -1070,6 +1090,7 @@ function ActionsFooter({ inbound, inboundId, isTriggering, setTriggering, setInb
 
 /* ───── Manual Weighing Dialog ───── */
 function ManualWeighingDialog({ inboundId, isTare, onSuccess, onClose }) {
+  const { t } = useTranslation(['weighing', 'common']);
   const [form, setForm] = useState({ weight_kg: '', reason: '', is_tare: false });
   const [submitting, setSubmitting] = useState(false);
 
@@ -1083,10 +1104,10 @@ function ManualWeighingDialog({ inboundId, isTare, onSuccess, onClose }) {
         manual_weight_kg: Number(form.weight_kg),
         manual_reason: form.reason,
       });
-      toast.success('Manual weight recorded');
+      toast.success(t('toast.manualWeightRecorded'));
       onSuccess(data.data);
     } catch (err) {
-      toast.error(err.response?.data?.error || 'Manual entry failed');
+      toast.error(err.response?.data?.error || t('toast.manualEntryFailed'));
     } finally {
       setSubmitting(false);
     }
@@ -1096,35 +1117,35 @@ function ManualWeighingDialog({ inboundId, isTare, onSuccess, onClose }) {
     <div className="mt-3 bg-orange-50 border border-orange-200 rounded-lg p-4">
       <div className="flex items-center gap-2 mb-3">
         <AlertTriangle size={16} className="text-orange-500" />
-        <span className="text-sm font-semibold text-grey-900">Manual Weight Entry</span>
+        <span className="text-sm font-semibold text-grey-900">{t('manualWeighing.title')}</span>
       </div>
       <form onSubmit={handleSubmit} className="grid grid-cols-1 sm:grid-cols-4 gap-3">
         <div>
-          <label className="block text-xs font-medium text-grey-700 mb-1">Weight (kg)</label>
+          <label className="block text-xs font-medium text-grey-700 mb-1">{t('manualWeighing.weightKg')}</label>
           <input type="number" value={form.weight_kg} onChange={(e) => setForm((p) => ({ ...p, weight_kg: e.target.value }))} required min="1" className={inputClass} />
         </div>
         <div>
-          <label className="block text-xs font-medium text-grey-700 mb-1">Reason</label>
+          <label className="block text-xs font-medium text-grey-700 mb-1">{t('manualWeighing.reason')}</label>
           <select value={form.reason} onChange={(e) => setForm((p) => ({ ...p, reason: e.target.value }))} required className={selectClass}>
-            <option value="">Select...</option>
-            <option value="Pfister unavailable">Pfister unavailable</option>
-            <option value="Communication error">Communication error</option>
-            <option value="Calibration in progress">Calibration in progress</option>
-            <option value="Other">Other</option>
+            <option value="">{t('parcelRegistration.select')}</option>
+            <option value="Pfister unavailable">{t('manualWeighing.pfisterUnavailable')}</option>
+            <option value="Communication error">{t('manualWeighing.communicationError')}</option>
+            <option value="Calibration in progress">{t('manualWeighing.calibrationInProgress')}</option>
+            <option value="Other">{t('manualWeighing.other')}</option>
           </select>
         </div>
         {isTare && (
           <div className="flex items-end">
             <label className="flex items-center gap-2 text-sm text-grey-700">
               <input type="checkbox" checked={form.is_tare} onChange={(e) => setForm((p) => ({ ...p, is_tare: e.target.checked }))} className="w-4 h-4 rounded border-grey-300 text-green-500 focus:ring-green-500" />
-              This is the tare
+              {t('manualWeighing.thisIsTare')}
             </label>
           </div>
         )}
         <div className="flex items-end gap-2">
-          <button type="button" onClick={onClose} className="h-10 px-3 text-xs text-grey-700 hover:text-grey-900 rounded-md hover:bg-white transition-colors">Cancel</button>
+          <button type="button" onClick={onClose} className="h-10 px-3 text-xs text-grey-700 hover:text-grey-900 rounded-md hover:bg-white transition-colors">{t('common:buttons.cancel')}</button>
           <button type="submit" disabled={submitting} className="h-10 px-4 bg-orange-500 text-white rounded-md font-semibold text-xs hover:bg-orange-600 disabled:opacity-50 transition-colors">
-            {submitting ? 'Recording...' : 'Record Weight'}
+            {submitting ? t('manualWeighing.recording') : t('manualWeighing.recordWeight')}
           </button>
         </div>
       </form>
@@ -1134,6 +1155,7 @@ function ManualWeighingDialog({ inboundId, isTare, onSuccess, onClose }) {
 
 /* ───── Override Dialog ───── */
 function OverrideDialog({ inboundId, weighings, onClose, onSuccess }) {
+  const { t } = useTranslation(['weighing', 'common']);
   const [form, setForm] = useState({ sequence: weighings[0]?.sequence || 1, weight_kg: '', reason_code: '' });
   const [submitting, setSubmitting] = useState(false);
 
@@ -1142,10 +1164,10 @@ function OverrideDialog({ inboundId, weighings, onClose, onSuccess }) {
     setSubmitting(true);
     try {
       await overrideWeight(inboundId, { ...form, weight_kg: Number(form.weight_kg) });
-      toast.success('Weight overridden');
+      toast.success(t('toast.weightOverridden'));
       onSuccess();
     } catch (err) {
-      toast.error(err.response?.data?.error || 'Override failed');
+      toast.error(err.response?.data?.error || t('toast.overrideFailed'));
     } finally {
       setSubmitting(false);
     }
@@ -1155,38 +1177,42 @@ function OverrideDialog({ inboundId, weighings, onClose, onSuccess }) {
     <div className="app-modal-overlay">
       <div className="app-modal-panel max-w-md">
         <div className="flex items-center justify-between px-6 py-4 border-b border-grey-200">
-          <h2 className="text-lg font-semibold text-grey-900">Override Weight</h2>
+          <h2 className="text-lg font-semibold text-grey-900">{t('overrideDialog.title')}</h2>
           <button onClick={onClose} className="p-1 rounded-md hover:bg-grey-50 text-grey-400">&times;</button>
         </div>
         <form onSubmit={handleSubmit} className="px-6 py-5 space-y-4">
           <div>
-            <label className="block text-sm font-medium text-grey-700 mb-1.5">Weighing</label>
+            <label className="block text-sm font-medium text-grey-700 mb-1.5">{t('overrideDialog.weighing')}</label>
             <select value={form.sequence} onChange={(e) => setForm((p) => ({ ...p, sequence: parseInt(e.target.value, 10) }))} className={selectClass}>
               {weighings.map((w) => (
                 <option key={w.sequence} value={w.sequence}>
-                  Weighing {w.sequence} ({w.is_tare ? 'Tare' : w.sequence === 1 ? 'Gross' : 'Intermediate'}) — {Number(w.weight_kg).toLocaleString()} kg
+                  {t('overrideDialog.weighingOption', {
+                    sequence: w.sequence,
+                    type: w.is_tare ? t('weighingFlow.typeTare') : w.sequence === 1 ? t('weighingFlow.typeGross') : t('overrideDialog.typeIntermediate'),
+                    weight: Number(w.weight_kg).toLocaleString(),
+                  })}
                 </option>
               ))}
             </select>
           </div>
           <div>
-            <label className="block text-sm font-medium text-grey-700 mb-1.5">New Weight (kg)</label>
+            <label className="block text-sm font-medium text-grey-700 mb-1.5">{t('overrideDialog.newWeight')}</label>
             <input type="number" value={form.weight_kg} onChange={(e) => setForm((p) => ({ ...p, weight_kg: e.target.value }))} required min="1" className={inputClass} />
           </div>
           <div>
-            <label className="block text-sm font-medium text-grey-700 mb-1.5">Reason Code</label>
+            <label className="block text-sm font-medium text-grey-700 mb-1.5">{t('overrideDialog.reasonCode')}</label>
             <select value={form.reason_code} onChange={(e) => setForm((p) => ({ ...p, reason_code: e.target.value }))} required className={selectClass}>
-              <option value="">Select reason...</option>
-              <option value="CALIBRATION_ERROR">Calibration Error</option>
-              <option value="EQUIPMENT_MALFUNCTION">Equipment Malfunction</option>
-              <option value="INCORRECT_READING">Incorrect Reading</option>
-              <option value="OTHER">Other</option>
+              <option value="">{t('overrideDialog.selectReason')}</option>
+              <option value="CALIBRATION_ERROR">{t('overrideDialog.calibrationError')}</option>
+              <option value="EQUIPMENT_MALFUNCTION">{t('overrideDialog.equipmentMalfunction')}</option>
+              <option value="INCORRECT_READING">{t('overrideDialog.incorrectReading')}</option>
+              <option value="OTHER">{t('overrideDialog.other')}</option>
             </select>
           </div>
           <div className="flex justify-end gap-3 pt-2">
-            <button type="button" onClick={onClose} className="h-9 px-4 bg-white text-grey-700 border border-grey-300 rounded-md text-sm font-semibold hover:bg-grey-50 transition-colors">Cancel</button>
+            <button type="button" onClick={onClose} className="h-9 px-4 bg-white text-grey-700 border border-grey-300 rounded-md text-sm font-semibold hover:bg-grey-50 transition-colors">{t('common:buttons.cancel')}</button>
             <button type="submit" disabled={submitting} className="h-9 px-4 bg-green-500 text-white rounded-md font-semibold text-sm hover:bg-green-700 disabled:opacity-50 transition-colors">
-              {submitting ? 'Saving...' : 'Override'}
+              {submitting ? t('overrideDialog.saving') : t('overrideDialog.override')}
             </button>
           </div>
         </form>

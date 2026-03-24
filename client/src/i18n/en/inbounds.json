@@ -1,0 +1,23 @@
+{
+  "title": "Inbounds",
+  "searchPlaceholder": "Search by inbound name",
+  "allStatuses": "All statuses",
+  "table": {
+    "inboundName": "Inbound Name",
+    "status": "Status",
+    "linkedOrder": "Linked Order",
+    "vehiclePlate": "Vehicle Plate",
+    "carrier": "Carrier",
+    "supplier": "Supplier",
+    "wasteStream": "Waste Stream",
+    "arrivedAt": "Arrived At",
+    "parcels": "Parcels",
+    "totalNetWeight": "Total Net Weight"
+  },
+  "empty": "No inbounds found",
+  "totalCount": "{{count}} total inbounds",
+  "toast": {
+    "statusUpdated": "Inbound status updated",
+    "statusUpdateFailed": "Failed to update status"
+  }
+}

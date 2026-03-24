@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { AlertTriangle, CheckCircle2, Download, History, Loader2, Plus, RefreshCcw, Trash2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { format } from 'date-fns';
@@ -32,13 +33,6 @@ const inputClass = 'w-full h-10 px-3.5 rounded-md border border-grey-300 text-sm
 const selectClass = `${inputClass} bg-white`;
 const textareaClass = 'w-full min-h-[92px] px-3.5 py-2.5 rounded-md border border-grey-300 text-sm text-grey-900 placeholder:text-grey-400 focus:border-green-500 focus:ring-[3px] focus:ring-green-500/15 outline-none transition-colors resize-vertical';
 
-const CONTAINER_TYPE_LABELS = {
-  OPEN_TOP: 'Open Top',
-  CLOSED_TOP: 'Closed Top',
-  GITTERBOX: 'Gitterbox',
-  PALLET: 'Pallet',
-  OTHER: 'Other',
-};
 
 function emptyCatalogueForm() {
   return {
@@ -93,6 +87,7 @@ function sumOutcomeWeight(records = []) {
 }
 
 export default function SortingPage() {
+  const { t } = useTranslation(['sorting', 'common']);
   const { sessionId } = useParams();
   const { user } = useAuthStore();
   const { materials, fractions, loadAll } = useMasterDataStore();
@@ -377,7 +372,7 @@ export default function SortingPage() {
             <StatusBadge status={sessionStatus} />
           </div>
           <p className="text-sm text-grey-500">
-            Shredding and sorting drive the process; downstream statements are generated from the material and fraction records captured here.
+            {t('sorting:sessionSubtitle')}
           </p>
         </div>
         {canOperate && (
@@ -386,7 +381,7 @@ export default function SortingPage() {
             className="flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium bg-orange-100 text-orange-700 hover:bg-orange-200 transition-colors"
           >
             <AlertTriangle size={16} />
-            Record Contamination
+            {t('sorting:recordContamination')}
             {contaminationCount > 0 && (
               <span className="ml-1 bg-orange-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
                 {contaminationCount}
@@ -398,25 +393,25 @@ export default function SortingPage() {
 
       <div className="bg-white rounded-lg border border-grey-200 shadow-sm p-4 mb-4">
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
-          <InfoField label="Linked Inbound">
+          <InfoField label={t('sorting:infoFields.linkedInbound')}>
             <Link className="text-sm font-semibold text-green-600 hover:underline mt-0.5 inline-block" to={`/inbounds/${session.inbound_id}`}>{session.inbound?.inbound_number || '—'}</Link>
           </InfoField>
-          <InfoField label="Linked Order">
+          <InfoField label={t('sorting:infoFields.linkedOrder')}>
             <Link className="text-sm font-semibold text-green-600 hover:underline mt-0.5 inline-block" to={`/orders/${order?.id}`}>{order?.order_number || '—'}</Link>
           </InfoField>
-          <InfoField label="Supplier" value={order?.supplier?.name} />
-          <InfoField label="Carrier" value={order?.carrier?.name} />
-          <InfoField label="Vehicle Plate" value={session.inbound?.vehicle?.registration_plate} mono />
-          <InfoField label="Waste Stream" value={order?.waste_stream?.name} />
-          <InfoField label="Contract">
+          <InfoField label={t('sorting:infoFields.supplier')} value={order?.supplier?.name} />
+          <InfoField label={t('sorting:infoFields.carrier')} value={order?.carrier?.name} />
+          <InfoField label={t('sorting:infoFields.vehiclePlate')} value={session.inbound?.vehicle?.registration_plate} mono />
+          <InfoField label={t('sorting:infoFields.wasteStream')} value={order?.waste_stream?.name} />
+          <InfoField label={t('sorting:infoFields.contract')}>
             {session.inbound?.linked_contract ? (
               <Link className="text-sm font-semibold text-green-700 hover:underline mt-0.5 inline-block" to={`/contracts/${session.inbound.linked_contract.id}`}>
                 {session.inbound.linked_contract.contract_number}
               </Link>
             ) : <span className="text-sm text-grey-400 mt-0.5 block">—</span>}
           </InfoField>
-          <InfoField label="Recorded" value={session.recorded_at ? format(new Date(session.recorded_at), 'dd MMM yyyy HH:mm') : '—'} />
-          <InfoField label="Parcels" value={String(assets.length)} />
+          <InfoField label={t('sorting:infoFields.recorded')} value={session.recorded_at ? format(new Date(session.recorded_at), 'dd MMM yyyy HH:mm') : '—'} />
+          <InfoField label={t('sorting:infoFields.parcels')} value={String(assets.length)} />
         </div>
       </div>
 
@@ -442,8 +437,8 @@ export default function SortingPage() {
                   {asset.asset_label}
                   <span className="text-xs text-grey-400">
                     {asset.parcel_type === 'CONTAINER'
-                      ? CONTAINER_TYPE_LABELS[asset.container_type] || asset.container_type
-                      : 'Material'}
+                      ? t(`common:containerTypes.${asset.container_type}`, { defaultValue: asset.container_type })
+                      : t('sorting:material')}
                   </span>
                 </button>
               );
@@ -459,7 +454,7 @@ export default function SortingPage() {
                     onClick={() => setActiveTab('catalogue')}
                     className={`h-9 px-4 rounded-md text-sm font-semibold transition-colors flex items-center gap-2 ${activeTab === 'catalogue' ? 'bg-green-500 text-white' : 'bg-white border border-grey-300 text-grey-700 hover:bg-grey-50'}`}
                   >
-                    Shredding
+                    {t('sorting:tabs.catalogue')}
                     {assetCatalogueEntries.length > 0 && (
                       <span className={`w-2 h-2 rounded-full ${isSortingBalanced ? (activeTab === 'catalogue' ? 'bg-white' : 'bg-green-500') : 'bg-red-500'}`} />
                     )}
@@ -469,7 +464,7 @@ export default function SortingPage() {
                     onClick={() => setActiveTab('processing')}
                     className={`h-9 px-4 rounded-md text-sm font-semibold transition-colors flex items-center gap-2 ${activeTab === 'processing' ? 'bg-green-500 text-white' : 'bg-white border border-grey-300 text-grey-700 hover:bg-grey-50'}`}
                   >
-                    Sorting
+                    {t('sorting:tabs.outcomes')}
                     {session.processing_status === 'COMPLETED' && <span className={`w-2 h-2 rounded-full ${activeTab === 'processing' ? 'bg-white' : 'bg-green-500'}`} />}
                     {session.processing_status !== 'COMPLETED' && session.processing_status === 'IN_PROGRESS' && <span className={`w-2 h-2 rounded-full ${activeTab === 'processing' ? 'bg-white/60' : 'bg-orange-400'}`} />}
                   </button>
@@ -478,14 +473,14 @@ export default function SortingPage() {
                     onClick={() => { setActiveTab('reusables'); fetchReusables(); }}
                     className={`h-9 px-4 rounded-md text-sm font-semibold transition-colors ${activeTab === 'reusables' ? 'bg-green-500 text-white' : 'bg-white border border-grey-300 text-grey-700 hover:bg-grey-50'}`}
                   >
-                    Reusables
+                    {t('sorting:tabs.reusableItems')}
                   </button>
                   <button
                     type="button"
                     onClick={() => { setActiveTab('reports'); fetchSessionReports(); }}
                     className={`h-9 px-4 rounded-md text-sm font-semibold transition-colors ${activeTab === 'reports' ? 'bg-green-500 text-white' : 'bg-white border border-grey-300 text-grey-700 hover:bg-grey-50'}`}
                   >
-                    Reports
+                    {t('sorting:tabs.reports')}
                   </button>
                 </div>
               </div>
@@ -494,28 +489,28 @@ export default function SortingPage() {
                 <div>
                   {/* Sorting Balance */}
                   <div className={`rounded-lg border px-4 py-2.5 text-sm mb-4 ${isSortingBalanced ? 'border-green-200 bg-green-25 text-green-700' : 'border-red-200 bg-red-25 text-red-700'}`}>
-                    Shredding Balance: {sortingWeightSum.toLocaleString()} / {assetNetWeight.toLocaleString()} kg
+                    {t('sorting:catalogue.balance.label')} {sortingWeightSum.toLocaleString()} / {assetNetWeight.toLocaleString()} kg
                     <span className="ml-2 font-semibold">
                       {isSortingBalanced
-                        ? 'Balanced'
+                        ? t('sorting:catalogue.balance.balanced')
                         : sortingBalance > 0
-                          ? `Over by ${sortingBalance} kg`
-                          : `Remaining ${Math.abs(sortingBalance)} kg`}
+                          ? t('sorting:catalogue.balance.over', { amount: sortingBalance })
+                          : t('sorting:catalogue.balance.remaining', { amount: Math.abs(sortingBalance) })}
                     </span>
                   </div>
                   <div className="grid grid-cols-1 xl:grid-cols-[1.05fr_0.95fr] gap-4">
                   <div className="bg-white rounded-lg border border-grey-200 shadow-sm p-5">
                     <div className="flex items-center justify-between mb-4">
                       <div>
-                        <h2 className="text-base font-semibold text-grey-900">Shredding Entries</h2>
-                        <p className="text-sm text-grey-500 mt-1">Capture materials and weights for {activeAsset.asset_label}.</p>
+                        <h2 className="text-base font-semibold text-grey-900">{t('sorting:catalogue.title')}</h2>
+                        <p className="text-sm text-grey-500 mt-1">{t('sorting:catalogue.subtitle', { assetLabel: activeAsset.asset_label })}</p>
                       </div>
-                      <div className="text-sm text-grey-500">{assetCatalogueEntries.length} line(s)</div>
+                      <div className="text-sm text-grey-500">{t('sorting:catalogue.lineCount', { count: assetCatalogueEntries.length })}</div>
                     </div>
 
                     {assetCatalogueEntries.length === 0 ? (
                       <div className="rounded-lg border border-dashed border-grey-300 p-8 text-center text-sm text-grey-400">
-                        No catalogue entries yet
+                        {t('sorting:catalogue.noEntries')}
                       </div>
                     ) : (
                       <div className="space-y-3">
@@ -543,7 +538,7 @@ export default function SortingPage() {
                                   }}
                                   className="h-8 px-3 rounded-md border border-grey-300 text-xs font-semibold text-grey-700 hover:bg-grey-50"
                                 >
-                                  Edit
+                                  {t('sorting:catalogue.edit')}
                                 </button>
                                 <button
                                   type="button"
@@ -556,11 +551,11 @@ export default function SortingPage() {
                             </div>
                             <div className="grid grid-cols-3 gap-3 mt-4 text-sm">
                               <div>
-                                <span className="text-xs text-grey-500 uppercase tracking-wide">Weight (kg)</span>
+                                <span className="text-xs text-grey-500 uppercase tracking-wide">{t('sorting:catalogue.weight')}</span>
                                 <p className="mt-1 font-semibold text-grey-900">{Number(entry.weight_kg).toLocaleString()}</p>
                               </div>
                               <div>
-                                <span className="text-xs text-grey-500 uppercase tracking-wide">Reusable Qty</span>
+                                <span className="text-xs text-grey-500 uppercase tracking-wide">{t('sorting:catalogue.reusableQty')}</span>
                                 <p className="mt-1 font-semibold text-grey-900">{entry.reuse_eligible_quantity}</p>
                               </div>
                             </div>
@@ -574,8 +569,8 @@ export default function SortingPage() {
                   <div className="bg-white rounded-lg border border-grey-200 shadow-sm p-5">
                     <div className="flex items-center justify-between mb-4">
                       <div>
-                        <h2 className="text-base font-semibold text-grey-900">{editingEntryId ? 'Edit Shredding Entry' : 'Add Shredding Entry'}</h2>
-                        <p className="text-sm text-grey-500 mt-1">Select the material and enter its weight. Fractions are captured in the sorting tab.</p>
+                        <h2 className="text-base font-semibold text-grey-900">{editingEntryId ? t('sorting:catalogue.editEntry') : t('sorting:catalogue.addEntry')}</h2>
+                        <p className="text-sm text-grey-500 mt-1">{t('sorting:catalogue.addSubtitle')}</p>
                       </div>
                       {editingEntryId && (
                         <button
@@ -586,20 +581,20 @@ export default function SortingPage() {
                           }}
                           className="text-sm text-grey-500 hover:text-grey-700"
                         >
-                          Reset
+                          {t('sorting:catalogue.reset')}
                         </button>
                       )}
                     </div>
                     <form className="space-y-4" onSubmit={handleSaveCatalogueEntry}>
                       <div>
-                        <label className="block text-sm font-medium text-grey-700 mb-1.5">Material</label>
+                        <label className="block text-sm font-medium text-grey-700 mb-1.5">{t('sorting:material')}</label>
                         <select
                           value={catalogueForm.material_id}
                           onChange={(event) => setCatalogueForm((current) => ({ ...current, material_id: event.target.value }))}
                           required
                           className={selectClass}
                         >
-                          <option value="">Select material...</option>
+                          <option value="">{t('sorting:catalogue.selectMaterial')}</option>
                           {materials
                             .filter((type) => !activeAsset.waste_stream_id || type.waste_stream_id === activeAsset.waste_stream_id)
                             .map((type) => (
@@ -610,7 +605,7 @@ export default function SortingPage() {
                         </select>
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-grey-700 mb-1.5">Weight (kg)</label>
+                        <label className="block text-sm font-medium text-grey-700 mb-1.5">{t('sorting:catalogue.weight')}</label>
                         <div className="flex items-center gap-2">
                           <input
                             type="number"
@@ -627,7 +622,7 @@ export default function SortingPage() {
                               onClick={() => setCatalogueForm((current) => ({ ...current, weight_kg: String(Math.abs(sortingBalance)) }))}
                               className="shrink-0 h-10 px-3 rounded-md border border-grey-300 text-xs font-medium text-grey-700 hover:bg-grey-50 transition-colors whitespace-nowrap"
                             >
-                              Use Remaining
+                              {t('sorting:catalogue.useRemaining')}
                             </button>
                           )}
                         </div>
@@ -644,11 +639,11 @@ export default function SortingPage() {
                             }))}
                             className="mr-2 accent-green-500"
                           />
-                          Reusable
+                          {t('sorting:catalogue.reusable')}
                         </label>
                         {catalogueForm.is_reusable && (
                           <div className="flex items-center gap-2">
-                            <label className="text-sm font-medium text-grey-700">Quantity:</label>
+                            <label className="text-sm font-medium text-grey-700">{t('sorting:catalogue.quantity')}</label>
                             <input
                               type="number"
                               min="1"
@@ -661,12 +656,12 @@ export default function SortingPage() {
                         )}
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-grey-700 mb-1.5">Notes</label>
+                        <label className="block text-sm font-medium text-grey-700 mb-1.5">{t('sorting:catalogue.notes')}</label>
                         <textarea
                           value={catalogueForm.notes}
                           onChange={(event) => setCatalogueForm((current) => ({ ...current, notes: event.target.value }))}
                           className={textareaClass}
-                          placeholder="Optional notes, operator observations, packaging cues..."
+                          placeholder={t('sorting:catalogue.notesPlaceholder')}
                         />
                       </div>
                       <div className="flex justify-end">
@@ -676,7 +671,7 @@ export default function SortingPage() {
                           className="h-10 px-4 rounded-md bg-green-500 text-white text-sm font-semibold hover:bg-green-700 disabled:opacity-50 flex items-center gap-2"
                         >
                           {savingCatalogue ? <Loader2 size={16} className="animate-spin" /> : editingEntryId ? null : <Plus size={16} />}
-                          {editingEntryId ? 'Update Entry' : 'Add Entry'}
+                          {editingEntryId ? t('sorting:catalogue.updateEntry') : t('sorting:catalogue.addEntryBtn')}
                         </button>
                       </div>
                     </form>
@@ -696,12 +691,12 @@ export default function SortingPage() {
 
                     return (
                       <div className="flex items-center justify-between">
-                        <p className="text-sm text-grey-500">Finalize when all fractions balance within ±1 kg of the shredding weight.</p>
+                        <p className="text-sm text-grey-500">{t('sorting:outcomes.balance.finalizeHint')}</p>
                         <div>
                           {allDraft && (
                             <button type="button" onClick={handleFinalizeAsset} disabled={!canOperate || busyAssetId === activeAsset.id}
                               className="h-9 px-5 border-2 border-green-500 text-green-700 rounded-md text-sm font-semibold hover:bg-green-25 disabled:opacity-50 transition-colors">
-                              {busyAssetId === activeAsset.id ? 'Working...' : 'Finalize Parcel'}
+                              {busyAssetId === activeAsset.id ? t('sorting:outcomes.actions.working') : t('sorting:outcomes.actions.finalizeParcel')}
                             </button>
                           )}
                           {allFinalized && (
@@ -709,19 +704,19 @@ export default function SortingPage() {
                               {canConfirm && (
                                 <button type="button" onClick={handleConfirmAsset} disabled={busyAssetId === activeAsset.id}
                                   className="h-9 px-4 rounded-md bg-green-500 text-white text-sm font-semibold hover:bg-green-700 disabled:opacity-50">
-                                  Confirm Compliance
+                                  {t('sorting:outcomes.actions.confirmCompliance')}
                                 </button>
                               )}
                               <button type="button" onClick={() => setShowReopenModal(true)} disabled={busyAssetId === activeAsset.id}
                                 className="h-9 px-4 rounded-md border border-grey-300 bg-white text-sm font-semibold text-grey-700 hover:bg-grey-50 disabled:opacity-50">
-                                Reopen Version
+                                {t('sorting:outcomes.actions.reopenVersion')}
                               </button>
                             </div>
                           )}
                           {allConfirmed && canConfirm && (
                             <button type="button" onClick={() => setShowReopenModal(true)} disabled={busyAssetId === activeAsset.id}
                               className="h-9 px-4 rounded-md border border-grey-300 bg-white text-sm font-semibold text-grey-700 hover:bg-grey-50 disabled:opacity-50">
-                              Reopen Version
+                              {t('sorting:outcomes.actions.reopenVersion')}
                             </button>
                           )}
                         </div>
@@ -731,7 +726,7 @@ export default function SortingPage() {
 
                   {assetProcessingRecords.length === 0 ? (
                     <div className="bg-white rounded-lg border border-grey-200 shadow-sm p-8 text-center text-sm text-grey-400">
-                      Add shredding entries first. Draft sorting records are created automatically from shredding.
+                      {t('sorting:outcomes.addShreddingFirst')}
                     </div>
                   ) : (
                     assetProcessingRecords.map((record) => {
@@ -764,13 +759,13 @@ export default function SortingPage() {
                               className="h-8 px-3 rounded-md border border-grey-300 text-xs font-semibold text-grey-700 hover:bg-grey-50 flex items-center gap-2"
                             >
                               {historyLoadingId === record.id ? <Loader2 size={14} className="animate-spin" /> : <History size={14} />}
-                              {history ? 'Hide History' : 'Show History'}
+                              {history ? t('sorting:outcomes.hideHistory') : t('sorting:outcomes.showHistory')}
                             </button>
                           </div>
 
                           {history && (
                             <div className="rounded-lg border border-grey-200 bg-grey-25 p-4 mb-4">
-                              <h4 className="text-sm font-semibold text-grey-900 mb-3">Version History</h4>
+                              <h4 className="text-sm font-semibold text-grey-900 mb-3">{t('sorting:outcomes.versionHistory')}</h4>
                               <div className="space-y-2">
                                 {history.map((version) => (
                                   <div key={version.id} className="flex items-center justify-between gap-3 text-sm">
@@ -787,9 +782,9 @@ export default function SortingPage() {
 
                           {materialTargetWeight > 0 && (
                             <div className={`rounded-lg border px-4 py-2 text-sm mb-4 ${materialBalanced ? 'border-green-200 bg-green-25 text-green-700' : 'border-red-200 bg-red-25 text-red-700'}`}>
-                              Sorting Balance: {materialOutcomeWeight.toLocaleString()} / {materialTargetWeight.toLocaleString()} kg
+                              {t('sorting:outcomes.balance.label')} {materialOutcomeWeight.toLocaleString()} / {materialTargetWeight.toLocaleString()} kg
                               <span className="ml-2 font-semibold">
-                                {materialBalanced ? 'Balanced' : materialDelta > 0 ? `Over by ${materialDelta} kg` : `Remaining ${Math.abs(materialDelta)} kg`}
+                                {materialBalanced ? t('sorting:outcomes.balance.balanced') : materialDelta > 0 ? t('sorting:outcomes.balance.over', { amount: materialDelta }) : t('sorting:outcomes.balance.remaining', { amount: Math.abs(materialDelta) })}
                               </span>
                             </div>
                           )}
@@ -798,16 +793,16 @@ export default function SortingPage() {
                             <table className="w-full text-sm">
                               <thead>
                                 <tr className="bg-grey-50 border-b border-grey-200">
-                                  <th className="px-3 py-2 text-left text-xs font-medium text-grey-500 uppercase tracking-wide">Fraction</th>
-                                  <th className="px-3 py-2 text-right text-xs font-medium text-grey-500 uppercase tracking-wide">Weight</th>
-                                  <th className="px-3 py-2 text-right text-xs font-medium text-grey-500 uppercase tracking-wide">Share</th>
-                                  <th className="px-3 py-2 text-right text-xs font-medium text-grey-500 uppercase tracking-wide">Actions</th>
+                                  <th className="px-3 py-2 text-left text-xs font-medium text-grey-500 uppercase tracking-wide">{t('sorting:outcomes.table.fraction')}</th>
+                                  <th className="px-3 py-2 text-right text-xs font-medium text-grey-500 uppercase tracking-wide">{t('sorting:outcomes.table.weight')}</th>
+                                  <th className="px-3 py-2 text-right text-xs font-medium text-grey-500 uppercase tracking-wide">{t('sorting:outcomes.table.share')}</th>
+                                  <th className="px-3 py-2 text-right text-xs font-medium text-grey-500 uppercase tracking-wide">{t('sorting:outcomes.table.actions')}</th>
                                 </tr>
                               </thead>
                               <tbody>
                                 {record.outcomes.length === 0 ? (
                                   <tr>
-                                    <td colSpan={4} className="px-3 py-5 text-center text-grey-400">No outcomes yet</td>
+                                    <td colSpan={4} className="px-3 py-5 text-center text-grey-400">{t('sorting:outcomes.noOutcomes')}</td>
                                   </tr>
                                 ) : (
                                   record.outcomes.map((outcome) => (
@@ -841,7 +836,7 @@ export default function SortingPage() {
                                             }}
                                             className="h-8 px-3 rounded-md border border-grey-300 text-xs font-semibold text-grey-700 hover:bg-grey-50 disabled:opacity-40"
                                           >
-                                            Edit
+                                            {t('sorting:catalogue.edit')}
                                           </button>
                                           <button
                                             type="button"
@@ -868,7 +863,7 @@ export default function SortingPage() {
                                 onClick={() => setOpenFractionForms((c) => ({ ...c, [record.id]: true }))}
                                 className="h-9 px-4 rounded-md bg-green-500 text-white text-sm font-semibold hover:bg-green-700 flex items-center gap-2"
                               >
-                                <Plus size={14} /> Add Fraction
+                                <Plus size={14} /> {t('sorting:outcomes.addFraction')}
                               </button>
                             </div>
                           )}
@@ -877,7 +872,7 @@ export default function SortingPage() {
                           {(openFractionForms[record.id] || editingOutcomeId) && (
                           <div className="rounded-lg border border-grey-200 bg-grey-25 p-4">
                             <div className="flex items-center justify-between gap-3 mb-4">
-                              <h4 className="text-sm font-semibold text-grey-900">{editingOutcomeId ? 'Edit Fraction' : 'Add Fraction'}</h4>
+                              <h4 className="text-sm font-semibold text-grey-900">{editingOutcomeId ? t('sorting:outcomes.editFraction') : t('sorting:outcomes.addFraction')}</h4>
                               <button
                                 type="button"
                                 onClick={() => {
@@ -888,12 +883,12 @@ export default function SortingPage() {
                                 className="text-sm text-grey-500 hover:text-grey-700 flex items-center gap-1"
                               >
                                 <RefreshCcw size={14} />
-                                {editingOutcomeId ? 'Cancel' : 'Close'}
+                                {editingOutcomeId ? t('sorting:outcomes.cancel') : t('sorting:outcomes.close')}
                               </button>
                             </div>
                             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3 mb-3">
                               <div>
-                                <label className="block text-xs font-medium text-grey-700 mb-1">Fraction</label>
+                                <label className="block text-xs font-medium text-grey-700 mb-1">{t('sorting:outcomes.fraction')}</label>
                                 <select
                                   value={form.fraction_id}
                                   onChange={(event) => {
@@ -911,7 +906,7 @@ export default function SortingPage() {
                                   className={selectClass}
                                   disabled={record.status !== 'DRAFT'}
                                 >
-                                  <option value="">Select fraction...</option>
+                                  <option value="">{t('sorting:outcomes.fractionPlaceholder')}</option>
                                   {(() => {
                                     const usedFractionIds = record.outcomes.map((o) => o.fraction_id).filter(Boolean);
                                     const editingFractionId = editingOutcomeId ? record.outcomes.find((o) => o.id === editingOutcomeId)?.fraction_id : null;
@@ -925,7 +920,7 @@ export default function SortingPage() {
                                 </select>
                               </div>
                               <div>
-                                <label className="block text-xs font-medium text-grey-700 mb-1">Weight (kg)</label>
+                                <label className="block text-xs font-medium text-grey-700 mb-1">{t('sorting:outcomes.weight')}</label>
                                 <div className="flex items-center gap-2">
                                   <input
                                     type="number"
@@ -942,13 +937,13 @@ export default function SortingPage() {
                                       onClick={() => setOutcomeForms((current) => ({ ...current, [record.id]: { ...form, weight_kg: String(Math.abs(materialDelta)) } }))}
                                       className="shrink-0 h-10 px-3 rounded-md border border-grey-300 text-xs font-medium text-grey-700 hover:bg-grey-50 transition-colors whitespace-nowrap"
                                     >
-                                      Use Remaining
+                                      {t('sorting:catalogue.useRemaining')}
                                     </button>
                                   )}
                                 </div>
                               </div>
                               <div className="md:col-span-2 xl:col-span-3">
-                                <label className="block text-xs font-medium text-grey-700 mb-1">Process Description</label>
+                                <label className="block text-xs font-medium text-grey-700 mb-1">{t('sorting:outcomes.processDescription')}</label>
                                 <input
                                   value={form.process_description}
                                   onChange={(event) => setOutcomeForms((current) => ({ ...current, [record.id]: { ...form, process_description: event.target.value } }))}
@@ -958,22 +953,22 @@ export default function SortingPage() {
                               </div>
                             </div>
                             <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-3 mb-3">
-                              <PercentageInput label="% Prepared for re-use" value={form.prepared_for_reuse_pct} disabled={record.status !== 'DRAFT'} onChange={(value) => setOutcomeForms((current) => ({ ...current, [record.id]: { ...form, prepared_for_reuse_pct: value } }))} />
-                              <PercentageInput label="% Recycling" value={form.recycling_pct} disabled={record.status !== 'DRAFT'} onChange={(value) => setOutcomeForms((current) => ({ ...current, [record.id]: { ...form, recycling_pct: value } }))} />
-                              <PercentageInput label="% Other MR" value={form.other_material_recovery_pct} disabled={record.status !== 'DRAFT'} onChange={(value) => setOutcomeForms((current) => ({ ...current, [record.id]: { ...form, other_material_recovery_pct: value } }))} />
-                              <PercentageInput label="% Energy" value={form.energy_recovery_pct} disabled={record.status !== 'DRAFT'} onChange={(value) => setOutcomeForms((current) => ({ ...current, [record.id]: { ...form, energy_recovery_pct: value } }))} />
-                              <PercentageInput label="% Thermal" value={form.thermal_disposal_pct} disabled={record.status !== 'DRAFT'} onChange={(value) => setOutcomeForms((current) => ({ ...current, [record.id]: { ...form, thermal_disposal_pct: value } }))} />
+                              <PercentageInput label={t('sorting:outcomes.reusePct')} value={form.prepared_for_reuse_pct} disabled={record.status !== 'DRAFT'} onChange={(value) => setOutcomeForms((current) => ({ ...current, [record.id]: { ...form, prepared_for_reuse_pct: value } }))} />
+                              <PercentageInput label={t('sorting:outcomes.recyclingPct')} value={form.recycling_pct} disabled={record.status !== 'DRAFT'} onChange={(value) => setOutcomeForms((current) => ({ ...current, [record.id]: { ...form, recycling_pct: value } }))} />
+                              <PercentageInput label={t('sorting:outcomes.otherMrPct')} value={form.other_material_recovery_pct} disabled={record.status !== 'DRAFT'} onChange={(value) => setOutcomeForms((current) => ({ ...current, [record.id]: { ...form, other_material_recovery_pct: value } }))} />
+                              <PercentageInput label={t('sorting:outcomes.energyPct')} value={form.energy_recovery_pct} disabled={record.status !== 'DRAFT'} onChange={(value) => setOutcomeForms((current) => ({ ...current, [record.id]: { ...form, energy_recovery_pct: value } }))} />
+                              <PercentageInput label={t('sorting:outcomes.thermalPct')} value={form.thermal_disposal_pct} disabled={record.status !== 'DRAFT'} onChange={(value) => setOutcomeForms((current) => ({ ...current, [record.id]: { ...form, thermal_disposal_pct: value } }))} />
                             </div>
                             <div className={`mb-3 rounded-md border px-3 py-2 text-xs ${Math.abs(percentageSum(form) - 100) < 0.01 ? 'border-green-200 bg-green-25 text-green-700' : 'border-orange-200 bg-orange-25 text-orange-700'}`}>
-                              Recovery profile total: {percentageSum(form).toFixed(2)}%
+                              {t('sorting:outcomes.recoveryTotal', { pct: percentageSum(form).toFixed(2) })}
                             </div>
                             <div className="mb-3">
-                              <label className="block text-xs font-medium text-grey-700 mb-1">Notes</label>
+                              <label className="block text-xs font-medium text-grey-700 mb-1">{t('sorting:catalogue.notes')}</label>
                               <textarea
                                 value={form.notes}
                                 onChange={(event) => setOutcomeForms((current) => ({ ...current, [record.id]: { ...form, notes: event.target.value } }))}
                                 className={textareaClass}
-                                placeholder="Transfer comments, contamination notes, operator remarks..."
+                                placeholder={t('sorting:outcomes.notesPlaceholder')}
                                 disabled={record.status !== 'DRAFT'}
                               />
                             </div>
@@ -988,7 +983,7 @@ export default function SortingPage() {
                                   }}
                                   className="h-10 px-4 rounded-md bg-green-500 text-white text-sm font-semibold hover:bg-green-700 disabled:opacity-50"
                                 >
-                                  Update Fraction
+                                  {t('sorting:outcomes.updateFraction')}
                                 </button>
                               ) : (
                                 <>
@@ -1001,7 +996,7 @@ export default function SortingPage() {
                                     }}
                                     className="h-10 px-4 rounded-md border border-grey-300 bg-white text-sm font-semibold text-grey-700 hover:bg-grey-50 disabled:opacity-50"
                                   >
-                                    Submit
+                                    {t('sorting:outcomes.submit')}
                                   </button>
                                   <button
                                     type="button"
@@ -1009,7 +1004,7 @@ export default function SortingPage() {
                                     onClick={() => handleSaveOutcome(record.id)}
                                     className="h-10 px-4 rounded-md bg-green-500 text-white text-sm font-semibold hover:bg-green-700 disabled:opacity-50"
                                   >
-                                    Submit &amp; Add Another
+                                    {t('sorting:outcomes.submitAddAnother')}
                                   </button>
                                 </>
                               )}
@@ -1023,24 +1018,24 @@ export default function SortingPage() {
                   {/* Sorting overall balance */}
                   {assetProcessingRecords.length > 0 && (
                     <div className={`rounded-lg border px-4 py-2.5 text-sm ${isBalanced ? 'border-green-200 bg-green-25 text-green-700' : 'border-red-200 bg-red-25 text-red-700'}`}>
-                      Sorting Balance: {assetProcessedWeight.toLocaleString()} / {sortingWeightSum.toLocaleString()} kg
+                      {t('sorting:outcomes.balance.label')} {assetProcessedWeight.toLocaleString()} / {sortingWeightSum.toLocaleString()} kg
                       <span className="ml-2 font-semibold">
-                        {isBalanced ? 'Balanced' : `${Math.abs(assetBalance)} kg ${assetBalance > 0 ? 'over' : 'remaining'}`}
+                        {isBalanced ? t('sorting:outcomes.balance.balanced') : assetBalance > 0 ? t('sorting:outcomes.balance.over', { amount: Math.abs(assetBalance) }) : t('sorting:outcomes.balance.remaining', { amount: Math.abs(assetBalance) })}
                       </span>
-                      <p className="mt-1 text-xs opacity-80">All fractions must balance within ±1 kg of the total shredding weight before finalization.</p>
+                      <p className="mt-1 text-xs opacity-80">{t('sorting:outcomes.balance.hint')}</p>
                     </div>
                   )}
                 </div>
               ) : activeTab === 'reusables' ? (
                 <div className="bg-white rounded-lg border border-grey-200 shadow-sm p-5">
-                  <h2 className="text-base font-semibold text-grey-900 mb-4">Reusable Items</h2>
+                  <h2 className="text-base font-semibold text-grey-900 mb-4">{t('sorting:reusables.title')}</h2>
                   {reusablesLoading ? (
                     <div className="flex items-center justify-center py-8">
                       <Loader2 className="animate-spin text-grey-400" size={20} />
                     </div>
                   ) : reusableItems.length === 0 ? (
                     <div className="rounded-lg border border-dashed border-grey-300 p-8 text-center text-sm text-grey-400">
-                      No reusable items. Mark shredding entries as reusable to create items here.
+                      {t('sorting:reusables.noItems')}
                     </div>
                   ) : (
                     <div className="space-y-4">
@@ -1059,12 +1054,12 @@ export default function SortingPage() {
                               <thead>
                                 <tr className="bg-grey-50 border-b border-grey-200">
                                   <th className="px-3 py-2 text-left text-xs font-medium text-grey-500 uppercase tracking-wide w-10">#</th>
-                                  <th className="px-3 py-2 text-left text-xs font-medium text-grey-500 uppercase tracking-wide">Brand</th>
-                                  <th className="px-3 py-2 text-left text-xs font-medium text-grey-500 uppercase tracking-wide">Model</th>
-                                  <th className="px-3 py-2 text-left text-xs font-medium text-grey-500 uppercase tracking-wide">Type</th>
-                                  <th className="px-3 py-2 text-left text-xs font-medium text-grey-500 uppercase tracking-wide">Serial Number</th>
-                                  <th className="px-3 py-2 text-left text-xs font-medium text-grey-500 uppercase tracking-wide">Condition</th>
-                                  <th className="px-3 py-2 text-left text-xs font-medium text-grey-500 uppercase tracking-wide">Notes</th>
+                                  <th className="px-3 py-2 text-left text-xs font-medium text-grey-500 uppercase tracking-wide">{t('sorting:reusables.brand')}</th>
+                                  <th className="px-3 py-2 text-left text-xs font-medium text-grey-500 uppercase tracking-wide">{t('sorting:reusables.model')}</th>
+                                  <th className="px-3 py-2 text-left text-xs font-medium text-grey-500 uppercase tracking-wide">{t('sorting:reusables.type')}</th>
+                                  <th className="px-3 py-2 text-left text-xs font-medium text-grey-500 uppercase tracking-wide">{t('sorting:reusables.serialNumber')}</th>
+                                  <th className="px-3 py-2 text-left text-xs font-medium text-grey-500 uppercase tracking-wide">{t('sorting:reusables.condition')}</th>
+                                  <th className="px-3 py-2 text-left text-xs font-medium text-grey-500 uppercase tracking-wide">{t('sorting:reusables.notes')}</th>
                                 </tr>
                               </thead>
                               <tbody>
@@ -1086,10 +1081,10 @@ export default function SortingPage() {
                                     <td className="px-3 py-1.5">
                                       <select defaultValue={item.condition || ''} onChange={(e) => handleUpdateReusable(item.id, 'condition', e.target.value)} className="w-full h-8 px-2 rounded border border-grey-200 text-sm bg-white focus:border-green-500 outline-none">
                                         <option value="">—</option>
-                                        <option value="GOOD">Good</option>
-                                        <option value="FAIR">Fair</option>
-                                        <option value="POOR">Poor</option>
-                                        <option value="DAMAGED">Damaged</option>
+                                        <option value="GOOD">{t('sorting:reusables.conditions.GOOD')}</option>
+                                        <option value="FAIR">{t('sorting:reusables.conditions.FAIR')}</option>
+                                        <option value="POOR">{t('sorting:reusables.conditions.POOR')}</option>
+                                        <option value="DAMAGED">{t('sorting:reusables.conditions.DAMAGED')}</option>
                                       </select>
                                     </td>
                                     <td className="px-3 py-1.5">
@@ -1107,7 +1102,7 @@ export default function SortingPage() {
                 </div>
               ) : activeTab === 'reports' ? (
                 <div className="bg-white rounded-lg border border-grey-200 shadow-sm p-5">
-                  <h2 className="text-base font-semibold text-grey-900 mb-4">Downstream Reports</h2>
+                  <h2 className="text-base font-semibold text-grey-900 mb-4">{t('sorting:reports.title')}</h2>
                   {reportsLoading ? (
                     <div className="flex items-center justify-center py-8">
                       <Loader2 className="animate-spin text-grey-400" size={20} />
@@ -1139,7 +1134,7 @@ export default function SortingPage() {
                                     onClick={() => handleDownloadReport(existingReport.id)}
                                     className="h-8 px-3 rounded-md bg-green-500 text-white text-xs font-semibold hover:bg-green-700 flex items-center gap-1.5"
                                   >
-                                    <Download size={12} /> Download PDF
+                                    <Download size={12} /> {t('sorting:reports.downloadPdf')}
                                   </button>
                                   <button
                                     type="button"
@@ -1147,7 +1142,7 @@ export default function SortingPage() {
                                     disabled={generatingEntryId === entry.id}
                                     className="h-8 px-3 rounded-md border border-grey-300 text-xs font-semibold text-grey-700 hover:bg-grey-50 disabled:opacity-50"
                                   >
-                                    {generatingEntryId === entry.id ? 'Generating...' : 'Regenerate'}
+                                    {generatingEntryId === entry.id ? t('sorting:reports.generating') : t('sorting:reports.regenerate')}
                                   </button>
                                 </>
                               ) : allConfirmed ? (
@@ -1158,10 +1153,10 @@ export default function SortingPage() {
                                   className="h-8 px-3 rounded-md bg-green-500 text-white text-xs font-semibold hover:bg-green-700 disabled:opacity-50 flex items-center gap-1.5"
                                 >
                                   {generatingEntryId === entry.id ? <Loader2 size={12} className="animate-spin" /> : <Plus size={12} />}
-                                  Generate Report
+                                  {t('sorting:reports.generateReport')}
                                 </button>
                               ) : (
-                                <span className="text-xs text-grey-400">Confirm all records first</span>
+                                <span className="text-xs text-grey-400">{t('sorting:reports.confirmAllFirst')}</span>
                               )}
                             </div>
                           </div>
@@ -1169,7 +1164,7 @@ export default function SortingPage() {
                       })}
                       {assetCatalogueEntries.length === 0 && (
                         <div className="rounded-lg border border-dashed border-grey-300 p-8 text-center text-sm text-grey-400">
-                          Add shredding entries first to generate downstream reports.
+                          {t('sorting:reports.addShreddingFirst')}
                         </div>
                       )}
                     </div>
@@ -1183,7 +1178,7 @@ export default function SortingPage() {
 
       {assets.length === 0 && (
         <div className="bg-white rounded-lg border border-grey-200 shadow-sm p-8 text-center text-grey-400 text-sm">
-          No parcels found on this inbound
+          {t('sorting:noParcels')}
         </div>
       )}
 
@@ -1191,31 +1186,31 @@ export default function SortingPage() {
       {showReopenModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'rgba(16,24,40,0.72)', backdropFilter: 'blur(3px)' }}>
           <div className="bg-white rounded-xl border border-grey-200 shadow-xl w-full max-w-md p-6">
-            <h3 className="text-lg font-semibold text-grey-900 mb-4">Reopen Version</h3>
+            <h3 className="text-lg font-semibold text-grey-900 mb-4">{t('sorting:reopen.title')}</h3>
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-grey-700 mb-1.5">Reason Code <span className="text-red-500">*</span></label>
+                <label className="block text-sm font-medium text-grey-700 mb-1.5">{t('sorting:reopen.reasonCodeRequired')}</label>
                 <select
                   value={reopenForm.reason_code}
                   onChange={(e) => setReopenForm((p) => ({ ...p, reason_code: e.target.value }))}
                   className={selectClass}
                   required
                 >
-                  <option value="">Select reason...</option>
-                  <option value="BALANCE_CORRECTION">Balance Correction</option>
-                  <option value="CERTIFICATE_FIX">Certificate Fix</option>
-                  <option value="DATA_ENTRY_ERROR">Data Entry Error</option>
-                  <option value="MATERIAL_RECLASSIFICATION">Material Reclassification</option>
-                  <option value="OTHER">Other</option>
+                  <option value="">{t('sorting:reopen.selectReason')}</option>
+                  <option value="BALANCE_CORRECTION">{t('sorting:reopen.reasons.BALANCE_CORRECTION')}</option>
+                  <option value="CERTIFICATE_FIX">{t('sorting:reopen.reasons.CERTIFICATE_FIX')}</option>
+                  <option value="DATA_ENTRY_ERROR">{t('sorting:reopen.reasons.DATA_ENTRY_ERROR')}</option>
+                  <option value="MATERIAL_RECLASSIFICATION">{t('sorting:reopen.reasons.MATERIAL_RECLASSIFICATION')}</option>
+                  <option value="OTHER">{t('sorting:reopen.reasons.OTHER')}</option>
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-grey-700 mb-1.5">Notes</label>
+                <label className="block text-sm font-medium text-grey-700 mb-1.5">{t('sorting:reopen.notes')}</label>
                 <textarea
                   value={reopenForm.reason_notes}
                   onChange={(e) => setReopenForm((p) => ({ ...p, reason_notes: e.target.value }))}
                   className={textareaClass}
-                  placeholder="Explain why this version needs to be reopened..."
+                  placeholder={t('sorting:reopen.notesPlaceholder')}
                 />
               </div>
               <div className="flex justify-end gap-3 pt-2">
@@ -1224,7 +1219,7 @@ export default function SortingPage() {
                   onClick={() => { setShowReopenModal(false); setReopenForm({ reason_code: '', reason_notes: '' }); }}
                   className="h-9 px-4 bg-white text-grey-700 border border-grey-300 rounded-md text-sm font-semibold hover:bg-grey-50"
                 >
-                  Cancel
+                  {t('sorting:reopen.cancel')}
                 </button>
                 <button
                   type="button"
@@ -1232,7 +1227,7 @@ export default function SortingPage() {
                   disabled={!reopenForm.reason_code || busyAssetId === activeAsset?.id}
                   className="h-9 px-4 bg-orange-500 text-white rounded-md text-sm font-semibold hover:bg-orange-600 disabled:opacity-50"
                 >
-                  {busyAssetId === activeAsset?.id ? 'Reopening...' : 'Reopen'}
+                  {busyAssetId === activeAsset?.id ? t('sorting:reopen.reopening') : t('sorting:reopen.reopen')}
                 </button>
               </div>
             </div>

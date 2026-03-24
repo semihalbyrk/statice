@@ -1,36 +1,15 @@
 const prisma = require('./prismaClient');
+const { generateSequentialId } = require('./sequentialId');
 
-const MAX_RETRIES = 3;
-
+/**
+ * Generate the next contamination incident number in format CON-NNNNN.
+ *
+ * @param {import('@prisma/client').PrismaClient} [tx] - optional transaction client
+ * @returns {Promise<string>} e.g. "CON-00001"
+ */
 async function generateContaminationNumber(tx) {
   const client = tx || prisma;
-  const prefix = 'CON-';
-
-  for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
-    const last = await client.contaminationIncident.findFirst({
-      where: { incident_number: { startsWith: prefix } },
-      orderBy: { incident_number: 'desc' },
-      select: { incident_number: true },
-    });
-
-    let nextSeq = 1;
-    if (last) {
-      const lastSeq = parseInt(last.incident_number.replace(prefix, ''), 10);
-      if (!isNaN(lastSeq)) nextSeq = lastSeq + 1;
-    }
-
-    const number = `${prefix}${String(nextSeq).padStart(5, '0')}`;
-
-    const existing = await client.contaminationIncident.findFirst({
-      where: { incident_number: number },
-      select: { incident_number: true },
-    });
-
-    if (!existing) return number;
-  }
-
-  const ts = Date.now().toString(36);
-  return `${prefix}${ts}`;
+  return generateSequentialId(client, 'contaminationIncident', 'incident_number', 'CON-');
 }
 
 module.exports = { generateContaminationNumber };

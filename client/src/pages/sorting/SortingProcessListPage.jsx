@@ -1,16 +1,17 @@
 import { useState, useEffect } from 'react';
 import { Search, ChevronLeft, ChevronRight, ArrowUpDown } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import useSortingListStore from '../../store/sortingListStore';
 import StatusBadge from '../../components/ui/StatusBadge';
 import { format } from 'date-fns';
 import { getSortingName } from '../../utils/entityNames';
 import SupplierTypeBadge from '../../components/ui/SupplierTypeBadge';
 
-const CONTAINER_TYPE_LABELS = { OPEN_TOP: 'Open Top', CLOSED_TOP: 'Closed Top', GITTERBOX: 'Gitterbox', PALLET: 'Pallet', OTHER: 'Other' };
 const STATUSES = ['', 'PLANNED', 'SORTED'];
 
 export default function SortingProcessListPage() {
+  const { t } = useTranslation(['sorting', 'common']);
   const { sessions, totalCount, filters, loading, fetchSessions, setFilters } = useSortingListStore();
   const [searchInput, setSearchInput] = useState(filters.search);
 
@@ -32,7 +33,7 @@ export default function SortingProcessListPage() {
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-xl font-semibold text-grey-900">Process</h1>
+        <h1 className="text-xl font-semibold text-grey-900">{t('sorting:title')}</h1>
       </div>
 
       <div className="flex items-center gap-3 mb-4">
@@ -40,7 +41,7 @@ export default function SortingProcessListPage() {
           <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-grey-400" />
           <input
             type="text"
-            placeholder="Search by process name..."
+            placeholder={t('sorting:searchPlaceholder')}
             value={searchInput}
             onChange={(e) => setSearchInput(e.target.value)}
             className="w-full h-10 pl-9 pr-3 rounded-md border border-grey-300 text-sm text-grey-900 placeholder:text-grey-400 focus:border-green-500 focus:ring-[3px] focus:ring-green-500/15 outline-none transition-colors"
@@ -51,7 +52,7 @@ export default function SortingProcessListPage() {
           onChange={(e) => setFilters({ status: e.target.value })}
           className="app-list-filter-select"
         >
-          <option value="">All statuses</option>
+          <option value="">{t('sorting:allStatuses')}</option>
           {STATUSES.filter(Boolean).map((s) => (
             <option key={s} value={s}>{s.replace(/_/g, ' ')}</option>
           ))}
@@ -62,29 +63,29 @@ export default function SortingProcessListPage() {
         <table className="w-full min-w-[900px] text-sm">
           <thead>
             <tr className="bg-grey-50 border-b border-grey-200">
-              <th className="text-left px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide min-w-[180px]"><span className="inline-flex items-center gap-1">Process Name <ArrowUpDown size={12} className="text-grey-400" /></span></th>
-              <th className="text-left px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide"><span className="inline-flex items-center gap-1">Status <ArrowUpDown size={12} className="text-grey-400" /></span></th>
-              <th className="text-left px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide min-w-[150px]">Linked Order</th>
-              <th className="text-left px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide">Supplier</th>
-              <th className="text-left px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide min-w-[160px]">Carrier</th>
-              <th className="text-left px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide min-w-[120px]">Plate</th>
-              <th className="text-left px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide min-w-[200px]">Waste Stream</th>
-              <th className="text-left px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide min-w-[140px]"><span className="inline-flex items-center gap-1">Date <ArrowUpDown size={12} className="text-grey-400" /></span></th>
-              <th className="text-right px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide">Parcels</th>
-              <th className="text-right px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide min-w-[130px]">Net Weight</th>
+              <th className="text-left px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide min-w-[180px]"><span className="inline-flex items-center gap-1">{t('sorting:table.processName')} <ArrowUpDown size={12} className="text-grey-400" /></span></th>
+              <th className="text-left px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide"><span className="inline-flex items-center gap-1">{t('sorting:table.status')} <ArrowUpDown size={12} className="text-grey-400" /></span></th>
+              <th className="text-left px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide min-w-[150px]">{t('sorting:table.linkedOrder')}</th>
+              <th className="text-left px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide">{t('sorting:table.supplier')}</th>
+              <th className="text-left px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide min-w-[160px]">{t('sorting:table.carrier')}</th>
+              <th className="text-left px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide min-w-[120px]">{t('sorting:table.plate')}</th>
+              <th className="text-left px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide min-w-[200px]">{t('sorting:table.wasteStream')}</th>
+              <th className="text-left px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide min-w-[140px]"><span className="inline-flex items-center gap-1">{t('sorting:table.date')} <ArrowUpDown size={12} className="text-grey-400" /></span></th>
+              <th className="text-right px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide">{t('sorting:table.parcels')}</th>
+              <th className="text-right px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide min-w-[130px]">{t('sorting:table.netWeight')}</th>
             </tr>
           </thead>
           <tbody>
             {loading ? (
               <tr>
                 <td colSpan={10} className="px-4 py-8 text-center text-grey-400">
-                  Loading...
+                  {t('common:table.loading')}
                 </td>
               </tr>
             ) : sessions.length === 0 ? (
               <tr>
                 <td colSpan={10} className="px-4 py-8 text-center text-grey-400">
-                  No process sessions found
+                  {t('sorting:empty')}
                 </td>
               </tr>
             ) : (
@@ -94,8 +95,8 @@ export default function SortingProcessListPage() {
                 const assets = inbound?.assets || [];
                 const totalNet = assets.reduce((sum, a) => sum + (Number(a.net_weight_kg) || 0), 0);
                 const containerTypes = [...new Set(assets.map((a) => {
-                  if (a.parcel_type === 'MATERIAL') return 'Material';
-                  return a.container_type ? (CONTAINER_TYPE_LABELS[a.container_type] || a.container_type) : '—';
+                  if (a.parcel_type === 'MATERIAL') return t('sorting:material');
+                  return a.container_type ? t(`common:containerTypes.${a.container_type}`, { defaultValue: a.container_type }) : '—';
                 }))].join(', ');
                 const wasteStreams = [...new Set(assets.map((a) => a.waste_stream?.name).filter(Boolean))].join(', ');
 
@@ -138,7 +139,7 @@ export default function SortingProcessListPage() {
 
         {totalPages > 1 && (
           <div className="flex items-center justify-between px-5 py-3 border-t border-grey-200 text-sm text-grey-500">
-            <span>{totalCount} total sessions</span>
+            <span>{t('sorting:pageInfo', { count: totalCount })}</span>
             <div className="flex items-center gap-3">
               <select
                 value={filters.limit}

@@ -1,4 +1,5 @@
 const prisma = require('./prismaClient');
+const { generateSequentialId } = require('./sequentialId');
 
 /**
  * Generate the next inbound number in format INB-NNNNN.
@@ -8,21 +9,7 @@ const prisma = require('./prismaClient');
  */
 async function generateInboundNumber(tx) {
   const client = tx || prisma;
-  const prefix = 'INB-';
-
-  const lastInbound = await client.inbound.findFirst({
-    where: { inbound_number: { startsWith: prefix } },
-    orderBy: { inbound_number: 'desc' },
-    select: { inbound_number: true },
-  });
-
-  let nextSeq = 1;
-  if (lastInbound) {
-    const lastSeq = parseInt(lastInbound.inbound_number.replace(prefix, ''), 10);
-    nextSeq = lastSeq + 1;
-  }
-
-  return `${prefix}${String(nextSeq).padStart(5, '0')}`;
+  return generateSequentialId(client, 'inbound', 'inbound_number', 'INB-');
 }
 
 module.exports = { generateInboundNumber };

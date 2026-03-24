@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Plus, Search, Pencil } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { useTranslation } from 'react-i18next';
 import { listContracts, getContractDashboard, deactivateContract, updateContract } from '../../api/contracts';
 import ClickableStatusBadge from '../../components/ui/ClickableStatusBadge';
 import ContractRagBadge from '../../components/contracts/ContractRagBadge';
@@ -20,6 +21,7 @@ const CONTRACT_TRANSITIONS = {
 
 export default function ContractsDashboardPage() {
   const navigate = useNavigate();
+  const { t } = useTranslation(['contracts', 'common']);
   const userRole = useAuthStore((s) => s.user?.role);
   const canWrite = ['ADMIN', 'FINANCE_MANAGER'].includes(userRole);
 
@@ -48,11 +50,11 @@ export default function ContractsDashboardPage() {
       setContracts(data.data);
       setTotal(data.total);
     } catch {
-      toast.error('Failed to load contracts');
+      toast.error(t('contracts:toast.loadFailed'));
     } finally {
       setLoading(false);
     }
-  }, [search, statusFilter]);
+  }, [search, statusFilter, t]);
 
   useEffect(() => { fetchDashboard(); }, [fetchDashboard]);
 
@@ -68,22 +70,29 @@ export default function ContractsDashboardPage() {
       } else {
         await updateContract(contractId, { status: newStatus });
       }
-      toast.success('Contract status updated');
+      toast.success(t('contracts:toast.statusUpdated'));
       fetchContracts();
       fetchDashboard();
     } catch (err) {
-      toast.error(err.response?.data?.error || 'Failed to update status');
+      toast.error(err.response?.data?.error || t('contracts:toast.statusFailed'));
     }
   }
+
+  const TAB_LABEL_KEYS = {
+    ALL: 'tabs.all',
+    ACTIVE: 'tabs.active',
+    EXPIRED: 'tabs.expired',
+    INACTIVE: 'tabs.inactive',
+  };
 
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-xl font-semibold text-grey-900">Contracts</h1>
+        <h1 className="text-xl font-semibold text-grey-900">{t('contracts:title')}</h1>
         {canWrite && (
           <button onClick={() => navigate('/contracts/new')}
             className="flex items-center gap-2 h-9 px-4 bg-green-500 text-white rounded-md text-sm font-semibold hover:bg-green-700 transition-colors">
-            <Plus size={16} strokeWidth={2} /> New Contract
+            <Plus size={16} strokeWidth={2} /> {t('contracts:newContract')}
           </button>
         )}
       </div>
@@ -93,27 +102,27 @@ export default function ContractsDashboardPage() {
         <div className="grid grid-cols-3 gap-4 mb-6">
           <div className="bg-white rounded-lg border border-grey-200 p-4 shadow-sm">
             <div className="flex items-center justify-between">
-              <p className="text-sm font-medium text-grey-500">On Track</p>
+              <p className="text-sm font-medium text-grey-500">{t('contracts:rag.onTrack')}</p>
               <span className="h-3 w-3 rounded-full bg-green-500" />
             </div>
             <p className="text-2xl font-bold text-grey-900 mt-1">{dashboard.expiry_rag.green}</p>
-            <p className="text-xs text-grey-400 mt-0.5">&gt;60 days to expiry</p>
+            <p className="text-xs text-grey-400 mt-0.5">{t('contracts:rag.onTrackDesc')}</p>
           </div>
           <div className="bg-white rounded-lg border border-grey-200 p-4 shadow-sm">
             <div className="flex items-center justify-between">
-              <p className="text-sm font-medium text-grey-500">Expiring Soon</p>
+              <p className="text-sm font-medium text-grey-500">{t('contracts:rag.expiringSoon')}</p>
               <span className="h-3 w-3 rounded-full bg-orange-500" />
             </div>
             <p className="text-2xl font-bold text-grey-900 mt-1">{dashboard.expiry_rag.amber}</p>
-            <p className="text-xs text-grey-400 mt-0.5">30&ndash;60 days to expiry</p>
+            <p className="text-xs text-grey-400 mt-0.5">{t('contracts:rag.expiringSoonDesc')}</p>
           </div>
           <div className="bg-white rounded-lg border border-grey-200 p-4 shadow-sm">
             <div className="flex items-center justify-between">
-              <p className="text-sm font-medium text-grey-500">Critical / Expired</p>
+              <p className="text-sm font-medium text-grey-500">{t('contracts:rag.critical')}</p>
               <span className="h-3 w-3 rounded-full bg-red-500" />
             </div>
             <p className="text-2xl font-bold text-grey-900 mt-1">{dashboard.expiry_rag.red}</p>
-            <p className="text-xs text-grey-400 mt-0.5">&lt;30 days or expired</p>
+            <p className="text-xs text-grey-400 mt-0.5">{t('contracts:rag.criticalDesc')}</p>
           </div>
         </div>
       )}
@@ -122,7 +131,7 @@ export default function ContractsDashboardPage() {
       <div className="flex items-center gap-4 mb-4">
         <div className="relative max-w-xs">
           <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-grey-400" />
-          <input type="text" placeholder="Search contracts..." value={search} onChange={(e) => setSearch(e.target.value)}
+          <input type="text" placeholder={t('contracts:searchPlaceholder')} value={search} onChange={(e) => setSearch(e.target.value)}
             className="w-full h-10 pl-9 pr-3 rounded-md border border-grey-300 text-sm text-grey-900 placeholder:text-grey-400 focus:border-green-500 focus:ring-[3px] focus:ring-green-500/15 outline-none transition-colors" />
         </div>
         <div className="flex gap-1">
@@ -132,7 +141,9 @@ export default function ContractsDashboardPage() {
                 ? 'bg-green-500 text-white'
                 : 'bg-grey-100 text-grey-600 hover:bg-grey-200'
               }`}>
-              {tab === 'ALL' ? `All (${dashboard?.total || total})` : tab.charAt(0) + tab.slice(1).toLowerCase()}
+              {tab === 'ALL'
+                ? `${t('contracts:tabs.all')} (${dashboard?.total || total})`
+                : t(`contracts:${TAB_LABEL_KEYS[tab]}`)}
             </button>
           ))}
         </div>
@@ -143,22 +154,22 @@ export default function ContractsDashboardPage() {
         <table className="w-full min-w-[900px] text-sm">
           <thead>
             <tr className="bg-grey-50 border-b border-grey-200">
-              <th className="text-left px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide">Contract #</th>
-              <th className="text-left px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide">Status</th>
-              <th className="text-left px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide">Supplier</th>
-              <th className="text-left px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide">Carrier</th>
-              <th className="text-left px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide">Name</th>
-              <th className="text-left px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide">Effective</th>
-              <th className="text-left px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide">Expiry</th>
-              <th className="text-left px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide">RAG</th>
+              <th className="text-left px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide">{t('contracts:table.contractNumber')}</th>
+              <th className="text-left px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide">{t('contracts:table.status')}</th>
+              <th className="text-left px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide">{t('contracts:table.supplier')}</th>
+              <th className="text-left px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide">{t('contracts:table.carrier')}</th>
+              <th className="text-left px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide">{t('contracts:table.name')}</th>
+              <th className="text-left px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide">{t('contracts:table.effective')}</th>
+              <th className="text-left px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide">{t('contracts:table.expiry')}</th>
+              <th className="text-left px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide">{t('contracts:table.rag')}</th>
               <th className="w-10 px-4 py-3"></th>
             </tr>
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={9} className="px-4 py-8 text-center text-grey-400">Loading...</td></tr>
+              <tr><td colSpan={9} className="px-4 py-8 text-center text-grey-400">{t('contracts:loading')}</td></tr>
             ) : contracts.length === 0 ? (
-              <tr><td colSpan={9} className="px-4 py-8 text-center text-grey-400">No contracts found</td></tr>
+              <tr><td colSpan={9} className="px-4 py-8 text-center text-grey-400">{t('contracts:noContracts')}</td></tr>
             ) : contracts.map((c) => (
               <tr key={c.id} onClick={() => navigate(`/contracts/${c.id}`)}
                 className="border-b border-grey-100 hover:bg-grey-50 transition-colors cursor-pointer">
@@ -178,7 +189,7 @@ export default function ContractsDashboardPage() {
                 <td className="px-4 py-3"><ContractRagBadge status={c.rag_status} /></td>
                 <td className="px-4 py-3 text-right" onClick={(e) => e.stopPropagation()}>
                   <RowActionMenu actions={[
-                    { label: 'Edit', icon: Pencil, onClick: () => navigate(`/contracts/${c.id}`) },
+                    { label: t('contracts:actions.edit'), icon: Pencil, onClick: () => navigate(`/contracts/${c.id}`) },
                   ]} />
                 </td>
               </tr>

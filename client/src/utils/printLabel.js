@@ -1,6 +1,9 @@
 import { renderToString } from 'react-dom/server';
 import { createElement } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
+import i18n from '../i18n';
+
+const t = i18n.t.bind(i18n);
 
 /**
  * Open a print window with a 100mm×50mm asset label containing a QR code.
@@ -19,7 +22,9 @@ export function printAssetLabel(asset, order) {
     createElement(QRCodeSVG, { value: qrValue, size: 100, level: 'M' })
   );
 
-  const dateStr = new Date(asset.created_at).toLocaleDateString('en-GB');
+  const dateStr = new Date(asset.created_at).toLocaleDateString(
+    i18n.language?.startsWith('nl') ? 'nl-NL' : 'en-GB'
+  );
   const category = asset.material_category?.code_cbs || '';
 
   const html = `<!DOCTYPE html>
@@ -41,10 +46,10 @@ export function printAssetLabel(asset, order) {
   <div class="info">
     <div class="label">${asset.asset_label}</div>
     <div class="detail">
-      Order: ${order?.order_number || '—'}<br/>
-      Type: ${asset.skip_type.replace(/_/g, ' ')}<br/>
-      Category: ${category}<br/>
-      Date: ${dateStr}
+      ${t('weighing:printLabel.order')}: ${order?.order_number || '—'}<br/>
+      ${t('weighing:printLabel.type')}: ${asset.skip_type.replace(/_/g, ' ')}<br/>
+      ${t('weighing:printLabel.category')}: ${category}<br/>
+      ${t('weighing:printLabel.date')}: ${dateStr}
     </div>
   </div>
 </body>

@@ -1,0 +1,199 @@
+{
+  "title": "Verwerking",
+  "searchPlaceholder": "Zoek op verwerkingsnaam...",
+  "allStatuses": "Alle statussen",
+  "table": {
+    "processName": "Verwerkingsnaam",
+    "status": "Status",
+    "linkedOrder": "Gekoppelde Order",
+    "supplier": "Leverancier",
+    "carrier": "Vervoerder",
+    "plate": "Kenteken",
+    "wasteStream": "Afvalstroom",
+    "date": "Datum",
+    "parcels": "Colli",
+    "netWeight": "Nettogewicht"
+  },
+  "empty": "Geen verwerkingssessies gevonden",
+  "pageInfo": "{{count}} sessies totaal",
+
+  "sessionSubtitle": "Schredderen en sorteren sturen het proces; downstream verklaringen worden gegenereerd op basis van de hier vastgelegde materiaal- en fractiegegevens.",
+  "recordContamination": "Verontreiniging Registreren",
+
+  "infoFields": {
+    "linkedInbound": "Gekoppeld Inbound",
+    "linkedOrder": "Gekoppelde Order",
+    "supplier": "Leverancier",
+    "carrier": "Vervoerder",
+    "vehiclePlate": "Kenteken",
+    "wasteStream": "Afvalstroom",
+    "contract": "Contract",
+    "recorded": "Vastgelegd",
+    "parcels": "Colli"
+  },
+
+  "noParcels": "Geen colli gevonden op dit inbound",
+
+  "tabs": {
+    "catalogue": "Schredderen",
+    "outcomes": "Sorteren",
+    "reusableItems": "Herbruikbare Items",
+    "history": "Geschiedenis",
+    "reports": "Rapporten"
+  },
+
+  "material": "Materiaal",
+
+  "catalogue": {
+    "title": "Schredderinvoer",
+    "subtitle": "Leg materialen en gewichten vast voor {{assetLabel}}.",
+    "lineCount": "{{count}} regel(s)",
+    "addEntry": "Schredderinvoer Toevoegen",
+    "editEntry": "Schredderinvoer Bewerken",
+    "addSubtitle": "Selecteer het materiaal en voer het gewicht in. Fracties worden vastgelegd in het sorteerblad.",
+    "saveCatalogue": "Catalogus Opslaan",
+    "noEntries": "Geen invoeren",
+    "edit": "Bewerken",
+    "reset": "Reset",
+    "weight": "Gewicht (kg)",
+    "reusableQty": "Herbruikbaar Aantal",
+    "reusable": "Herbruikbaar",
+    "quantity": "Aantal:",
+    "notes": "Notities",
+    "notesPlaceholder": "Optionele notities, opmerkingen van de operator, verpakkingsaanwijzingen...",
+    "selectMaterial": "Selecteer materiaal...",
+    "useRemaining": "Gebruik Restant",
+    "addEntryBtn": "Invoer Toevoegen",
+    "updateEntry": "Invoer Bijwerken",
+    "balance": {
+      "label": "Schredderbalans:",
+      "balanced": "Gebalanceerd",
+      "over": "Over met {{amount}} kg",
+      "remaining": "Resterend {{amount}} kg"
+    }
+  },
+
+  "outcomes": {
+    "title": "Sorteren",
+    "processingOutcomes": "Verwerkingsresultaten",
+    "addOutcome": "Resultaat Toevoegen",
+    "saveOutcome": "Resultaat Opslaan",
+    "noOutcomes": "Nog geen resultaten",
+    "addFraction": "Fractie Toevoegen",
+    "editFraction": "Fractie Bewerken",
+    "fraction": "Fractie",
+    "weight": "Gewicht (kg)",
+    "processDescription": "Procesbeschrijving",
+    "fractionPlaceholder": "Selecteer fractie...",
+    "notesPlaceholder": "Transportopmerkingen, verontreinigingsnotities, opmerkingen van de operator...",
+    "recoveryTotal": "Totaal terugwinningsprofiel: {{pct}}%",
+    "reusePct": "% Voorbereid voor hergebruik",
+    "recyclingPct": "% Recycling",
+    "otherMrPct": "% Overig MH",
+    "energyPct": "% Energie",
+    "thermalPct": "% Thermisch",
+    "submit": "Indienen",
+    "submitAddAnother": "Indienen & Nog Een Toevoegen",
+    "updateFraction": "Fractie Bijwerken",
+    "cancel": "Annuleren",
+    "close": "Sluiten",
+    "versionHistory": "Versiegeschiedenis",
+    "showHistory": "Geschiedenis Tonen",
+    "hideHistory": "Geschiedenis Verbergen",
+    "balance": {
+      "label": "Sorteerbalans:",
+      "balanced": "Gebalanceerd",
+      "over": "Over met {{amount}} kg",
+      "remaining": "Resterend {{amount}} kg",
+      "hint": "Alle fracties moeten binnen ±1 kg van het totale schreddergewicht balanceren voor definitieve verwerking.",
+      "finalizeHint": "Finaliseer wanneer alle fracties binnen ±1 kg van het schreddergewicht balanceren."
+    },
+    "addShreddingFirst": "Voeg eerst schredderinvoer toe. Conceptsorteringen worden automatisch aangemaakt vanuit het schredderen.",
+    "actions": {
+      "finalizeParcel": "Collo Finaliseren",
+      "confirmCompliance": "Compliance Bevestigen",
+      "reopenVersion": "Versie Heropenen",
+      "working": "Bezig..."
+    },
+    "table": {
+      "fraction": "Fractie",
+      "weight": "Gewicht",
+      "share": "Aandeel",
+      "actions": "Acties"
+    }
+  },
+
+  "reusables": {
+    "title": "Herbruikbare Items",
+    "noItems": "Geen herbruikbare items. Markeer schredderinvoer als herbruikbaar om items hier te maken.",
+    "brand": "Merk",
+    "model": "Model",
+    "type": "Type",
+    "serialNumber": "Serienummer",
+    "condition": "Conditie",
+    "notes": "Notities",
+    "conditions": {
+      "GOOD": "Goed",
+      "FAIR": "Redelijk",
+      "POOR": "Slecht",
+      "DAMAGED": "Beschadigd"
+    }
+  },
+
+  "reports": {
+    "title": "Downstream Rapporten",
+    "downloadPdf": "PDF Downloaden",
+    "regenerate": "Opnieuw Genereren",
+    "generating": "Genereren...",
+    "generateReport": "Rapport Genereren",
+    "confirmAllFirst": "Bevestig eerst alle records",
+    "addShreddingFirst": "Voeg eerst schredderinvoer toe om downstream rapporten te genereren."
+  },
+
+  "reopen": {
+    "title": "Versie Heropenen",
+    "reasonCode": "Redencode",
+    "reasonCodeRequired": "Redencode *",
+    "selectReason": "Selecteer reden...",
+    "notes": "Notities",
+    "notesPlaceholder": "Leg uit waarom deze versie heropend moet worden...",
+    "cancel": "Annuleren",
+    "reopen": "Heropenen",
+    "reopening": "Heropenen...",
+    "reasons": {
+      "BALANCE_CORRECTION": "Balancecorrectie",
+      "CERTIFICATE_FIX": "Certificaatcorrectie",
+      "DATA_ENTRY_ERROR": "Invoerfout",
+      "MATERIAL_RECLASSIFICATION": "Materiaalherclassificatie",
+      "OTHER": "Overig"
+    }
+  },
+
+  "contamination": {
+    "title": "Verontreiniging Registreren",
+    "contaminationType": "Type Verontreiniging",
+    "description": "Beschrijving",
+    "descriptionPlaceholder": "Beschrijf de gevonden verontreiniging...",
+    "weightKg": "Verontreinigingsgewicht (kg)",
+    "percentage": "Verontreinigingspercentage (%)",
+    "hours": "Geschatte Uren",
+    "notes": "Notities",
+    "notesOptional": "Notities (optioneel)",
+    "estimatedFee": "Geschatte kosten:",
+    "feePercentageNote": "Kosten worden bij opslaan berekend als percentage van de orderwaarde.",
+    "selectType": "Selecteer type...",
+    "unableToLoad": "Configuratie kan niet worden geladen",
+    "supplierNotAvailable": "Leveranciersinformatie niet beschikbaar. Herlaad de pagina.",
+    "noActiveContract": "Geen Actief Contract Gevonden",
+    "noActiveContractDesc": "Deze leverancier heeft geen actief contract. Een contract met verontreinigingsboetes moet worden geconfigureerd voordat incidenten kunnen worden geregistreerd.",
+    "noPenalties": "Geen Verontreinigingsboetes Geconfigureerd",
+    "noPenaltiesDesc": "Het actieve contract voor deze leverancier heeft geen verontreinigingsboeteregels. Voeg boeteregels toe in de contractinstellingen om incidentregistratie mogelijk te maken.",
+    "loadingConfig": "Configuratie laden...",
+    "recorded": "Verontreinigingsincident geregistreerd",
+    "recordIncident": "Incident Registreren",
+    "recording": "Registreren...",
+    "close": "Sluiten",
+    "cancel": "Annuleren",
+    "descriptionRequired": "Beschrijving is vereist"
+  }
+}

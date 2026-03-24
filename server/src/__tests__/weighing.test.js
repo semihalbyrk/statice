@@ -125,7 +125,7 @@ describe('POST /api/inbounds (create weighing event)', () => {
       .set('Authorization', `Bearer ${adminToken}`)
       .send({
         carrier_id: 'carrier-van-happen',
-        supplier_id: 'supplier-third-party',
+        supplier_id: 'supplier-techrecycle',
         waste_stream_ids: [wasteStreamId],
         planned_date: new Date().toISOString().split('T')[0],
         vehicle_plate: 'WE-TEST-01',

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Plus, Search, ChevronLeft, ChevronRight, ArrowUpDown } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { useTranslation } from 'react-i18next';
 import useOrdersStore from '../../store/ordersStore';
 import useAuthStore from '../../store/authStore';
 import ClickableStatusBadge from '../../components/ui/ClickableStatusBadge';
@@ -10,10 +11,6 @@ import { updateOrder } from '../../api/orders';
 import { format } from 'date-fns';
 
 const STATUSES = ['', 'PLANNED', 'ARRIVED', 'IN_PROGRESS', 'COMPLETED', 'DISPUTE', 'INVOICED', 'CANCELLED'];
-const TABS = [
-  { key: 'all', label: 'All Orders' },
-  { key: 'today', label: 'Today' },
-];
 const ORDER_TRANSITIONS = {
   PLANNED: ['ARRIVED', 'CANCELLED'],
   ARRIVED: ['IN_PROGRESS', 'DISPUTE', 'CANCELLED'],
@@ -26,6 +23,7 @@ const ORDER_TRANSITIONS = {
 
 export default function OrdersPage() {
   const navigate = useNavigate();
+  const { t } = useTranslation(['orders', 'common']);
   const user = useAuthStore((state) => state.user);
   const { orders, totalCount, filters, loading, fetchOrders, setFilters } = useOrdersStore();
   const [searchInput, setSearchInput] = useState(filters.search);
@@ -33,6 +31,11 @@ export default function OrdersPage() {
 
   const canCreate = ['ADMIN', 'LOGISTICS_PLANNER'].includes(user?.role);
   const totalPages = Math.ceil(totalCount / filters.limit);
+
+  const TABS = [
+    { key: 'all', label: t('orders:tabs.allOrders') },
+    { key: 'today', label: t('orders:tabs.today') },
+  ];
 
   function handleTabChange(tab) {
     setActiveTab(tab);
@@ -60,24 +63,24 @@ export default function OrdersPage() {
   async function handleStatusTransition(orderId, newStatus) {
     try {
       await updateOrder(orderId, { status: newStatus });
-      toast.success(`Order status updated to ${newStatus.replace(/_/g, ' ')}`);
+      toast.success(t('orders:toast.statusUpdated', { status: newStatus.replace(/_/g, ' ') }));
       fetchOrders();
     } catch (err) {
-      toast.error(err.response?.data?.error || 'Failed to update order status');
+      toast.error(err.response?.data?.error || t('orders:toast.statusFailed'));
     }
   }
 
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-xl font-semibold text-grey-900">Orders</h1>
+        <h1 className="text-xl font-semibold text-grey-900">{t('orders:title')}</h1>
         {canCreate && (
           <button
             onClick={() => navigate('/orders/new')}
             className="flex items-center gap-2 h-9 px-4 bg-green-500 text-white rounded-md text-sm font-semibold hover:bg-green-700 transition-colors"
           >
             <Plus size={16} strokeWidth={2} />
-            New Order
+            {t('orders:newOrder')}
           </button>
         )}
       </div>
@@ -103,7 +106,7 @@ export default function OrdersPage() {
           <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-grey-400" />
           <input
             type="text"
-            placeholder="Search by order name..."
+            placeholder={t('orders:searchPlaceholder')}
             value={searchInput}
             onChange={(e) => setSearchInput(e.target.value)}
             className="w-full h-10 pl-9 pr-3 rounded-md border border-grey-300 text-sm text-grey-900 placeholder:text-grey-400 focus:border-green-500 focus:ring-[3px] focus:ring-green-500/15 outline-none transition-colors"
@@ -114,7 +117,7 @@ export default function OrdersPage() {
           onChange={(e) => setFilters({ status: e.target.value })}
           className="app-list-filter-select"
         >
-          <option value="">All statuses</option>
+          <option value="">{t('orders:allStatuses')}</option>
           {STATUSES.filter(Boolean).map((s) => (
             <option key={s} value={s}>{s.replace('_', ' ')}</option>
           ))}
@@ -125,27 +128,27 @@ export default function OrdersPage() {
         <table className="w-full min-w-[1000px] text-sm">
           <thead>
             <tr className="bg-grey-50 border-b border-grey-200">
-              <th className="text-left px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide"><span className="inline-flex items-center gap-1">Order # <ArrowUpDown size={12} className="text-grey-400" /></span></th>
-              <th className="text-left px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide"><span className="inline-flex items-center gap-1">Status <ArrowUpDown size={12} className="text-grey-400" /></span></th>
-              <th className="text-left px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide">Vehicle Plate</th>
-              <th className="text-left px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide">Carrier</th>
-              <th className="text-left px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide">Supplier</th>
-              <th className="text-left px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide">Waste Stream</th>
-              <th className="text-left px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide"><span className="inline-flex items-center gap-1">Planned Date <ArrowUpDown size={12} className="text-grey-400" /></span></th>
-              <th className="text-right px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide">Parcels</th>
+              <th className="text-left px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide"><span className="inline-flex items-center gap-1">{t('orders:table.orderName')} <ArrowUpDown size={12} className="text-grey-400" /></span></th>
+              <th className="text-left px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide"><span className="inline-flex items-center gap-1">{t('orders:table.status')} <ArrowUpDown size={12} className="text-grey-400" /></span></th>
+              <th className="text-left px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide">{t('orders:table.vehiclePlate')}</th>
+              <th className="text-left px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide">{t('orders:table.carrier')}</th>
+              <th className="text-left px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide">{t('orders:table.supplier')}</th>
+              <th className="text-left px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide">{t('orders:table.wasteStream')}</th>
+              <th className="text-left px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide"><span className="inline-flex items-center gap-1">{t('orders:table.plannedDate')} <ArrowUpDown size={12} className="text-grey-400" /></span></th>
+              <th className="text-right px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide">{t('orders:table.parcels')}</th>
             </tr>
           </thead>
           <tbody>
             {loading ? (
               <tr>
                 <td colSpan={8} className="px-4 py-8 text-center text-grey-400">
-                  Loading...
+                  {t('common:table.loading')}
                 </td>
               </tr>
             ) : orders.length === 0 ? (
               <tr>
                 <td colSpan={8} className="px-4 py-8 text-center text-grey-400">
-                  No orders found
+                  {t('orders:empty.noOrders')}
                 </td>
               </tr>
             ) : (
@@ -190,16 +193,16 @@ export default function OrdersPage() {
 
         {totalPages > 1 && (
           <div className="flex items-center justify-between px-5 py-3 border-t border-grey-200 text-sm text-grey-500">
-            <span>{totalCount} total orders</span>
+            <span>{t('orders:pagination.totalOrders', { count: totalCount })}</span>
             <div className="flex items-center gap-3">
               <select
                 value={filters.limit}
                 onChange={(e) => setFilters({ limit: Number(e.target.value), page: 1 })}
                 className="h-8 px-2 text-xs rounded-md border border-grey-300 text-grey-700 focus:border-green-500 outline-none"
               >
-                <option value={10}>10 / page</option>
-                <option value={20}>20 / page</option>
-                <option value={50}>50 / page</option>
+                <option value={10}>{t('common:table.perPage', { count: 10 })}</option>
+                <option value={20}>{t('common:table.perPage', { count: 20 })}</option>
+                <option value={50}>{t('common:table.perPage', { count: 50 })}</option>
               </select>
               <div className="flex items-center gap-2">
                 <button
@@ -210,7 +213,7 @@ export default function OrdersPage() {
                   <ChevronLeft size={16} />
                 </button>
                 <span>
-                  Page {filters.page} of {totalPages}
+                  {t('common:table.pageOf', { page: filters.page, total: totalPages })}
                 </span>
                 <button
                   onClick={() => setFilters({ page: Math.min(totalPages, filters.page + 1) })}

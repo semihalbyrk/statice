@@ -96,7 +96,7 @@ describe('POST /api/orders', () => {
       .set('Authorization', `Bearer ${gateToken}`)
       .send({
         carrier_id: 'carrier-van-happen',
-        supplier_id: 'supplier-third-party',
+        supplier_id: 'supplier-techrecycle',
         waste_stream_ids: [wasteStreamId],
         planned_date: '2026-04-01',
       });
@@ -121,7 +121,7 @@ describe('POST /api/orders', () => {
       .set('Authorization', `Bearer ${adminToken}`)
       .send({
         carrier_id: 'carrier-van-happen',
-        supplier_id: 'supplier-third-party',
+        supplier_id: 'supplier-techrecycle',
         waste_stream_ids: [wasteStreamId],
         planned_date: '2026-04-15',
         expected_skip_count: 2,
@@ -147,7 +147,7 @@ describe('POST /api/orders', () => {
       .set('Authorization', `Bearer ${plannerToken}`)
       .send({
         carrier_id: 'carrier-direct-dropoff',
-        supplier_id: 'supplier-third-party',
+        supplier_id: 'supplier-techrecycle',
         waste_stream_ids: [wasteStreamId],
         planned_date: '2026-04-16',
       });

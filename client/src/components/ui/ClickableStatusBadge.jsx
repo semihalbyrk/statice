@@ -1,23 +1,9 @@
 import { useState, useRef, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { STATUS_CONFIG } from './StatusBadge';
 
-const TRANSITION_LABELS = {
-  IN_PROGRESS: 'In Progress',
-  COMPLETED: 'Completed',
-  CANCELLED: 'Cancelled',
-  ARRIVED: 'Arrived',
-  WEIGHED_IN: 'Weigh In',
-  WEIGHED_OUT: 'Weigh Out',
-  PLANNED: 'Planned',
-  ACTIVE: 'Active',
-  INACTIVE: 'Inactive',
-  DISPUTE: 'Dispute',
-  INVOICED: 'Invoiced',
-  EXPIRED: 'Expired',
-  DRAFT: 'Draft',
-};
-
 export default function ClickableStatusBadge({ status, allowedTransitions = [], onTransition, disabled }) {
+  const { t } = useTranslation('common');
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
 
@@ -33,7 +19,8 @@ export default function ClickableStatusBadge({ status, allowedTransitions = [], 
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [open]);
 
-  const config = STATUS_CONFIG[status] || { label: status, className: 'bg-grey-100 text-grey-700 border-grey-300' };
+  const config = STATUS_CONFIG[status] || { className: 'bg-grey-100 text-grey-700 border-grey-300' };
+  const label = t('status.' + status, { defaultValue: status });
   const canClick = allowedTransitions.length > 0 && !disabled;
 
   return (
@@ -48,7 +35,7 @@ export default function ClickableStatusBadge({ status, allowedTransitions = [], 
           canClick ? 'cursor-pointer hover:brightness-[0.98]' : 'cursor-default'
         } transition`}
       >
-        {config.label}
+        {label}
         {canClick && (
           <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
@@ -58,23 +45,20 @@ export default function ClickableStatusBadge({ status, allowedTransitions = [], 
 
       {open && (
         <div className="absolute z-50 mt-1 left-0 bg-white rounded-lg border border-grey-200 shadow-lg py-1 min-w-[160px]">
-          {allowedTransitions.map((nextStatus) => {
-            const nextConfig = STATUS_CONFIG[nextStatus] || { label: nextStatus };
-            return (
-              <button
-                key={nextStatus}
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setOpen(false);
-                  onTransition(nextStatus);
-                }}
-                className="w-full text-left px-3 py-2 text-sm text-grey-700 hover:bg-grey-50 transition-colors"
-              >
-                {TRANSITION_LABELS[nextStatus] || nextConfig.label || nextStatus.replace(/_/g, ' ')}
-              </button>
-            );
-          })}
+          {allowedTransitions.map((nextStatus) => (
+            <button
+              key={nextStatus}
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                setOpen(false);
+                onTransition(nextStatus);
+              }}
+              className="w-full text-left px-3 py-2 text-sm text-grey-700 hover:bg-grey-50 transition-colors"
+            >
+              {t('status.' + nextStatus, { defaultValue: nextStatus.replace(/_/g, ' ') })}
+            </button>
+          ))}
         </div>
       )}
     </div>
