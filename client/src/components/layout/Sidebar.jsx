@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, ClipboardList, Truck, Scale, Building2, Users, Recycle, FileBarChart,
-  UserCog, ScrollText, Settings2, Boxes, ChevronDown, ChevronRight, LogOut, CalendarDays, Receipt,
+  UserCog, ScrollText, Settings2, Boxes, ChevronDown, ChevronRight, LogOut, CalendarDays, Receipt, FileText,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../../api/axios';
@@ -17,6 +17,7 @@ const NAV_ITEMS = [
   { to: '/sorting', label: 'Process', icon: Boxes, roles: ['SORTING_EMPLOYEE', 'GATE_OPERATOR', 'ADMIN'] },
   { to: '/reports', label: 'Reports', icon: FileBarChart, roles: ['REPORTING_MANAGER', 'ADMIN'] },
   { to: '/contracts', label: 'Contracts', icon: ScrollText, roles: ['ADMIN', 'FINANCE_MANAGER', 'FINANCE_USER'] },
+  { to: '/invoices', label: 'Invoices', icon: FileText, roles: ['ADMIN', 'FINANCE_MANAGER', 'FINANCE_USER'] },
 ];
 
 const ADMIN_ITEMS = [

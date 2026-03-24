@@ -280,15 +280,14 @@ async function generateMaterialRecoveryPDF(data, filePath, user) {
   });
 
   addSectionTitle(doc, 'Recovery by Product Category');
-  const headers = ['CBS Code', 'Category', 'Inbound (kg)', 'Recycled (kg)', 'Recycled %', 'Reused (kg)', 'Reused %', 'Disposed (kg)', 'Disposed %', 'Landfill (kg)', 'Landfill %'];
-  const widths = [40, 65, 48, 45, 38, 40, 38, 42, 38, 42, 38];
+  const headers = ['CBS Code', 'Category', 'Inbound (kg)', 'Recycled (kg)', 'Recycled %', 'Reused (kg)', 'Reused %', 'Disposed (kg)', 'Disposed %'];
+  const widths = [45, 80, 55, 50, 45, 50, 45, 50, 45];
   const rows = data.categories.map((c) => [
     c.codeCbs, c.descriptionEn,
     formatWeight(c.totalInboundKg),
     formatWeight(c.recycledKg), formatPct(c.recycledPct),
     formatWeight(c.reusedKg), formatPct(c.reusedPct),
     formatWeight(c.disposedKg), formatPct(c.disposedPct),
-    formatWeight(c.landfillKg), formatPct(c.landfillPct),
   ]);
   const totals = [
     'TOTAL', '',
@@ -296,7 +295,6 @@ async function generateMaterialRecoveryPDF(data, filePath, user) {
     formatWeight(data.totals.recycledKg), formatPct(data.totals.recycledPct),
     formatWeight(data.totals.reusedKg), formatPct(data.totals.reusedPct),
     formatWeight(data.totals.disposedKg), formatPct(data.totals.disposedPct),
-    formatWeight(data.totals.landfillKg), formatPct(data.totals.landfillPct),
   ];
   totals._bold = true;
   rows.push(totals);
@@ -548,11 +546,10 @@ async function generateDownstreamStatementPDF(data, filePath) {
     { l: '%\nRecycling', w: 56 },
     { l: '% Other\nmaterial\nrecovery', w: 56 },
     { l: '% Energy\nRecovery', w: 56 },
-    { l: '% Thermal\nDisposal', w: 56 },
-    { l: '% Landfill\nDisposal', w: LCW - 110 - 52 - 40 - 58 - 100 - 58 - 56 - 56 - 56 - 56 },
+    { l: '% Thermal\nDisposal', w: LCW - 110 - 52 - 40 - 58 - 100 - 58 - 56 - 56 - 56 },
   ];
   const groupWidths = [fCols[0].w, fCols[1].w, fCols[2].w, fCols[3].w, fCols[4].w, fCols.slice(5).reduce((sum, col) => sum + col.w, 0)];
-  const dataAlign = ['left', 'center', 'center', 'center', 'center', 'center', 'center', 'center', 'center', 'center', 'center'];
+  const dataAlign = ['left', 'center', 'center', 'center', 'center', 'center', 'center', 'center', 'center', 'center'];
   const nH = 16;
   const lhH = 52;
   const rH = 18;
@@ -599,7 +596,6 @@ async function generateDownstreamStatementPDF(data, filePath) {
         nlPct(row.otherMaterialRecoveryPct),
         nlPct(row.energyRecoveryPct),
         nlPct(row.thermalDisposalPct),
-        nlPct(row.landfillDisposalPct),
       ];
       let fx = LM;
       for (let i = 0; i < fCols.length; i++) {
@@ -650,7 +646,7 @@ async function generateDownstreamStatementPDF(data, filePath) {
   const totals = [
     'Total', '', nlPct1(tsp), '', '',
     nlPct1(wavg('preparedForReusePct')), nlPct1(wavg('recyclingPct')), nlPct1(wavg('otherMaterialRecoveryPct')),
-    nlPct1(wavg('energyRecoveryPct')), nlPct1(wavg('thermalDisposalPct')), nlPct1(wavg('landfillDisposalPct')),
+    nlPct1(wavg('energyRecoveryPct')), nlPct1(wavg('thermalDisposalPct')),
   ];
   let fx = LM;
   for (let i = 0; i < fCols.length; i++) {
@@ -729,14 +725,13 @@ async function generateChainOfCustodyPDF(data, filePath, user) {
             .text(`Sorting — ${asset.assetLabel}`, MARGIN, doc.y);
           doc.y += 4;
 
-          const sortHeaders = ['Category', 'Weight (kg)', 'Recycled %', 'Reused %', 'Disposed %', 'Landfill %', 'Processor'];
-          const sortWidths = [100, 60, 50, 50, 50, 50, 130];
+          const sortHeaders = ['Category', 'Weight (kg)', 'Recycled %', 'Reused %', 'Disposed %'];
+          const sortWidths = [160, 80, 80, 80, 80];
           const sortRows = asset.sortingLines.map((l) => [
             `${l.codeCbs} — ${l.descriptionEn}`,
             formatWeight(l.netWeightKg),
             formatPct(l.recycledPct), formatPct(l.reusedPct),
-            formatPct(l.disposedPct), formatPct(l.landfillPct),
-            l.downstreamProcessor || '—',
+            formatPct(l.disposedPct),
           ]);
           addTable(doc, { headers: sortHeaders, rows: sortRows, columnWidths: sortWidths, fontSize: 6.5 });
         }
@@ -819,7 +814,7 @@ async function generateWasteStreamAnalysisPDF(data, filePath, user) {
   for (const ws of data.wasteStreams) {
     checkPageBreak(doc, 60);
     addSectionTitle(doc, `${ws.streamName} (${ws.streamCode})`);
-    addSubtitle(doc, `Total Inbound: ${formatWeight(ws.totals.totalInboundKg)} | Recycled: ${formatPct(ws.totals.recycledPct)} | Reused: ${formatPct(ws.totals.reusedPct)} | Disposed: ${formatPct(ws.totals.disposedPct)} | Landfill: ${formatPct(ws.totals.landfillPct)}`);
+    addSubtitle(doc, `Total Inbound: ${formatWeight(ws.totals.totalInboundKg)} | Recycled: ${formatPct(ws.totals.recycledPct)} | Reused: ${formatPct(ws.totals.reusedPct)} | Disposed: ${formatPct(ws.totals.disposedPct)}`);
     doc.y += 4;
 
     // Simple horizontal bar chart using rect primitives
@@ -840,11 +835,11 @@ async function generateWasteStreamAnalysisPDF(data, filePath, user) {
     doc.y += 6;
 
     // Detail table
-    const headers = ['CBS Code', 'Category', 'Inbound (kg)', 'Recycled %', 'Reused %', 'Disposed %', 'Landfill %'];
-    const widths = [55, 120, 70, 60, 60, 60, 60];
+    const headers = ['CBS Code', 'Category', 'Inbound (kg)', 'Recycled %', 'Reused %', 'Disposed %'];
+    const widths = [60, 150, 80, 70, 70, 70];
     const rows = ws.categories.map((c) => [
       c.codeCbs, c.descriptionEn, formatWeight(c.totalInboundKg),
-      formatPct(c.recycledPct), formatPct(c.reusedPct), formatPct(c.disposedPct), formatPct(c.landfillPct),
+      formatPct(c.recycledPct), formatPct(c.reusedPct), formatPct(c.disposedPct),
     ]);
     addTable(doc, { headers, rows, columnWidths: widths });
     doc.y += 8;

@@ -121,7 +121,7 @@ export default function OrdersPage() {
         </select>
       </div>
 
-      <div className="bg-white rounded-lg border border-grey-200 shadow-sm overflow-x-auto">
+      <div className="bg-white rounded-lg border border-grey-200 shadow-sm overflow-visible">
         <table className="w-full min-w-[1000px] text-sm">
           <thead>
             <tr className="bg-grey-50 border-b border-grey-200">

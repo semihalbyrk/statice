@@ -23,6 +23,8 @@ const dashboardRoutes = require('./routes/dashboard');
 const notificationRoutes = require('./routes/notifications');
 const feesRoutes = require('./routes/fees');
 const contractsRoutes = require('./routes/contracts');
+const invoicesRoutes = require('./routes/invoices');
+const contaminationRoutes = require('./routes/contamination');
 
 const app = express();
 
@@ -64,6 +66,8 @@ app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/fees', feesRoutes);
 app.use('/api/contracts', contractsRoutes);
+app.use('/api/invoices', invoicesRoutes);
+app.use('/api/contamination', contaminationRoutes);
 
 // Global error handler
 const errorHandler = require('./middleware/errorHandler');

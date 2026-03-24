@@ -94,8 +94,6 @@ const mockContract = {
   invoicing_frequency: 'MONTHLY',
   currency: 'EUR',
   contamination_tolerance_pct: 5,
-  requires_finance_review: true,
-  approved_by_user: { full_name: 'Admin User' },
   rag_status: 'GREEN',
   contract_waste_streams: [
     {
@@ -164,7 +162,6 @@ describe('ContractDetailPage', () => {
     expect(screen.getByText('Monthly')).toBeInTheDocument();
     expect(screen.getByText('EUR')).toBeInTheDocument();
     expect(screen.getByText('5%')).toBeInTheDocument();
-    expect(screen.getByText('Yes')).toBeInTheDocument();
   });
 
   it('renders waste stream section with rate lines', async () => {

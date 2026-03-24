@@ -13,6 +13,14 @@ import { formatDate } from '../../utils/formatDate';
 
 const PRICING_LABELS = { WEIGHT: 'Per Weight', QUANTITY: 'Per Quantity' };
 const FREQ_LABELS = { PER_ORDER: 'Per Order', WEEKLY: 'Weekly', MONTHLY: 'Monthly', QUARTERLY: 'Quarterly' };
+const FEE_TYPE_LABELS = {
+  CONTAMINATION_SURCHARGE: 'Contamination Surcharge',
+  CONTAMINATION_FLAT: 'Contamination Flat Fee',
+  CONTAMINATION_PERCENTAGE: 'Contamination Percentage',
+  SORTING_SURCHARGE: 'Sorting Surcharge',
+  HAZARDOUS_MATERIAL: 'Hazardous Material',
+  REJECTION_FEE: 'Rejection Fee',
+};
 const CONTRACT_TRANSITIONS = {
   ACTIVE: ['INACTIVE', 'EXPIRED'],
   INACTIVE: ['ACTIVE'],
@@ -161,16 +169,8 @@ export default function ContractDetailPage() {
             <p className="text-grey-900">{contract.currency}</p>
           </div>
           <div>
-            <p className="text-grey-500 mb-0.5">Approved By</p>
-            <p className="text-grey-900">{contract.approved_by_user?.full_name || '\u2014'}</p>
-          </div>
-          <div>
             <p className="text-grey-500 mb-0.5">Contamination Tolerance</p>
             <p className="text-grey-900">{Number(contract.contamination_tolerance_pct)}%</p>
-          </div>
-          <div>
-            <p className="text-grey-500 mb-0.5">Finance Review Required</p>
-            <p className="text-grey-900">{contract.requires_finance_review ? 'Yes' : 'No'}</p>
           </div>
         </div>
       </div>
@@ -205,11 +205,15 @@ export default function ContractDetailPage() {
                   )}
                 </div>
               </div>
-              <div className="overflow-visible">
-                <table className="w-full text-sm">
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm min-w-[900px]">
                   <thead>
                     <tr className="bg-grey-50 border-b border-grey-200">
                       <th className="text-left px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide">Material</th>
+                      <th className="text-left px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide">CBS Code</th>
+                      <th className="text-left px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide">WEEELABEX</th>
+                      <th className="text-left px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide">EURAL Code</th>
+                      <th className="text-left px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide">Processing Method</th>
                       <th className="text-left px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide">Pricing</th>
                       <th className="text-right px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide">Unit Rate</th>
                       <th className="text-right px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide">BTW %</th>
@@ -218,10 +222,14 @@ export default function ContractDetailPage() {
                   </thead>
                   <tbody>
                     {(!cws.rate_lines || cws.rate_lines.length === 0) ? (
-                      <tr><td colSpan={canWrite ? 5 : 4} className="px-4 py-4 text-center text-grey-400 text-xs">No materials</td></tr>
+                      <tr><td colSpan={canWrite ? 9 : 8} className="px-4 py-4 text-center text-grey-400 text-xs">No materials</td></tr>
                     ) : cws.rate_lines.map((rl) => (
                       <tr key={rl.id} className="border-b border-grey-100 hover:bg-grey-50 transition-colors">
                         <td className="px-4 py-3 text-grey-900 font-medium">{rl.material?.name}</td>
+                        <td className="px-4 py-3 text-grey-700 text-xs">{rl.material?.cbs_code || '\u2014'}</td>
+                        <td className="px-4 py-3 text-grey-700 text-xs">{rl.material?.weeelabex_group || '\u2014'}</td>
+                        <td className="px-4 py-3 text-grey-700 text-xs">{rl.material?.eural_code || '\u2014'}</td>
+                        <td className="px-4 py-3 text-grey-700 text-xs">{rl.processing_method || '\u2014'}</td>
                         <td className="px-4 py-3 text-grey-700">{PRICING_LABELS[rl.pricing_model]}</td>
                         <td className="px-4 py-3 text-right text-grey-900 font-medium">{currencySymbol} {Number(rl.unit_rate).toFixed(2)}</td>
                         <td className="px-4 py-3 text-right text-grey-700">{Number(rl.btw_rate)}%</td>
@@ -255,11 +263,15 @@ export default function ContractDetailPage() {
               </button>
             )}
           </div>
-          <div className="overflow-visible">
-            <table className="w-full text-sm">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm min-w-[900px]">
               <thead>
                 <tr className="bg-grey-50 border-b border-grey-200">
                   <th className="text-left px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide">Material</th>
+                  <th className="text-left px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide">CBS Code</th>
+                  <th className="text-left px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide">WEEELABEX</th>
+                  <th className="text-left px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide">EURAL Code</th>
+                  <th className="text-left px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide">Processing Method</th>
                   <th className="text-left px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide">Pricing</th>
                   <th className="text-right px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide">Unit Rate</th>
                   <th className="text-right px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide">BTW %</th>
@@ -270,6 +282,10 @@ export default function ContractDetailPage() {
                 {standaloneRateLines.map((rl) => (
                   <tr key={rl.id} className="border-b border-grey-100 hover:bg-grey-50 transition-colors">
                     <td className="px-4 py-3 text-grey-900 font-medium">{rl.material?.name}</td>
+                    <td className="px-4 py-3 text-grey-700 text-xs">{rl.material?.cbs_code || '\u2014'}</td>
+                    <td className="px-4 py-3 text-grey-700 text-xs">{rl.material?.weeelabex_group || '\u2014'}</td>
+                    <td className="px-4 py-3 text-grey-700 text-xs">{rl.material?.eural_code || '\u2014'}</td>
+                    <td className="px-4 py-3 text-grey-700 text-xs">{rl.processing_method || '\u2014'}</td>
                     <td className="px-4 py-3 text-grey-700">{PRICING_LABELS[rl.pricing_model]}</td>
                     <td className="px-4 py-3 text-right text-grey-900 font-medium">{currencySymbol} {Number(rl.unit_rate).toFixed(2)}</td>
                     <td className="px-4 py-3 text-right text-grey-700">{Number(rl.btw_rate)}%</td>
@@ -308,7 +324,7 @@ export default function ContractDetailPage() {
               {contract.contamination_penalties.map((p) => (
                 <div key={p.id} className="flex items-center justify-between p-3 rounded-md border border-grey-200">
                   <div>
-                    <p className="text-sm font-medium text-grey-900">{p.fee?.fee_type}</p>
+                    <p className="text-sm font-medium text-grey-900">{FEE_TYPE_LABELS[p.fee?.fee_type] || p.fee?.fee_type}</p>
                     <p className="text-xs text-grey-500">{p.fee?.description}</p>
                   </div>
                   <p className="text-sm font-medium text-grey-700">

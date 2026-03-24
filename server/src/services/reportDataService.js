@@ -105,13 +105,9 @@ async function fetchSupplierStatementData({ supplierId, dateFrom, dateTo, catego
         descriptionEn: line.category.description_en,
         wasteStream: line.category.waste_stream?.name,
         lines: [],
-        downstreamProcessors: new Set(),
       };
     }
     categoryMap[catId].lines.push(line);
-    if (line.downstream_processor) {
-      categoryMap[catId].downstreamProcessors.add(line.downstream_processor);
-    }
   }
 
   const categories = Object.values(categoryMap).map((cat) => {
@@ -125,12 +121,9 @@ async function fetchSupplierStatementData({ supplierId, dateFrom, dateTo, catego
       recycledKg: Math.round(cat.lines.reduce((s, l) => s + Number(l.net_weight_kg) * Number(l.recycled_pct) / 100, 0) * 100) / 100,
       reusedKg: Math.round(cat.lines.reduce((s, l) => s + Number(l.net_weight_kg) * Number(l.reused_pct) / 100, 0) * 100) / 100,
       disposedKg: Math.round(cat.lines.reduce((s, l) => s + Number(l.net_weight_kg) * Number(l.disposed_pct) / 100, 0) * 100) / 100,
-      landfillKg: Math.round(cat.lines.reduce((s, l) => s + Number(l.net_weight_kg) * Number(l.landfill_pct) / 100, 0) * 100) / 100,
       weightedAvgRecycledPct: weightedAvg(cat.lines, 'recycled_pct', 'net_weight_kg'),
       weightedAvgReusedPct: weightedAvg(cat.lines, 'reused_pct', 'net_weight_kg'),
       weightedAvgDisposedPct: weightedAvg(cat.lines, 'disposed_pct', 'net_weight_kg'),
-      weightedAvgLandfillPct: weightedAvg(cat.lines, 'landfill_pct', 'net_weight_kg'),
-      downstreamProcessors: [...cat.downstreamProcessors],
     };
   });
 
@@ -155,7 +148,6 @@ async function fetchSupplierStatementData({ supplierId, dateFrom, dateTo, catego
       weightedAvgRecycledPct: weightedAvg(filteredLines, 'recycled_pct', 'net_weight_kg'),
       weightedAvgReusedPct: weightedAvg(filteredLines, 'reused_pct', 'net_weight_kg'),
       weightedAvgDisposedPct: weightedAvg(filteredLines, 'disposed_pct', 'net_weight_kg'),
-      weightedAvgLandfillPct: weightedAvg(filteredLines, 'landfill_pct', 'net_weight_kg'),
     },
     period: { from: dateFrom, to: dateTo },
   };
@@ -258,11 +250,9 @@ function aggregateByCategory(lines) {
       recycledKg: Math.round(cat.lines.reduce((s, l) => s + Number(l.net_weight_kg) * Number(l.recycled_pct) / 100, 0) * 100) / 100,
       reusedKg: Math.round(cat.lines.reduce((s, l) => s + Number(l.net_weight_kg) * Number(l.reused_pct) / 100, 0) * 100) / 100,
       disposedKg: Math.round(cat.lines.reduce((s, l) => s + Number(l.net_weight_kg) * Number(l.disposed_pct) / 100, 0) * 100) / 100,
-      landfillKg: Math.round(cat.lines.reduce((s, l) => s + Number(l.net_weight_kg) * Number(l.landfill_pct) / 100, 0) * 100) / 100,
       recycledPct: weightedAvg(cat.lines, 'recycled_pct', 'net_weight_kg'),
       reusedPct: weightedAvg(cat.lines, 'reused_pct', 'net_weight_kg'),
       disposedPct: weightedAvg(cat.lines, 'disposed_pct', 'net_weight_kg'),
-      landfillPct: weightedAvg(cat.lines, 'landfill_pct', 'net_weight_kg'),
     };
   });
 }
@@ -274,11 +264,9 @@ function computeTotals(categories) {
     recycledKg: Math.round(categories.reduce((s, c) => s + c.recycledKg, 0) * 100) / 100,
     reusedKg: Math.round(categories.reduce((s, c) => s + c.reusedKg, 0) * 100) / 100,
     disposedKg: Math.round(categories.reduce((s, c) => s + c.disposedKg, 0) * 100) / 100,
-    landfillKg: Math.round(categories.reduce((s, c) => s + c.landfillKg, 0) * 100) / 100,
     recycledPct: totalKg > 0 ? Math.round(categories.reduce((s, c) => s + c.recycledKg, 0) / totalKg * 10000) / 100 : 0,
     reusedPct: totalKg > 0 ? Math.round(categories.reduce((s, c) => s + c.reusedKg, 0) / totalKg * 10000) / 100 : 0,
     disposedPct: totalKg > 0 ? Math.round(categories.reduce((s, c) => s + c.disposedKg, 0) / totalKg * 10000) / 100 : 0,
-    landfillPct: totalKg > 0 ? Math.round(categories.reduce((s, c) => s + c.landfillKg, 0) / totalKg * 10000) / 100 : 0,
   };
 }
 
@@ -354,8 +342,6 @@ async function fetchChainOfCustodyData({ orderId, dateFrom, dateTo }) {
           recycledPct: Number(line.recycled_pct),
           reusedPct: Number(line.reused_pct),
           disposedPct: Number(line.disposed_pct),
-          landfillPct: Number(line.landfill_pct),
-          downstreamProcessor: line.downstream_processor,
         })),
       })),
     })),
@@ -517,7 +503,6 @@ async function fetchWasteStreamAnalysisData({ dateFrom, dateTo, wasteStreamIds }
         recycledPct: weightedAvg(cat.lines, 'recycled_pct', 'net_weight_kg'),
         reusedPct: weightedAvg(cat.lines, 'reused_pct', 'net_weight_kg'),
         disposedPct: weightedAvg(cat.lines, 'disposed_pct', 'net_weight_kg'),
-        landfillPct: weightedAvg(cat.lines, 'landfill_pct', 'net_weight_kg'),
       };
     });
 
@@ -540,10 +525,6 @@ async function fetchWasteStreamAnalysisData({ dateFrom, dateTo, wasteStreamIds }
         disposedPct: weightedAvg(
           Object.values(stream.categoryMap).flatMap((c) => c.lines),
           'disposed_pct', 'net_weight_kg'
-        ),
-        landfillPct: weightedAvg(
-          Object.values(stream.categoryMap).flatMap((c) => c.lines),
-          'landfill_pct', 'net_weight_kg'
         ),
       },
     };
@@ -648,7 +629,6 @@ async function fetchDownstreamStatementData({ supplierId, materialId, dateFrom, 
         outcomes: {
           include: {
             fraction: true,
-            downstream_processor: true,
           },
         },
       },
@@ -668,20 +648,19 @@ async function fetchDownstreamStatementData({ supplierId, materialId, dateFrom, 
       const key = [
         outcome.fraction_id || fractionName,
         outcome.acceptant_stage,
-        outcome.downstream_processor_id || '',
+
         outcome.process_description || '',
         outcome.prepared_for_reuse_pct,
         outcome.recycling_pct,
         outcome.other_material_recovery_pct,
         outcome.energy_recovery_pct,
         outcome.thermal_disposal_pct,
-        outcome.landfill_disposal_pct,
       ].join('::');
 
       const current = rowMap.get(key) || {
         fractionName,
         euralCode: outcome.fraction?.eural_code || '—',
-        processorName: outcome.downstream_processor?.name || '',
+        processorName: '',
         acceptantStage: outcome.acceptant_stage,
         processDescription: outcome.process_description || material.default_process_description || '—',
         preparedForReusePct: Number(outcome.prepared_for_reuse_pct || 0),
@@ -689,7 +668,6 @@ async function fetchDownstreamStatementData({ supplierId, materialId, dateFrom, 
         otherMaterialRecoveryPct: Number(outcome.other_material_recovery_pct || 0),
         energyRecoveryPct: Number(outcome.energy_recovery_pct || 0),
         thermalDisposalPct: Number(outcome.thermal_disposal_pct || 0),
-        landfillDisposalPct: Number(outcome.landfill_disposal_pct || 0),
         quantityKg: 0,
       };
 
@@ -738,7 +716,7 @@ async function fetchDownstreamEntryStatement({ sessionId, catalogueEntryId }) {
       processing_records: {
         where: { is_current: true },
         include: {
-          outcomes: { include: { fraction: true, downstream_processor: true } },
+          outcomes: { include: { fraction: true } },
         },
       },
     },
@@ -770,7 +748,6 @@ async function fetchDownstreamEntryStatement({ sessionId, catalogueEntryId }) {
       otherMaterialRecoveryPct: Number(outcome.other_material_recovery_pct || 0),
       energyRecoveryPct: Number(outcome.energy_recovery_pct || 0),
       thermalDisposalPct: Number(outcome.thermal_disposal_pct || 0),
-      landfillDisposalPct: Number(outcome.landfill_disposal_pct || 0),
       quantityKg: Math.round(weightKg * 100) / 100,
     };
   }).sort((a, b) => a.fractionName.localeCompare(b.fractionName));

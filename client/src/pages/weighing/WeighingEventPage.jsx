@@ -187,12 +187,14 @@ export default function InboundDetailPage() {
       {/* Info Card */}
       <div className="bg-white rounded-lg border border-grey-200 shadow-sm p-4 mb-4">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-          <div className="grid flex-1 grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-y-3 gap-x-6 min-w-0">
-            <InfoField label="Carrier" value={order?.carrier?.name} />
+          <div className="grid flex-1 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-y-3 gap-x-6 min-w-0">
+            <InfoField label="Carrier">
+              <p className="text-sm font-medium text-grey-900 mt-0.5 truncate" title={order?.carrier?.name || '—'}>{order?.carrier?.name || '—'}</p>
+            </InfoField>
             <InfoField label="Supplier">
-              <div className="flex items-center gap-1.5 mt-0.5">
-                <span className="text-sm font-medium text-grey-900">{order?.supplier?.name || '—'}</span>
-                <SupplierTypeBadge type={order?.supplier?.supplier_type} />
+              <div className="flex items-center gap-1.5 mt-0.5 min-w-0">
+                <span className="text-sm font-medium text-grey-900 truncate" title={order?.supplier?.name || '—'}>{order?.supplier?.name || '—'}</span>
+                <SupplierTypeBadge className="flex-shrink-0" type={order?.supplier?.supplier_type} />
               </div>
             </InfoField>
             <InfoField label="Vehicle Plate">
@@ -200,43 +202,19 @@ export default function InboundDetailPage() {
                 {inbound.vehicle?.registration_plate || '—'}
               </span>
             </InfoField>
-            <InfoField label="Waste Stream(s)" value={orderWasteStreams.map((ws) => `${ws.name} (${ws.code})`).join(', ') || '—'} />
+            <InfoField label="Waste Stream(s)">
+              <p className="text-sm font-medium text-grey-900 mt-0.5 truncate" title={orderWasteStreams.map((ws) => `${ws.name} (${ws.code})`).join(', ') || '—'}>{orderWasteStreams.map((ws) => `${ws.name} (${ws.code})`).join(', ') || '—'}</p>
+            </InfoField>
             <InfoField label="Arrived At" value={formatDateTime(inbound.arrived_at)} />
-            {inbound.notes && <InfoField className="sm:col-span-2 xl:col-span-5" label="Notes" value={inbound.notes} />}
+            <InfoField label="Contract">
+              {inbound.linked_contract ? (
+                <Link to={`/contracts/${inbound.linked_contract.id}`} className="text-sm font-medium text-green-700 hover:underline mt-0.5 block">
+                  {inbound.linked_contract.contract_number}
+                </Link>
+              ) : <p className="text-sm text-grey-400 mt-0.5">—</p>}
+            </InfoField>
+            {inbound.notes && <InfoField className="sm:col-span-2 lg:col-span-4" label="Notes" value={inbound.notes} />}
           </div>
-          {/* Incident Section */}
-          {!['READY_FOR_SORTING', 'SORTED'].includes(inbound.status) && (
-            <div className="mt-4 pt-4 border-t border-grey-200">
-              <h4 className="text-sm font-medium text-grey-700 mb-2">Report Incident</h4>
-              <div className="flex gap-2">
-                <select
-                  value={incidentCategory}
-                  onChange={e => setIncidentCategory(e.target.value)}
-                  className="h-10 px-3.5 rounded-md border border-grey-300 text-sm text-grey-900 bg-white focus:border-green-500 focus:ring-[3px] focus:ring-green-500/15 outline-none transition-colors"
-                >
-                  <option value="">Select incident type...</option>
-                  <option value="DAMAGE">Damage</option>
-                  <option value="DISPUTE">Dispute</option>
-                  <option value="SPECIAL_HANDLING">Special Handling</option>
-                  <option value="DRIVER_INSTRUCTION">Driver Instruction</option>
-                </select>
-                <input
-                  type="text"
-                  placeholder="Notes..."
-                  value={incidentNotes}
-                  onChange={e => setIncidentNotes(e.target.value)}
-                  className="flex-1 h-10 px-3.5 rounded-md border border-grey-300 text-sm text-grey-900 focus:border-green-500 focus:ring-[3px] focus:ring-green-500/15 outline-none transition-colors"
-                />
-                <button
-                  onClick={handleIncident}
-                  disabled={!incidentCategory}
-                  className="h-10 px-4 bg-red-500 text-white rounded-md text-sm font-semibold hover:bg-red-600 disabled:opacity-50 transition-colors"
-                >
-                  Report
-                </button>
-              </div>
-            </div>
-          )}
           <InfoField className="lg:min-w-[180px] lg:text-right" label="Order Name">
             <Link
               to={`/orders/${inbound.order_id}`}
@@ -247,6 +225,40 @@ export default function InboundDetailPage() {
             </Link>
           </InfoField>
         </div>
+
+        {/* Incident Section */}
+        {!['READY_FOR_SORTING', 'SORTED'].includes(inbound.status) && (
+          <div className="mt-4 pt-4 border-t border-grey-200">
+            <h4 className="text-sm font-medium text-grey-700 mb-2">Report Incident</h4>
+            <div className="flex gap-2">
+              <select
+                value={incidentCategory}
+                onChange={e => setIncidentCategory(e.target.value)}
+                className="h-10 px-3.5 rounded-md border border-grey-300 text-sm text-grey-900 bg-white focus:border-green-500 focus:ring-[3px] focus:ring-green-500/15 outline-none transition-colors"
+              >
+                <option value="">Select incident type...</option>
+                <option value="DAMAGE">Damage</option>
+                <option value="DISPUTE">Dispute</option>
+                <option value="SPECIAL_HANDLING">Special Handling</option>
+                <option value="DRIVER_INSTRUCTION">Driver Instruction</option>
+              </select>
+              <input
+                type="text"
+                placeholder="Notes..."
+                value={incidentNotes}
+                onChange={e => setIncidentNotes(e.target.value)}
+                className="flex-1 h-10 px-3.5 rounded-md border border-grey-300 text-sm text-grey-900 focus:border-green-500 focus:ring-[3px] focus:ring-green-500/15 outline-none transition-colors"
+              />
+              <button
+                onClick={handleIncident}
+                disabled={!incidentCategory}
+                className="h-10 px-4 bg-red-500 text-white rounded-md text-sm font-semibold hover:bg-red-600 disabled:opacity-50 transition-colors"
+              >
+                Report
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Weighing + Parcels side by side */}
@@ -411,7 +423,32 @@ function WeighingFlowSection({ inbound, inboundId, weighings, assets, orderWaste
             inboundId={inboundId}
             orderWasteStreams={orderWasteStreams}
             onSuccess={handleParcelRegistered}
+            parcelCount={assets.length}
+            maxParcels={inbound.max_parcels}
           />
+        </div>
+      )}
+
+      {/* Excess Weighing Recovery — stuck state: extra weighing exists but max parcels reached */}
+      {inbound.has_excess_weighing && !isTerminal && (
+        <div className="mt-4 bg-amber-50 border border-amber-300 rounded-lg p-4">
+          <div className="flex items-center gap-2 mb-2">
+            <AlertTriangle size={16} className="text-amber-600" />
+            <span className="text-sm font-semibold text-amber-800">
+              Maximum parcels reached ({inbound.max_parcels})
+            </span>
+          </div>
+          <p className="text-xs text-amber-700 mb-3">
+            An extra weighing was triggered but no more parcels can be registered. You can finalize the weighing process now.
+          </p>
+          <button
+            onClick={() => handleWeighing(true)}
+            disabled={isTriggering}
+            className="h-10 px-5 flex items-center gap-2 border-2 border-green-500 text-green-700 rounded-md font-semibold text-sm hover:bg-green-25 disabled:opacity-50 transition-colors"
+          >
+            {isTriggering ? <Loader2 className="animate-spin" size={16} /> : <Scale size={16} />}
+            Finalize Weighing (Tare)
+          </button>
         </div>
       )}
 
@@ -535,7 +572,7 @@ function WeighingTimeline({ weighings, assets, user, onConfirmWeighing }) {
 }
 
 /* ───── Parcel Registration Form ───── */
-function ParcelRegistrationForm({ inboundId, orderWasteStreams, onSuccess }) {
+function ParcelRegistrationForm({ inboundId, orderWasteStreams, onSuccess, parcelCount = 0, maxParcels = 2 }) {
   const [registrationMode, setRegistrationMode] = useState('new_container'); // 'new_container' | 'existing_container' | 'no_container'
   const [form, setForm] = useState({
     container_label: '',
@@ -684,6 +721,9 @@ function ParcelRegistrationForm({ inboundId, orderWasteStreams, onSuccess }) {
     }
   }
 
+  // This parcel being registered would be the last allowed one
+  const isLastParcel = parcelCount + 1 >= maxParcels;
+
   const continueDisabled = submitting || (isContainer && registrationMode === 'new_container' && !form.container_type) || (isContainer && registrationMode === 'existing_container' && !lookupResult);
   const finalizeDisabled = continueDisabled;
 
@@ -822,6 +862,12 @@ function ParcelRegistrationForm({ inboundId, orderWasteStreams, onSuccess }) {
       </div>
 
       {/* Action buttons */}
+      {isLastParcel && (
+        <p className="text-xs text-amber-600 mb-2 flex items-center gap-1.5">
+          <AlertTriangle size={12} />
+          Last parcel — vehicle allows max {maxParcels} parcels
+        </p>
+      )}
       <div className="flex justify-end gap-2">
         <button
           type="button"
@@ -832,6 +878,7 @@ function ParcelRegistrationForm({ inboundId, orderWasteStreams, onSuccess }) {
           {submitting ? <Loader2 className="animate-spin" size={14} /> : <Scale size={14} />}
           Finalize Weighing
         </button>
+        {!isLastParcel && (
         <button
           type="button"
           onClick={handleContinue}
@@ -841,15 +888,28 @@ function ParcelRegistrationForm({ inboundId, orderWasteStreams, onSuccess }) {
           {submitting ? <Loader2 className="animate-spin" size={14} /> : <Scale size={14} />}
           Continue Next Weighing
         </button>
+        )}
       </div>
     </div>
   );
 }
 
 /* ───── Parcels Table ───── */
+function getMaterialNetWeight(asset) {
+  if (asset.net_weight_kg == null) return null;
+  const cargoNet = Number(asset.net_weight_kg);
+  if (asset.parcel_type === 'CONTAINER' && asset.estimated_tare_weight_kg != null) {
+    return cargoNet - Number(asset.estimated_tare_weight_kg);
+  }
+  return cargoNet;
+}
+
 function ParcelsTable({ inbound, assets, refreshInbound }) {
   const isTerminal = ['READY_FOR_SORTING', 'SORTED'].includes(inbound.status);
-  const totalNet = assets.reduce((sum, a) => sum + (Number(a.net_weight_kg) || 0), 0);
+  const totalMaterialNet = assets.reduce((sum, a) => {
+    const mnet = getMaterialNetWeight(a);
+    return sum + (mnet ?? 0);
+  }, 0);
 
   if (assets.length === 0) {
     return (
@@ -866,37 +926,45 @@ function ParcelsTable({ inbound, assets, refreshInbound }) {
         Parcels <span className="ml-1 text-xs font-normal text-grey-500">({assets.length})</span>
       </h2>
       <div className="overflow-x-auto">
-        <table className="w-full text-sm">
+        <table className="w-full text-sm min-w-[540px]">
           <thead>
             <tr className="bg-grey-50 border-b border-grey-200">
               <th className="px-2.5 py-2 text-left text-xs font-medium text-grey-500 uppercase tracking-wide">Parcel ID</th>
-              <th className="px-2.5 py-2 text-left text-xs font-medium text-grey-500 uppercase tracking-wide">Container ID</th>
-              <th className="px-2.5 py-2 text-right text-xs font-medium text-grey-500 uppercase tracking-wide">Gross (kg)</th>
-              <th className="px-2.5 py-2 text-right text-xs font-medium text-grey-500 uppercase tracking-wide">Tare (kg)</th>
-              <th className="px-2.5 py-2 text-right text-xs font-medium text-grey-500 uppercase tracking-wide">Net (kg)</th>
+              <th className="px-2.5 py-2 text-left text-xs font-medium text-grey-500 uppercase tracking-wide">Container</th>
+              <th className="px-2.5 py-2 text-right text-xs font-medium text-grey-500 uppercase tracking-wide">Cargo Net (kg)</th>
+              <th className="px-2.5 py-2 text-right text-xs font-medium text-grey-500 uppercase tracking-wide">Container Tare (kg)</th>
+              <th className="px-2.5 py-2 text-right text-xs font-medium text-grey-500 uppercase tracking-wide">Material Net (kg)</th>
               <th className="px-2.5 py-2 w-8"></th>
             </tr>
           </thead>
           <tbody>
-            {assets.map((asset) => (
+            {assets.map((asset) => {
+              const materialNet = getMaterialNetWeight(asset);
+              const isContainer = asset.parcel_type === 'CONTAINER';
+              return (
               <tr key={asset.id} className="border-b border-grey-100 hover:bg-grey-50 group">
-                <td className="px-2.5 py-2.5">
-                  <span className="text-sm font-semibold text-grey-900">{asset.asset_label}</span>
+                <td className="px-2.5 py-3">
+                  <span className="text-sm font-medium text-grey-900">{asset.asset_label}</span>
                   {asset.notes && <p className="text-[11px] text-grey-400 mt-0.5 truncate max-w-[140px]">{asset.notes}</p>}
                 </td>
-                <td className="px-2.5 py-2.5 text-sm font-mono text-grey-700">
-                  {asset.container_label || '—'}
+                <td className="px-2.5 py-3 text-sm text-grey-700">
+                  {isContainer
+                    ? <span className="font-mono">{asset.container_label || '—'}</span>
+                    : <span className="text-grey-400">—</span>
+                  }
                 </td>
-                <td className="px-2.5 py-2.5 text-right text-sm text-grey-700 tabular-nums">
-                  {asset.gross_weight_kg != null ? Number(asset.gross_weight_kg).toLocaleString() : '—'}
-                </td>
-                <td className="px-2.5 py-2.5 text-right text-sm text-grey-700 tabular-nums">
-                  {asset.tare_weight_kg != null ? Number(asset.tare_weight_kg).toLocaleString() : '—'}
-                </td>
-                <td className="px-2.5 py-2.5 text-right text-sm font-bold text-grey-900 tabular-nums">
+                <td className="px-2.5 py-3 text-right text-sm text-grey-700 tabular-nums">
                   {asset.net_weight_kg != null ? Number(asset.net_weight_kg).toLocaleString() : '—'}
                 </td>
-                <td className="px-2.5 py-2.5 text-right">
+                <td className="px-2.5 py-3 text-right text-sm text-grey-700 tabular-nums">
+                  {isContainer && asset.estimated_tare_weight_kg != null
+                    ? Number(asset.estimated_tare_weight_kg).toLocaleString()
+                    : '—'}
+                </td>
+                <td className="px-2.5 py-3 text-right text-sm font-bold text-grey-900 tabular-nums">
+                  {materialNet != null ? materialNet.toLocaleString() : '—'}
+                </td>
+                <td className="px-2.5 py-3 text-right">
                   {!isTerminal && (
                     <button
                       onClick={async () => {
@@ -916,7 +984,8 @@ function ParcelsTable({ inbound, assets, refreshInbound }) {
                   )}
                 </td>
               </tr>
-            ))}
+              );
+            })}
           </tbody>
           <tfoot>
             <tr className="border-t border-grey-300 bg-grey-50">
@@ -924,7 +993,7 @@ function ParcelsTable({ inbound, assets, refreshInbound }) {
               <td className="px-2.5 py-2 text-xs text-grey-500">{assets.length} parcel(s)</td>
               <td></td>
               <td></td>
-              <td className="px-2.5 py-2 text-right text-sm font-bold text-grey-900 tabular-nums">{totalNet ? totalNet.toLocaleString() : '—'}</td>
+              <td className="px-2.5 py-2 text-right text-sm font-bold text-grey-900 tabular-nums">{totalMaterialNet ? totalMaterialNet.toLocaleString() : '—'}</td>
               <td></td>
             </tr>
           </tfoot>
@@ -981,7 +1050,7 @@ function ActionsFooter({ inbound, inboundId, isTriggering, setTriggering, setInb
         <>
           <button
             onClick={handleDownloadPdf}
-            className="h-9 px-4 flex items-center gap-2 bg-green-500 text-white rounded-md font-semibold text-sm hover:bg-green-700 transition-colors"
+            className="h-9 px-4 flex items-center gap-2 border-2 border-green-500 text-green-700 rounded-md font-semibold text-sm hover:bg-green-25 transition-colors"
           >
             <Download size={16} /> Download Weight Ticket
           </button>

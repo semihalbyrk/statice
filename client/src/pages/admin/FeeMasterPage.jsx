@@ -6,6 +6,14 @@ import { listFees, createFee, updateFee, deleteFee } from '../../api/fees';
 
 const RATE_TYPES = ['FIXED', 'PERCENTAGE', 'PER_KG', 'PER_HOUR'];
 const RATE_TYPE_LABELS = { FIXED: 'Fixed', PERCENTAGE: 'Percentage', PER_KG: 'Per kg', PER_HOUR: 'Per hour' };
+const FEE_TYPE_LABELS = {
+  CONTAMINATION_SURCHARGE: 'Contamination Surcharge',
+  CONTAMINATION_FLAT: 'Contamination Flat Fee',
+  CONTAMINATION_PERCENTAGE: 'Contamination Percentage',
+  SORTING_SURCHARGE: 'Sorting Surcharge',
+  HAZARDOUS_MATERIAL: 'Hazardous Material',
+  REJECTION_FEE: 'Rejection Fee',
+};
 
 const inputClass = "w-full h-10 px-3.5 rounded-md border border-grey-300 text-sm text-grey-900 focus:border-green-500 focus:ring-[3px] focus:ring-green-500/15 outline-none transition-colors";
 const selectClass = `${inputClass} bg-white`;
@@ -189,7 +197,7 @@ export default function FeeMasterPage() {
               <tr><td colSpan={8} className="px-4 py-8 text-center text-grey-400">No fees found</td></tr>
             ) : fees.map((f) => (
               <tr key={f.id} className="border-b border-grey-100 hover:bg-grey-50 transition-colors">
-                <td className="px-4 py-3 font-medium text-green-700">{f.fee_type}</td>
+                <td className="px-4 py-3 font-medium text-grey-900">{FEE_TYPE_LABELS[f.fee_type] || f.fee_type}</td>
                 <td className="px-4 py-3 text-grey-700 max-w-[200px] truncate">{f.description}</td>
                 <td className="px-4 py-3 text-grey-700">{RATE_TYPE_LABELS[f.rate_type] || f.rate_type}</td>
                 <td className="px-4 py-3 text-right text-grey-900 font-medium">{formatValue(f)}</td>

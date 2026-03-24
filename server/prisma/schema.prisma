@@ -89,7 +89,6 @@ enum TreatmentRoute {
   RECYCLED
   REUSED
   DISPOSED
-  LANDFILL
 }
 
 enum AcceptantStage {
@@ -136,6 +135,19 @@ enum ParcelType {
   MATERIAL
 }
 
+enum InvoiceStatus {
+  DRAFT
+  FINALIZED
+  CANCELLED
+}
+
+enum ContaminationType {
+  NON_WEEE
+  HAZARDOUS
+  EXCESSIVE_MOISTURE
+  SORTING_REQUIRED
+}
+
 model User {
   id            String    @id @default(uuid())
   email         String    @unique
@@ -154,7 +166,9 @@ model User {
   audit_logs         AuditLog[]
   notifications      Notification[]
   weight_amendments  WeightAmendment[] @relation("WeightAmendments")
-  contracts_approved SupplierContract[] @relation("ContractsApproved")
+
+  invoices_created          Invoice[]
+  contamination_incidents   ContaminationIncident[]
 }
 
 model Carrier {
@@ -192,6 +206,7 @@ model Supplier {
   orders             InboundOrder[]
   afvalstroomnummers SupplierAfvalstroomnummer[]
   contracts          SupplierContract[]
+  invoices           Invoice[]
 }
 
 model Vehicle {
@@ -234,7 +249,6 @@ model ProductCategory {
   recycled_pct_default  Decimal  @default(0)
   reused_pct_default    Decimal  @default(0)
   disposed_pct_default  Decimal  @default(0)
-  landfill_pct_default  Decimal  @default(0)
   is_active             Boolean  @default(true)
   created_at            DateTime @default(now())
 
@@ -276,6 +290,8 @@ model InboundOrder {
   created_by_user User               @relation(fields: [created_by], references: [id])
   inbounds        Inbound[]
   waste_streams   OrderWasteStream[]
+  invoice_lines           InvoiceLine[]
+  contamination_incidents ContaminationIncident[]
 }
 
 model OrderWasteStream {
@@ -412,6 +428,7 @@ model SortingSession {
   sorting_lines    SortingLine[]
   catalogue_entries AssetCatalogueEntry[]
   processing_records ProcessingRecord[]
+  contamination_incidents ContaminationIncident[]
 }
 
 model SortingLine {
@@ -423,13 +440,6 @@ model SortingLine {
   recycled_pct         Decimal
   reused_pct           Decimal
   disposed_pct         Decimal
-  landfill_pct         Decimal
-  downstream_processor         String?
-  downstream_processor_address String?
-  downstream_permit_number     String?
-  transfer_date                DateTime?
-  transfer_method              String?
-  certificate_reference        String?
   notes                        String?
 
   session  SortingSession  @relation(fields: [session_id], references: [id])
@@ -485,7 +495,6 @@ model SystemSetting {
   facility_kvk                 String   @default("12345678")
   report_footer_text           String   @default("Statice B.V. — Confidential")
   max_skips_per_event          Int      @default(10)
-  require_downstream_processor Boolean  @default(false)
   config_json                  Json     @default("{}")
   updated_at                   DateTime @updatedAt
 }
@@ -566,6 +575,7 @@ model MaterialMaster {
   fractions          MaterialFraction[]
   reusable_items     ReusableItem[]
   contract_rate_lines ContractRateLine[]
+  invoice_lines      InvoiceLine[]
 
   @@map("ProductTypeMaster")
 }
@@ -582,7 +592,6 @@ model FractionMaster {
   other_material_recovery_pct_default Decimal  @default(0)
   energy_recovery_pct_default         Decimal  @default(0)
   thermal_disposal_pct_default        Decimal  @default(0)
-  landfill_disposal_pct_default       Decimal  @default(0)
   is_active                           Boolean  @default(true)
   created_at                          DateTime @default(now())
   updated_at                          DateTime @updatedAt
@@ -673,16 +682,11 @@ model ProcessingOutcomeLine {
   other_material_recovery_pct Decimal  @default(0)
   energy_recovery_pct         Decimal  @default(0)
   thermal_disposal_pct        Decimal  @default(0)
-  landfill_disposal_pct       Decimal  @default(0)
-  downstream_processor_id String?
-  transfer_date         DateTime?
   notes                 String?
-  landfill_reason_code  String?
   created_at            DateTime       @default(now())
 
   processing_record  ProcessingRecord @relation(fields: [processing_record_id], references: [id])
   fraction           FractionMaster?  @relation(fields: [fraction_id], references: [id])
-  downstream_processor Processor?     @relation(fields: [downstream_processor_id], references: [id])
 }
 
 model Processor {
@@ -697,7 +701,6 @@ model Processor {
   updated_at                  DateTime @updatedAt
 
   certificates ProcessorCertificate[]
-  outcome_lines ProcessingOutcomeLine[]
 }
 
 model ProcessorCertificate {
@@ -758,7 +761,8 @@ model FeeMaster {
   created_at  DateTime    @default(now())
   updated_at  DateTime    @updatedAt
 
-  contract_penalties ContractContaminationPenalty[]
+  contract_penalties      ContractContaminationPenalty[]
+  contamination_incidents ContaminationIncident[]
 
   @@index([fee_type])
 }
@@ -772,7 +776,6 @@ model SupplierContract {
   effective_date              DateTime
   expiry_date                 DateTime?
   status                      ContractStatus     @default(ACTIVE)
-  approved_by                 String?
   receiver_name               String             @default("Statice B.V.")
 
   payment_term_days           Int                @default(30)
@@ -781,7 +784,6 @@ model SupplierContract {
   invoice_delivery_method     String?
 
   contamination_tolerance_pct Decimal            @default(0)
-  requires_finance_review     Boolean            @default(false)
 
   is_active                   Boolean            @default(true)
   created_at                  DateTime           @default(now())
@@ -789,10 +791,10 @@ model SupplierContract {
 
   supplier                    Supplier           @relation(fields: [supplier_id], references: [id])
   carrier                     Carrier?           @relation(fields: [carrier_id], references: [id])
-  approved_by_user            User?              @relation("ContractsApproved", fields: [approved_by], references: [id])
   rate_lines                  ContractRateLine[]
   contamination_penalties     ContractContaminationPenalty[]
   contract_waste_streams      ContractWasteStream[]
+  invoices                    Invoice[]
 
   @@index([supplier_id])
   @@index([carrier_id])
@@ -808,6 +810,7 @@ model ContractRateLine {
   pricing_model            PricingModel
   unit_rate                Decimal
   btw_rate                 Decimal      @default(0)
+  processing_method        String?
   valid_from               DateTime
   valid_to                 DateTime?
   superseded_at            DateTime?
@@ -846,4 +849,89 @@ model ContractContaminationPenalty {
   fee         FeeMaster        @relation(fields: [fee_id], references: [id])
 
   @@unique([contract_id, fee_id])
+}
+
+model Invoice {
+  id                String        @id @default(uuid())
+  invoice_number    String        @unique
+  status            InvoiceStatus @default(DRAFT)
+  supplier_id       String
+  contract_id       String
+  invoice_date      DateTime
+  due_date          DateTime
+  currency          String        @default("EUR")
+  subtotal          Decimal       @default(0)
+  btw_total         Decimal       @default(0)
+  total_amount      Decimal       @default(0)
+  notes             String?
+  recipient_name    String
+  recipient_address String?
+  created_by        String
+  created_at        DateTime      @default(now())
+  updated_at        DateTime      @updatedAt
+
+  supplier        Supplier         @relation(fields: [supplier_id], references: [id])
+  contract        SupplierContract @relation(fields: [contract_id], references: [id])
+  created_by_user User             @relation(fields: [created_by], references: [id])
+  lines           InvoiceLine[]
+
+  @@index([supplier_id])
+  @@index([contract_id])
+  @@index([status])
+  @@index([invoice_date])
+}
+
+model InvoiceLine {
+  id                         String   @id @default(uuid())
+  invoice_id                 String
+  order_id                   String?
+  material_id                String?
+  description                String
+  line_type                  String   @default("material")
+  quantity                   Decimal
+  unit                       String   @default("kg")
+  unit_rate                  Decimal
+  btw_rate                   Decimal  @default(0)
+  line_subtotal              Decimal
+  btw_amount                 Decimal  @default(0)
+  line_total                 Decimal
+  contamination_incident_id  String?
+  rate_line_id               String?
+  sort_order                 Int      @default(0)
+  created_at                 DateTime @default(now())
+
+  invoice                Invoice                @relation(fields: [invoice_id], references: [id])
+  order                  InboundOrder?          @relation(fields: [order_id], references: [id])
+  material               MaterialMaster?        @relation(fields: [material_id], references: [id])
+  contamination_incident ContaminationIncident? @relation(fields: [contamination_incident_id], references: [id])
+
+  @@index([invoice_id])
+  @@index([order_id])
+}
+
+model ContaminationIncident {
+  id                      String            @id @default(uuid())
+  incident_number         String            @unique
+  order_id                String
+  sorting_session_id      String?
+  contamination_type      ContaminationType
+  description             String
+  contamination_weight_kg Decimal?
+  contamination_pct       Decimal?
+  estimated_hours         Decimal?
+  fee_amount              Decimal?
+  fee_master_id           String?
+  is_invoiced             Boolean           @default(false)
+  recorded_by             String
+  recorded_at             DateTime          @default(now())
+  notes                   String?
+
+  order           InboundOrder    @relation(fields: [order_id], references: [id])
+  sorting_session SortingSession? @relation(fields: [sorting_session_id], references: [id])
+  fee_master      FeeMaster?      @relation(fields: [fee_master_id], references: [id])
+  recorded_by_user User           @relation(fields: [recorded_by], references: [id])
+  invoice_lines   InvoiceLine[]
+
+  @@index([order_id])
+  @@index([sorting_session_id])
 }

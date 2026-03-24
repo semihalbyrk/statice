@@ -4,6 +4,14 @@ import { listFees } from '../../api/fees';
 import { syncContractPenalties } from '../../api/contracts';
 
 const RATE_TYPE_LABELS = { FIXED: 'Fixed', PERCENTAGE: '%', PER_KG: '/kg', PER_HOUR: '/hr' };
+const FEE_TYPE_LABELS = {
+  CONTAMINATION_SURCHARGE: 'Contamination Surcharge',
+  CONTAMINATION_FLAT: 'Contamination Flat Fee',
+  CONTAMINATION_PERCENTAGE: 'Contamination Percentage',
+  SORTING_SURCHARGE: 'Sorting Surcharge',
+  HAZARDOUS_MATERIAL: 'Hazardous Material',
+  REJECTION_FEE: 'Rejection Fee',
+};
 
 export default function PenaltySelectModal({ contractId, currentPenalties = [], onClose, onSuccess }) {
   const [fees, setFees] = useState([]);
@@ -66,12 +74,15 @@ export default function PenaltySelectModal({ contractId, currentPenalties = [], 
                   <input type="checkbox" checked={selected.has(f.id)} onChange={() => toggleFee(f.id)}
                     className="mt-0.5 h-4 w-4 rounded border-grey-300 text-green-500 focus:ring-green-500/15" />
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-grey-900">{f.fee_type}</p>
+                    <p className="text-sm font-medium text-grey-900">{FEE_TYPE_LABELS[f.fee_type] || f.fee_type}</p>
                     <p className="text-xs text-grey-500 mt-0.5">{f.description}</p>
-                    <p className="text-xs text-grey-700 mt-1">
-                      {RATE_TYPE_LABELS[f.rate_type]}: {f.rate_type === 'PERCENTAGE' ? `${f.rate_value}%` : `\u20AC${Number(f.rate_value).toFixed(2)}${RATE_TYPE_LABELS[f.rate_type]}`}
-                      {f.min_cap != null && ` (min \u20AC${Number(f.min_cap).toFixed(2)})`}
-                      {f.max_cap != null && ` (max \u20AC${Number(f.max_cap).toFixed(2)})`}
+                    <p className="text-xs font-medium text-grey-700 mt-1">
+                      {f.rate_type === 'PERCENTAGE' && `${f.rate_value}% of order value`}
+                      {f.rate_type === 'FIXED' && `\u20AC${Number(f.rate_value).toFixed(2)} fixed`}
+                      {f.rate_type === 'PER_KG' && `\u20AC${Number(f.rate_value).toFixed(2)}/kg`}
+                      {f.rate_type === 'PER_HOUR' && `\u20AC${Number(f.rate_value).toFixed(2)}/hr`}
+                      {f.min_cap != null && ` \u00B7 min \u20AC${Number(f.min_cap).toFixed(0)}`}
+                      {f.max_cap != null && ` \u00B7 max \u20AC${Number(f.max_cap).toFixed(0)}`}
                     </p>
                   </div>
                 </label>

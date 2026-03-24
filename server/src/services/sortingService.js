@@ -6,6 +6,7 @@ const {
   PROCESSING_RECORD_INCLUDE,
   sumOutcomeWeight,
 } = require('./sortingWorkflowService');
+const { findActiveContractForSupplier } = require('./contractService');
 
 const LINE_INCLUDE = {
   asset: { select: { id: true, asset_label: true, container_type: true, parcel_type: true, net_weight_kg: true } },
@@ -99,7 +100,23 @@ async function getSession(id) {
     include: SESSION_INCLUDE,
   });
   if (!session) return null;
-  return addAllocationFields(session);
+
+  const enriched = addAllocationFields(session);
+
+  let linkedContract = null;
+  try {
+    linkedContract = await findActiveContractForSupplier(
+      session.inbound?.order?.supplier_id,
+      session.inbound?.order?.planned_date || session.recorded_at,
+    );
+  } catch {
+    // No match found — that's OK
+  }
+  if (enriched.inbound) {
+    enriched.inbound.linked_contract = linkedContract;
+  }
+
+  return enriched;
 }
 
 async function listSessionsByOrder(orderId) {
@@ -164,7 +181,7 @@ async function submitSession(sessionId, userId) {
     for (const line of session.sorting_lines) {
       const sum = Math.round(
         (Number(line.recycled_pct) + Number(line.reused_pct) +
-         Number(line.disposed_pct) + Number(line.landfill_pct)) * 100
+         Number(line.disposed_pct)) * 100
       ) / 100;
       if (sum !== 100) {
         invalidLines.push({ line_id: line.id, asset_id: line.asset_id, sum });
@@ -289,13 +306,6 @@ async function createLine(sessionId, data, userId) {
         recycled_pct: parseFloat(data.recycled_pct),
         reused_pct: parseFloat(data.reused_pct),
         disposed_pct: parseFloat(data.disposed_pct),
-        landfill_pct: parseFloat(data.landfill_pct),
-        downstream_processor: data.downstream_processor || null,
-        downstream_processor_address: data.downstream_processor_address || null,
-        downstream_permit_number: data.downstream_permit_number || null,
-        transfer_date: data.transfer_date ? new Date(data.transfer_date) : null,
-        transfer_method: data.transfer_method || null,
-        certificate_reference: data.certificate_reference || null,
         notes: data.notes || null,
       },
       include: LINE_INCLUDE,
@@ -339,13 +349,6 @@ async function updateLine(sessionId, lineId, data, userId) {
     if (data.recycled_pct !== undefined) updateData.recycled_pct = parseFloat(data.recycled_pct);
     if (data.reused_pct !== undefined) updateData.reused_pct = parseFloat(data.reused_pct);
     if (data.disposed_pct !== undefined) updateData.disposed_pct = parseFloat(data.disposed_pct);
-    if (data.landfill_pct !== undefined) updateData.landfill_pct = parseFloat(data.landfill_pct);
-    if (data.downstream_processor !== undefined) updateData.downstream_processor = data.downstream_processor;
-    if (data.downstream_processor_address !== undefined) updateData.downstream_processor_address = data.downstream_processor_address;
-    if (data.downstream_permit_number !== undefined) updateData.downstream_permit_number = data.downstream_permit_number;
-    if (data.transfer_date !== undefined) updateData.transfer_date = data.transfer_date ? new Date(data.transfer_date) : null;
-    if (data.transfer_method !== undefined) updateData.transfer_method = data.transfer_method;
-    if (data.certificate_reference !== undefined) updateData.certificate_reference = data.certificate_reference;
     if (data.notes !== undefined) updateData.notes = data.notes;
 
     const updated = await tx.sortingLine.update({
@@ -425,7 +428,6 @@ async function getCategoryDefaults(categoryId) {
       recycled_pct_default: true,
       reused_pct_default: true,
       disposed_pct_default: true,
-      landfill_pct_default: true,
     },
   });
   if (!category) throw createError('Product category not found', 404);

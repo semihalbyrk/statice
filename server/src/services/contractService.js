@@ -13,12 +13,14 @@ const MATERIAL_SELECT = {
   code: true,
   name: true,
   weee_category: true,
+  cbs_code: true,
+  weeelabex_group: true,
+  eural_code: true,
 };
 
 const CONTRACT_INCLUDE = {
   supplier: { select: { id: true, name: true, supplier_type: true } },
   carrier: { select: { id: true, name: true } },
-  approved_by_user: { select: { id: true, full_name: true } },
   contract_waste_streams: {
     include: {
       waste_stream: { select: { id: true, name: true, code: true } },
@@ -44,7 +46,6 @@ const CONTRACT_INCLUDE = {
 const CONTRACT_LIST_INCLUDE = {
   supplier: { select: { id: true, name: true, supplier_type: true } },
   carrier: { select: { id: true, name: true } },
-  approved_by_user: { select: { id: true, full_name: true } },
   _count: { select: { rate_lines: { where: { superseded_at: null } } } },
 };
 
@@ -229,7 +230,6 @@ async function createContract(data, userId) {
         currency: data.currency ?? 'EUR',
         invoice_delivery_method: data.invoice_delivery_method || null,
         contamination_tolerance_pct: data.contamination_tolerance_pct ?? 0,
-        requires_finance_review: data.requires_finance_review ?? false,
       },
     });
 
@@ -288,6 +288,7 @@ async function createContract(data, userId) {
               pricing_model: rl.pricing_model,
               unit_rate: rl.unit_rate,
               btw_rate: rl.btw_rate ?? 0,
+              processing_method: rl.processing_method || null,
               valid_from: effectiveDate,
               valid_to: expiryDate,
             })),
@@ -377,7 +378,6 @@ async function updateContract(id, data, userId) {
     if (data.currency !== undefined) updateData.currency = data.currency;
     if (data.invoice_delivery_method !== undefined) updateData.invoice_delivery_method = data.invoice_delivery_method || null;
     if (data.contamination_tolerance_pct !== undefined) updateData.contamination_tolerance_pct = data.contamination_tolerance_pct;
-    if (data.requires_finance_review !== undefined) updateData.requires_finance_review = data.requires_finance_review;
 
     await tx.supplierContract.update({
       where: { id },
@@ -456,6 +456,7 @@ async function updateContract(id, data, userId) {
               pricing_model: rl.pricing_model,
               unit_rate: rl.unit_rate,
               btw_rate: rl.btw_rate ?? 0,
+              processing_method: rl.processing_method || null,
               valid_from: effectiveDate,
               valid_to: expiryDate,
             })),
@@ -553,7 +554,7 @@ async function approveContract(id, userId) {
 
     const updated = await tx.supplierContract.update({
       where: { id },
-      data: { status: 'ACTIVE', approved_by: userId },
+      data: { status: 'ACTIVE' },
       include: CONTRACT_INCLUDE,
     });
 
@@ -562,8 +563,8 @@ async function approveContract(id, userId) {
       action: 'APPROVE',
       entityType: 'SupplierContract',
       entityId: id,
-      before: { status: existing.status, approved_by: existing.approved_by },
-      after: { status: 'ACTIVE', approved_by: userId },
+      before: { status: existing.status },
+      after: { status: 'ACTIVE' },
     }, tx);
 
     return enrichContract(updated);
@@ -632,6 +633,7 @@ async function addRateLine(contractId, data, userId) {
         pricing_model: data.pricing_model,
         unit_rate: data.unit_rate,
         btw_rate: data.btw_rate ?? 0,
+        processing_method: data.processing_method || null,
         valid_from: data.valid_from ? new Date(data.valid_from) : contract.effective_date,
         valid_to: data.valid_to ? new Date(data.valid_to) : contract.expiry_date || null,
       },
@@ -677,6 +679,7 @@ async function updateRateLine(lineId, data, userId) {
         pricing_model: data.pricing_model ?? existing.pricing_model,
         unit_rate: data.unit_rate !== undefined ? data.unit_rate : existing.unit_rate,
         btw_rate: data.btw_rate !== undefined ? data.btw_rate : existing.btw_rate,
+        processing_method: data.processing_method !== undefined ? data.processing_method : existing.processing_method,
         valid_from: data.valid_from ? new Date(data.valid_from) : existing.valid_from,
         valid_to: data.valid_to ? new Date(data.valid_to) : existing.valid_to,
       },
@@ -975,6 +978,31 @@ async function getSupplierContracts(supplierId, { status } = {}) {
   return contracts.map(enrichContract);
 }
 
+// --- Supplier-level contract lookup (no material required) ---
+
+async function findActiveContractForSupplier(supplierId, date, tx) {
+  const client = tx || prisma;
+  const targetDate = new Date(date);
+
+  const contract = await client.supplierContract.findFirst({
+    where: {
+      supplier_id: supplierId,
+      status: 'ACTIVE',
+      is_active: true,
+      effective_date: { lte: targetDate },
+      OR: [
+        { expiry_date: { gte: targetDate } },
+        { expiry_date: null },
+      ],
+    },
+    select: { id: true, contract_number: true },
+    orderBy: { effective_date: 'desc' },
+  });
+
+  if (!contract) return null;
+  return { id: contract.id, contract_number: contract.contract_number };
+}
+
 module.exports = {
   listContracts,
   getContract,
@@ -992,4 +1020,5 @@ module.exports = {
   matchContractForOrder,
   findContractForSupplierCarrier,
   getSupplierContracts,
+  findActiveContractForSupplier,
 };

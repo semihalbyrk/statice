@@ -12,6 +12,19 @@ const inputClass = "w-full h-10 px-3.5 rounded-md border border-grey-300 text-sm
 const selectClass = `${inputClass} bg-white`;
 const TABS = ['Waste Streams', 'Materials', 'Fractions'];
 
+const WEEE_CATEGORIES = [
+  'Cat. 1 — Large Household Appliances',
+  'Cat. 2 — Small Household Appliances',
+  'Cat. 3 — IT and Telecommunications Equipment',
+  'Cat. 4 — Consumer Equipment',
+  'Cat. 5 — Lighting Equipment',
+  'Cat. 6 — Electrical and Electronic Tools',
+  'Cat. 7 — Toys, Leisure and Sports Equipment',
+  'Cat. 8 — Medical Devices',
+  'Cat. 9 — Monitoring and Control Instruments',
+  'Cat. 10 — Automatic Dispensers',
+];
+
 // --- Waste Stream Form ---
 function WasteStreamFormModal({ stream, onClose, onSuccess }) {
   const isEdit = !!stream;
@@ -141,7 +154,10 @@ function MaterialFormModal({ material, wasteStreams, allFractions, onClose, onSu
           </div>
           <div>
             <label className="block text-sm font-medium text-grey-700 mb-1.5">WEEE Category</label>
-            <input name="weee_category" value={form.weee_category} onChange={handleChange} className={inputClass} />
+            <select name="weee_category" value={form.weee_category} onChange={handleChange} className={selectClass}>
+              <option value="">Select...</option>
+              {WEEE_CATEGORIES.map((cat) => <option key={cat} value={cat}>{cat}</option>)}
+            </select>
           </div>
           <div>
             <label className="flex items-center gap-2 text-sm text-grey-700 cursor-pointer">
@@ -491,13 +507,17 @@ export default function MaterialsManagementPage() {
 
           {/* Materials Tab */}
           {activeTab === 1 && (
-            <table className="w-full text-sm">
+            <div className="overflow-x-auto">
+            <table className="w-full text-sm min-w-[1000px]">
               <thead>
                 <tr className="bg-grey-50 border-b border-grey-200">
                   <th className="text-left px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide">Code</th>
                   <th className="text-left px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide">Status</th>
                   <th className="text-left px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide">Name</th>
                   <th className="text-left px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide">Waste Stream</th>
+                  <th className="text-left px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide">CBS Code</th>
+                  <th className="text-left px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide">WEEELABEX</th>
+                  <th className="text-left px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide">EURAL Code</th>
                   <th className="text-left px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide">WEEE Category</th>
                   <th className="text-right px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide">Fractions</th>
                   <th className="w-10 px-4 py-3"></th>
@@ -505,7 +525,7 @@ export default function MaterialsManagementPage() {
               </thead>
               <tbody>
                 {filteredMaterials.length === 0 ? (
-                  <tr><td colSpan={7} className="px-4 py-8 text-center text-grey-400">No materials found</td></tr>
+                  <tr><td colSpan={10} className="px-4 py-8 text-center text-grey-400">No materials found</td></tr>
                 ) : filteredMaterials.map((m) => (
                   <React.Fragment key={m.id}>
                     <tr className="border-b border-grey-100 hover:bg-grey-50 transition-colors cursor-pointer"
@@ -531,6 +551,9 @@ export default function MaterialsManagementPage() {
                           {wsNameMap[m.waste_stream_id] || '\u2014'}
                         </span>
                       </td>
+                      <td className="px-4 py-3 text-grey-700 text-xs">{m.cbs_code || '\u2014'}</td>
+                      <td className="px-4 py-3 text-grey-700 text-xs">{m.weeelabex_group || '\u2014'}</td>
+                      <td className="px-4 py-3 text-grey-700 text-xs">{m.eural_code || '\u2014'}</td>
                       <td className="px-4 py-3 text-grey-700">{m.weee_category || '\u2014'}</td>
                       <td className="px-4 py-3 text-right text-grey-700">{m.fractions?.length || 0}</td>
                       <td className="px-4 py-3 text-right" onClick={(e) => e.stopPropagation()}>
@@ -541,7 +564,7 @@ export default function MaterialsManagementPage() {
                     </tr>
                     {expandedMat[m.id] && (m.fractions?.length || 0) > 0 && (
                       <tr>
-                        <td colSpan={7} className="p-0">
+                        <td colSpan={10} className="p-0">
                           <div className="bg-grey-25 border-b border-grey-200">
                             <table className="w-full text-sm">
                               <thead>
@@ -578,6 +601,7 @@ export default function MaterialsManagementPage() {
                 ))}
               </tbody>
             </table>
+            </div>
           )}
 
           {/* Fractions Tab */}

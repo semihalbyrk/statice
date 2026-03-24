@@ -22,7 +22,6 @@ const MATERIAL_INCLUDE = {
           other_material_recovery_pct_default: true,
           energy_recovery_pct_default: true,
           thermal_disposal_pct_default: true,
-          landfill_disposal_pct_default: true,
           is_active: true,
         },
       },
@@ -56,13 +55,6 @@ const PROCESSING_OUTCOME_INCLUDE = {
       code: true,
       name: true,
       eural_code: true,
-    },
-  },
-  downstream_processor: {
-    select: {
-      id: true,
-      name: true,
-      environmental_permit_number: true,
     },
   },
 };
@@ -113,13 +105,11 @@ function computeCompatibilityRouteTotals(outcomes = []) {
       + Number(outcome.energy_recovery_pct || 0)
       + Number(outcome.thermal_disposal_pct || 0)
     ) / 100;
-    totals.landfill += weight * Number(outcome.landfill_disposal_pct || 0) / 100;
     return totals;
   }, {
     recycled: 0,
     reused: 0,
     disposed: 0,
-    landfill: 0,
   });
 }
 
@@ -248,10 +238,6 @@ async function syncCompatibilitySortingLines(tx, sessionId) {
         recycled_pct: roundPct((routeTotals.recycled / totalWeight) * 100),
         reused_pct: roundPct((routeTotals.reused / totalWeight) * 100),
         disposed_pct: roundPct((routeTotals.disposed / totalWeight) * 100),
-        landfill_pct: roundPct((routeTotals.landfill / totalWeight) * 100),
-        downstream_processor: record.outcomes[0]?.downstream_processor?.name || null,
-        downstream_permit_number: record.outcomes[0]?.downstream_processor?.environmental_permit_number || null,
-        transfer_date: record.outcomes[0]?.transfer_date || null,
         notes: `Compatibility projection from processing record ${record.id}`,
       },
     });

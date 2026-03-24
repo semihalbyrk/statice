@@ -25,6 +25,9 @@ import ContractsDashboardPage from './pages/contracts/ContractsDashboardPage';
 import ContractCreatePage from './pages/contracts/ContractCreatePage';
 import ContractDetailPage from './pages/contracts/ContractDetailPage';
 import FeeMasterPage from './pages/admin/FeeMasterPage';
+import InvoicesPage from './pages/invoices/InvoicesPage';
+import InvoiceCreatePage from './pages/invoices/InvoiceCreatePage';
+import InvoiceDetailPage from './pages/invoices/InvoiceDetailPage';
 import NotFoundPage from './pages/errors/NotFoundPage';
 import UnauthorisedPage from './pages/errors/UnauthorisedPage';
 
@@ -74,6 +77,9 @@ export default function App() {
           <Route path="/contracts/new" element={<ProtectedRoute allowedRoles={['ADMIN', 'FINANCE_MANAGER']}><ContractCreatePage /></ProtectedRoute>} />
           <Route path="/contracts/:id/edit" element={<ProtectedRoute allowedRoles={['ADMIN', 'FINANCE_MANAGER']}><ContractCreatePage /></ProtectedRoute>} />
           <Route path="/contracts/:id" element={<ProtectedRoute allowedRoles={['ADMIN', 'FINANCE_MANAGER', 'FINANCE_USER']}><ContractDetailPage /></ProtectedRoute>} />
+          <Route path="/invoices" element={<ProtectedRoute allowedRoles={['ADMIN', 'FINANCE_MANAGER', 'FINANCE_USER']}><InvoicesPage /></ProtectedRoute>} />
+          <Route path="/invoices/new" element={<ProtectedRoute allowedRoles={['ADMIN', 'FINANCE_MANAGER', 'FINANCE_USER']}><InvoiceCreatePage /></ProtectedRoute>} />
+          <Route path="/invoices/:id" element={<ProtectedRoute allowedRoles={['ADMIN', 'FINANCE_MANAGER', 'FINANCE_USER']}><InvoiceDetailPage /></ProtectedRoute>} />
           <Route path="/admin/fees" element={<ProtectedRoute allowedRoles={['ADMIN', 'FINANCE_MANAGER']}><FeeMasterPage /></ProtectedRoute>} />
           <Route path="/admin/audit-log" element={<ProtectedRoute allowedRoles={['ADMIN']}><AuditLogPage /></ProtectedRoute>} />
           <Route path="/admin/settings" element={<ProtectedRoute allowedRoles={['ADMIN']}><SystemSettingsPage /></ProtectedRoute>} />

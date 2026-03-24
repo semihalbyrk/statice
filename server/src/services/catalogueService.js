@@ -218,7 +218,6 @@ async function createFraction(data, userId) {
         other_material_recovery_pct_default: data.other_material_recovery_pct_default ?? 0,
         energy_recovery_pct_default: data.energy_recovery_pct_default ?? 0,
         thermal_disposal_pct_default: data.thermal_disposal_pct_default ?? 0,
-        landfill_disposal_pct_default: data.landfill_disposal_pct_default ?? 0,
         is_active: data.is_active ?? true,
       },
     });
@@ -255,7 +254,6 @@ async function updateFraction(id, data, userId) {
         other_material_recovery_pct_default: data.other_material_recovery_pct_default ?? existing.other_material_recovery_pct_default,
         energy_recovery_pct_default: data.energy_recovery_pct_default ?? existing.energy_recovery_pct_default,
         thermal_disposal_pct_default: data.thermal_disposal_pct_default ?? existing.thermal_disposal_pct_default,
-        landfill_disposal_pct_default: data.landfill_disposal_pct_default ?? existing.landfill_disposal_pct_default,
         is_active: data.is_active !== undefined ? Boolean(data.is_active) : existing.is_active,
       },
     });

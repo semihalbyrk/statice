@@ -29,7 +29,6 @@ export default function ContractFormModal({ contract, onClose, onSuccess }) {
     currency: contract?.currency || 'EUR',
     invoice_delivery_method: contract?.invoice_delivery_method || '',
     contamination_tolerance_pct: contract?.contamination_tolerance_pct ?? 0,
-    requires_finance_review: contract?.requires_finance_review ?? false,
   });
   const [submitting, setSubmitting] = useState(false);
 
@@ -135,13 +134,6 @@ export default function ContractFormModal({ contract, onClose, onSuccess }) {
               <div>
                 <label className="block text-sm font-medium text-grey-700 mb-1.5">Tolerance (%)</label>
                 <input name="contamination_tolerance_pct" type="number" step="0.1" min="0" max="100" value={form.contamination_tolerance_pct} onChange={handleChange} className={inputClass} />
-              </div>
-              <div className="flex items-end pb-1">
-                <label className="flex items-center gap-2 text-sm text-grey-700 cursor-pointer">
-                  <input name="requires_finance_review" type="checkbox" checked={form.requires_finance_review} onChange={handleChange}
-                    className="h-4 w-4 rounded border-grey-300 text-green-500 focus:ring-green-500/15" />
-                  Requires finance review
-                </label>
               </div>
             </div>
           </div>

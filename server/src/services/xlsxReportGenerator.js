@@ -111,8 +111,6 @@ async function generateSupplierStatementXLSX(data, filePath, user) {
     { header: 'Recycled %', key: 'recycledPct', width: 12 },
     { header: 'Reused %', key: 'reusedPct', width: 12 },
     { header: 'Disposed %', key: 'disposedPct', width: 12 },
-    { header: 'Landfill %', key: 'landfillPct', width: 12 },
-    { header: 'Processors', key: 'processors', width: 30 },
   ];
   styleHeaderRow(cs, 1);
   rowNum = 2;
@@ -125,8 +123,6 @@ async function generateSupplierStatementXLSX(data, filePath, user) {
       recycledPct: formatPct(c.weightedAvgRecycledPct),
       reusedPct: formatPct(c.weightedAvgReusedPct),
       disposedPct: formatPct(c.weightedAvgDisposedPct),
-      landfillPct: formatPct(c.weightedAvgLandfillPct),
-      processors: c.downstreamProcessors.join(', '),
     });
     styleDataRow(cs, rowNum++);
   }
@@ -135,7 +131,6 @@ async function generateSupplierStatementXLSX(data, filePath, user) {
     recycledPct: formatPct(data.totals.weightedAvgRecycledPct),
     reusedPct: formatPct(data.totals.weightedAvgReusedPct),
     disposedPct: formatPct(data.totals.weightedAvgDisposedPct),
-    landfillPct: formatPct(data.totals.weightedAvgLandfillPct),
   });
   styleTotalsRow(cs, rowNum);
 
@@ -159,8 +154,6 @@ async function generateMaterialRecoveryXLSX(data, filePath, user) {
     { header: 'Reused %', key: 'reusedPct', width: 12 },
     { header: 'Disposed (kg)', key: 'disposedKg', width: 14 },
     { header: 'Disposed %', key: 'disposedPct', width: 12 },
-    { header: 'Landfill (kg)', key: 'landfillKg', width: 14 },
-    { header: 'Landfill %', key: 'landfillPct', width: 12 },
   ];
   styleHeaderRow(ws, 1);
   let rowNum = 2;
@@ -171,7 +164,6 @@ async function generateMaterialRecoveryXLSX(data, filePath, user) {
       recycledKg: formatWeight(c.recycledKg), recycledPct: formatPct(c.recycledPct),
       reusedKg: formatWeight(c.reusedKg), reusedPct: formatPct(c.reusedPct),
       disposedKg: formatWeight(c.disposedKg), disposedPct: formatPct(c.disposedPct),
-      landfillKg: formatWeight(c.landfillKg), landfillPct: formatPct(c.landfillPct),
     });
     styleDataRow(ws, rowNum++);
   }
@@ -181,7 +173,6 @@ async function generateMaterialRecoveryXLSX(data, filePath, user) {
     recycledKg: formatWeight(data.totals.recycledKg), recycledPct: formatPct(data.totals.recycledPct),
     reusedKg: formatWeight(data.totals.reusedKg), reusedPct: formatPct(data.totals.reusedPct),
     disposedKg: formatWeight(data.totals.disposedKg), disposedPct: formatPct(data.totals.disposedPct),
-    landfillKg: formatWeight(data.totals.landfillKg), landfillPct: formatPct(data.totals.landfillPct),
   });
   styleTotalsRow(ws, rowNum);
 
@@ -236,8 +227,6 @@ async function generateChainOfCustodyXLSX(data, filePath, user) {
     { header: 'Recycled %', key: 'recycledPct', width: 10 },
     { header: 'Reused %', key: 'reusedPct', width: 10 },
     { header: 'Disposed %', key: 'disposedPct', width: 10 },
-    { header: 'Landfill %', key: 'landfillPct', width: 10 },
-    { header: 'Processor', key: 'processor', width: 24 },
   ];
   styleHeaderRow(ws, 1);
   let rowNum = 2;
@@ -262,8 +251,7 @@ async function generateChainOfCustodyXLSX(data, filePath, user) {
             codeCbs: line.codeCbs, category: line.descriptionEn,
             weight: formatWeight(line.netWeightKg),
             recycledPct: formatPct(line.recycledPct), reusedPct: formatPct(line.reusedPct),
-            disposedPct: formatPct(line.disposedPct), landfillPct: formatPct(line.landfillPct),
-            processor: line.downstreamProcessor || '',
+            disposedPct: formatPct(line.disposedPct),
           });
           styleDataRow(ws, rowNum++);
         }
@@ -363,7 +351,6 @@ async function generateWasteStreamAnalysisXLSX(data, filePath, user) {
     { header: 'Recycled %', key: 'recycledPct', width: 12 },
     { header: 'Reused %', key: 'reusedPct', width: 12 },
     { header: 'Disposed %', key: 'disposedPct', width: 12 },
-    { header: 'Landfill %', key: 'landfillPct', width: 12 },
   ];
   styleHeaderRow(ws, 1);
   let rowNum = 2;
@@ -372,7 +359,7 @@ async function generateWasteStreamAnalysisXLSX(data, filePath, user) {
       streamName: s.streamName, streamCode: s.streamCode,
       totalInboundKg: formatWeight(s.totals.totalInboundKg),
       recycledPct: formatPct(s.totals.recycledPct), reusedPct: formatPct(s.totals.reusedPct),
-      disposedPct: formatPct(s.totals.disposedPct), landfillPct: formatPct(s.totals.landfillPct),
+      disposedPct: formatPct(s.totals.disposedPct),
     });
     styleDataRow(ws, rowNum++);
   }
@@ -387,7 +374,6 @@ async function generateWasteStreamAnalysisXLSX(data, filePath, user) {
       { header: 'Recycled %', key: 'recycledPct', width: 12 },
       { header: 'Reused %', key: 'reusedPct', width: 12 },
       { header: 'Disposed %', key: 'disposedPct', width: 12 },
-      { header: 'Landfill %', key: 'landfillPct', width: 12 },
     ];
     styleHeaderRow(ds, 1);
     let dr = 2;
@@ -396,7 +382,7 @@ async function generateWasteStreamAnalysisXLSX(data, filePath, user) {
         codeCbs: c.codeCbs, descriptionEn: c.descriptionEn,
         totalInboundKg: formatWeight(c.totalInboundKg),
         recycledPct: formatPct(c.recycledPct), reusedPct: formatPct(c.reusedPct),
-        disposedPct: formatPct(c.disposedPct), landfillPct: formatPct(c.landfillPct),
+        disposedPct: formatPct(c.disposedPct),
       });
       styleDataRow(ds, dr++);
     }
@@ -470,7 +456,6 @@ async function generateDownstreamStatementXLSX(data, filePath, user) {
     { header: '% Other material recovery', key: 'otherMaterialRecoveryPct', width: 18 },
     { header: '% Energy Recovery', key: 'energyRecoveryPct', width: 16 },
     { header: '% Thermal Disposal', key: 'thermalDisposalPct', width: 16 },
-    { header: '% Landfill Disposal', key: 'landfillDisposalPct', width: 16 },
   ];
   styleHeaderRow(ws, 1);
   let rowNum = 2;
@@ -486,7 +471,6 @@ async function generateDownstreamStatementXLSX(data, filePath, user) {
       otherMaterialRecoveryPct: formatPct(row.otherMaterialRecoveryPct),
       energyRecoveryPct: formatPct(row.energyRecoveryPct),
       thermalDisposalPct: formatPct(row.thermalDisposalPct),
-      landfillDisposalPct: formatPct(row.landfillDisposalPct),
     });
     styleDataRow(ws, rowNum++);
   }

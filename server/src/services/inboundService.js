@@ -6,6 +6,7 @@ const { requestPfisterWeighing } = require('./pfisterGateway');
 const { generateInboundNumber } = require('../utils/inboundNumber');
 const { generateAssetLabel, generateContainerLabel, CONTAINER_TARE_WEIGHTS } = require('../utils/assetLabel');
 const { notifyRoles } = require('./notificationService');
+const { findActiveContractForSupplier } = require('./contractService');
 
 const TERMINAL_STATUSES = ['READY_FOR_SORTING', 'SORTED'];
 
@@ -155,20 +156,30 @@ function enrichInbound(inbound) {
   // Can trigger first weighing (gross)
   inbound.can_weigh_first = inbound.status === 'ARRIVED' && weighings.length === 0;
 
-  // Can register a parcel (gap exists: last weighing has no corresponding parcel)
-  inbound.can_register_parcel = inbound.status === 'WEIGHED_IN' && weighings.length > assets.length;
+  // Max parcels per vehicle type (LZV = 3, normal = 2)
+  const maxParcels = inbound.order?.is_lzv ? 3 : 2;
+  inbound.max_parcels = maxParcels;
+  inbound.at_max_parcels = assets.length >= maxParcels;
+
+  // Can register a parcel (gap exists AND not at max capacity)
+  inbound.can_register_parcel = inbound.status === 'WEIGHED_IN' && weighings.length > assets.length && assets.length < maxParcels;
+
+  // Excess weighing: extra weighing exists but can't register more parcels (stuck state recovery)
+  inbound.has_excess_weighing = inbound.status === 'WEIGHED_IN' && weighings.length > assets.length && assets.length >= maxParcels;
 
   // Can trigger next weighing (parcel registered since last weighing, counts are equal, at least 1 parcel)
   inbound.can_weigh_next = inbound.status === 'WEIGHED_IN' && weighings.length === assets.length && assets.length >= 1;
 
-  // Can trigger tare (same as can_weigh_next)
-  inbound.can_weigh_tare = inbound.can_weigh_next;
+  // Can trigger tare (same as can_weigh_next, OR has excess weighing that needs recovery)
+  inbound.can_weigh_tare = inbound.can_weigh_next || inbound.has_excess_weighing;
 
   // Current phase
   if (inbound.status === 'ARRIVED') {
     inbound.current_phase = 'awaiting_first_weighing';
   } else if (inbound.can_register_parcel) {
     inbound.current_phase = 'awaiting_parcel';
+  } else if (inbound.has_excess_weighing) {
+    inbound.current_phase = 'excess_weighing_recovery';
   } else if (inbound.can_weigh_next) {
     inbound.current_phase = 'awaiting_next_weighing';
   } else if (['WEIGHED_OUT', 'READY_FOR_SORTING', 'SORTED'].includes(inbound.status)) {
@@ -186,7 +197,21 @@ async function getInbound(id) {
     include: INBOUND_INCLUDE,
   });
   if (!inbound) return null;
-  return enrichInbound(inbound);
+
+  const enriched = enrichInbound(inbound);
+
+  let linkedContract = null;
+  try {
+    linkedContract = await findActiveContractForSupplier(
+      inbound.order?.supplier_id,
+      inbound.order?.planned_date || inbound.created_at,
+    );
+  } catch {
+    // No match found — that's OK
+  }
+  enriched.linked_contract = linkedContract;
+
+  return enriched;
 }
 
 async function listInbounds({ status, search, order_id, page = 1, limit = 20 }) {
@@ -310,6 +335,7 @@ async function triggerNextWeighing(inboundId, options, userId) {
     const inbound = await tx.inbound.findUnique({
       where: { id: inboundId },
       include: {
+        order: { select: { is_lzv: true } },
         assets: { orderBy: { sequence: 'asc' } },
         weighings: { orderBy: { sequence: 'asc' } },
       },
@@ -331,7 +357,10 @@ async function triggerNextWeighing(inboundId, options, userId) {
     } else {
       // Subsequent weighings: a parcel must have been registered since last weighing
       // 1:1 rule: assets.length must equal weighings.length (one parcel per gap)
-      if (assets.length !== weighings.length) {
+      // Exception: tare is allowed when max parcels reached but an excess weighing exists (recovery from stuck state)
+      const maxParcels = inbound.order?.is_lzv ? 3 : 2;
+      const hasExcessWeighing = weighings.length > assets.length && assets.length >= maxParcels;
+      if (assets.length !== weighings.length && !(is_tare && hasExcessWeighing)) {
         const err = new Error('A parcel must be registered before the next weighing');
         err.statusCode = 400;
         throw err;

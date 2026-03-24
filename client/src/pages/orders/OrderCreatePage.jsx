@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Check, ChevronDown, CheckCircle, AlertTriangle } from 'lucide-react';
 import toast from 'react-hot-toast';
 import Breadcrumb from '../../components/ui/Breadcrumb';
@@ -56,6 +56,20 @@ export default function OrderCreatePage() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  // Auto-select single supplier
+  useEffect(() => {
+    if (allSuppliers.length === 1 && !form.supplier_id) {
+      setForm((f) => ({ ...f, supplier_id: allSuppliers[0].id }));
+    }
+  }, [allSuppliers]);
+
+  // Auto-select single carrier
+  useEffect(() => {
+    if (carriers.length === 1 && !form.carrier_id) {
+      setForm((f) => ({ ...f, carrier_id: carriers[0].id }));
+    }
+  }, [carriers]);
+
   // Auto-match contract when supplier + carrier change
   useEffect(() => {
     if (!form.supplier_id || !form.carrier_id) {
@@ -77,8 +91,13 @@ export default function OrderCreatePage() {
         setMatchedContract(data.data);
         const cws = data.data?.contract_waste_streams || [];
         setContractWasteStreams(cws);
-        // Reset waste stream selection
-        setForm((prev) => ({ ...prev, waste_stream_ids: [] }));
+        // Reset waste stream selection, then auto-select if only one available
+        if (cws.length === 1) {
+          const wsId = cws[0].waste_stream?.id || cws[0].waste_stream_id;
+          setForm((prev) => ({ ...prev, waste_stream_ids: [wsId] }));
+        } else {
+          setForm((prev) => ({ ...prev, waste_stream_ids: [] }));
+        }
       })
       .catch(() => {
         if (cancelled) return;
@@ -148,7 +167,7 @@ export default function OrderCreatePage() {
       <Breadcrumb items={[{ label: 'Orders', to: '/orders' }, { label: 'New Order' }]} />
       <h1 className="text-xl font-semibold text-grey-900 mb-6">New Order</h1>
 
-      <form onSubmit={handleSubmit} className="max-w-3xl space-y-6">
+      <form onSubmit={handleSubmit} className="space-y-6">
         {/* Supplier + Carrier */}
         <div className="bg-white rounded-lg border border-grey-200 shadow-sm p-5">
           <div className="grid grid-cols-2 gap-4">
@@ -183,8 +202,8 @@ export default function OrderCreatePage() {
                 <>
                   <CheckCircle size={16} />
                   <span className="font-medium">{matchedContract.contract_number}</span>
-                  <span>\u2014 {matchedContract.name}</span>
-                  <Link to={`/contracts/${matchedContract.id}`} className="ml-auto text-xs underline">View</Link>
+                  <span className="text-green-600">·</span>
+                  <span>{matchedContract.name}</span>
                 </>
               ) : (
                 <>

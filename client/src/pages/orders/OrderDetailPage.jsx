@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import { ExternalLink, Loader2, MoreVertical, Pencil } from 'lucide-react';
 import toast from 'react-hot-toast';
 import useOrdersStore from '../../store/ordersStore';
@@ -166,6 +166,18 @@ export default function OrderDetailPage() {
           <div className="min-w-0">
             <span className="text-xs font-medium text-grey-500 uppercase tracking-wide">Created By</span>
             <p className="mt-0.5 break-words text-sm font-medium text-grey-900">{order.created_by_user?.full_name}</p>
+          </div>
+          <div className="min-w-0">
+            <span className="text-xs font-medium text-grey-500 uppercase tracking-wide">Linked Contract</span>
+            <div className="mt-0.5">
+              {order.linked_contract ? (
+                <Link to={`/contracts/${order.linked_contract.id}`} className="text-sm font-medium text-green-700 hover:underline">
+                  {order.linked_contract.contract_number}
+                </Link>
+              ) : (
+                <span className="text-sm text-grey-400">—</span>
+              )}
+            </div>
           </div>
           {order.vehicle_plate && (
             <div className="min-w-0">

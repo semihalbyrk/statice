@@ -1,6 +1,5 @@
 const prisma = require('../utils/prismaClient');
 const { writeAuditLog } = require('../utils/auditLog');
-const { notifyRoles } = require('./notificationService');
 const {
   PROCESSING_RECORD_INCLUDE,
   roundWeight,
@@ -49,7 +48,6 @@ function buildLegacyRoutePercentages(treatmentRoute) {
         other_material_recovery_pct: 0,
         energy_recovery_pct: 0,
         thermal_disposal_pct: 0,
-        landfill_disposal_pct: 0,
       };
     case 'DISPOSED':
       return {
@@ -58,16 +56,6 @@ function buildLegacyRoutePercentages(treatmentRoute) {
         other_material_recovery_pct: 50,
         energy_recovery_pct: 0,
         thermal_disposal_pct: 50,
-        landfill_disposal_pct: 0,
-      };
-    case 'LANDFILL':
-      return {
-        prepared_for_reuse_pct: 0,
-        recycling_pct: 0,
-        other_material_recovery_pct: 0,
-        energy_recovery_pct: 0,
-        thermal_disposal_pct: 0,
-        landfill_disposal_pct: 100,
       };
     case 'RECYCLED':
     default:
@@ -77,7 +65,6 @@ function buildLegacyRoutePercentages(treatmentRoute) {
         other_material_recovery_pct: 0,
         energy_recovery_pct: 0,
         thermal_disposal_pct: 0,
-        landfill_disposal_pct: 0,
       };
   }
 }
@@ -94,7 +81,6 @@ function normaliseOutcomePayload(data, record, fraction) {
     other_material_recovery_pct: data.other_material_recovery_pct,
     energy_recovery_pct: data.energy_recovery_pct,
     thermal_disposal_pct: data.thermal_disposal_pct,
-    landfill_disposal_pct: data.landfill_disposal_pct,
   };
 
   const hasExplicitPercentages = Object.values(percentages).some((value) => value !== undefined && value !== null && value !== '');
@@ -107,7 +93,6 @@ function normaliseOutcomePayload(data, record, fraction) {
   const otherMaterialRecoveryPct = roundPct(basePercentages.other_material_recovery_pct ?? fraction?.other_material_recovery_pct_default ?? 0);
   const energyRecoveryPct = roundPct(basePercentages.energy_recovery_pct ?? fraction?.energy_recovery_pct_default ?? 0);
   const thermalDisposalPct = roundPct(basePercentages.thermal_disposal_pct ?? fraction?.thermal_disposal_pct_default ?? 0);
-  const landfillDisposalPct = roundPct(basePercentages.landfill_disposal_pct ?? fraction?.landfill_disposal_pct_default ?? 0);
 
   const percentageSum = roundPct(
     preparedForReusePct
@@ -115,7 +100,6 @@ function normaliseOutcomePayload(data, record, fraction) {
     + otherMaterialRecoveryPct
     + energyRecoveryPct
     + thermalDisposalPct
-    + landfillDisposalPct
   );
   if (Math.abs(percentageSum - 100) > 0.01) {
     throw createError('Outcome percentage fields must sum to 100', 400);
@@ -123,16 +107,12 @@ function normaliseOutcomePayload(data, record, fraction) {
 
   const assetNetWeight = Number(record.asset?.net_weight_kg || 0);
   const sharePct = assetNetWeight > 0 ? roundPct((weightKg / assetNetWeight) * 100) : 0;
-  const landfillReasonCode = data.landfill_reason_code || null;
-  if (landfillDisposalPct > 0 && !landfillReasonCode) {
-    throw createError('landfill_reason_code is required when landfill_disposal_pct is greater than 0', 400);
-  }
 
   return {
     fraction_id: fraction?.id || null,
     material_fraction: fraction?.name || data.material_fraction || '',
     weight_kg: weightKg,
-    treatment_route: data.treatment_route || (landfillDisposalPct > 0 ? 'LANDFILL' : recyclingPct > 0 ? 'RECYCLED' : preparedForReusePct > 0 ? 'REUSED' : 'DISPOSED'),
+    treatment_route: data.treatment_route || (recyclingPct > 0 ? 'RECYCLED' : preparedForReusePct > 0 ? 'REUSED' : 'DISPOSED'),
     acceptant_stage: data.acceptant_stage || fraction?.default_acceptant_stage || 'FIRST_ACCEPTANT',
     process_description: data.process_description || fraction?.default_process_description || record.material?.default_process_description || null,
     share_pct: sharePct,
@@ -141,11 +121,7 @@ function normaliseOutcomePayload(data, record, fraction) {
     other_material_recovery_pct: otherMaterialRecoveryPct,
     energy_recovery_pct: energyRecoveryPct,
     thermal_disposal_pct: thermalDisposalPct,
-    landfill_disposal_pct: landfillDisposalPct,
-    downstream_processor_id: data.downstream_processor_id || null,
-    transfer_date: data.transfer_date ? new Date(data.transfer_date) : null,
     notes: data.notes || null,
-    landfill_reason_code: landfillReasonCode,
   };
 }
 
@@ -270,17 +246,6 @@ async function createOutcome(recordId, data, userId) {
 
     const payload = normaliseOutcomePayload(data, record, fraction);
 
-    if (payload.downstream_processor_id || payload.transfer_date) {
-      if (!payload.downstream_processor_id || !payload.transfer_date) {
-        throw createError('downstream_processor_id and transfer_date must be provided together', 400);
-      }
-      await validateProcessorCertification(tx, {
-        processor_id: payload.downstream_processor_id,
-        material_id: record.material_id,
-        transfer_date: payload.transfer_date,
-      });
-    }
-
     const outcome = await tx.processingOutcomeLine.create({
       data: {
         processing_record_id: recordId,
@@ -290,16 +255,6 @@ async function createOutcome(recordId, data, userId) {
     });
 
     await recalculateRecordBalance(tx, recordId, record.asset.net_weight_kg);
-
-    if (payload.landfill_disposal_pct > 0) {
-      await notifyRoles(tx, ['COMPLIANCE_OFFICER'], {
-        type: 'LANDFILL_REVIEW_REQUIRED',
-        title: `Landfill outcome requires review for ${record.asset.asset_label}`,
-        message: `${payload.material_fraction} was routed partly or fully to landfill for asset ${record.asset.asset_label}`,
-        entityType: 'ProcessingRecord',
-        entityId: recordId,
-      });
-    }
 
     await updateSessionWorkflowStates(tx, record.session_id);
 
@@ -341,21 +296,9 @@ async function updateOutcome(outcomeId, data, userId) {
     const payload = normaliseOutcomePayload({
       ...existing,
       ...data,
-      transfer_date: data.transfer_date !== undefined ? data.transfer_date : existing.transfer_date,
       treatment_route: data.treatment_route !== undefined ? data.treatment_route : existing.treatment_route,
       material_fraction: data.material_fraction !== undefined ? data.material_fraction : existing.material_fraction,
     }, existing.processing_record, fraction);
-
-    if (payload.downstream_processor_id || payload.transfer_date) {
-      if (!payload.downstream_processor_id || !payload.transfer_date) {
-        throw createError('downstream_processor_id and transfer_date must be provided together', 400);
-      }
-      await validateProcessorCertification(tx, {
-        processor_id: payload.downstream_processor_id,
-        material_id: existing.processing_record.material_id,
-        transfer_date: payload.transfer_date,
-      });
-    }
 
     const updated = await tx.processingOutcomeLine.update({
       where: { id: outcomeId },
@@ -450,7 +393,6 @@ async function finalizeAsset(sessionId, assetId, userId) {
           + Number(outcome.other_material_recovery_pct || 0)
           + Number(outcome.energy_recovery_pct || 0)
           + Number(outcome.thermal_disposal_pct || 0)
-          + Number(outcome.landfill_disposal_pct || 0)
         );
         if (Math.abs(pctSum - 100) > 0.01) {
           throw createError('Each processing outcome must have percentage fields that sum to 100', 400);
@@ -458,17 +400,6 @@ async function finalizeAsset(sessionId, assetId, userId) {
         if (!outcome.fraction_id) {
           throw createError('Each processing outcome must reference a fraction', 400);
         }
-        if (Number(outcome.landfill_disposal_pct || 0) > 0 && !outcome.landfill_reason_code) {
-          throw createError('Landfill outcomes require a supervisor reason code', 400);
-        }
-        if (!outcome.downstream_processor_id || !outcome.transfer_date) {
-          throw createError('Each processing outcome requires downstream processor and transfer date', 400);
-        }
-        await validateProcessorCertification(tx, {
-          processor_id: outcome.downstream_processor_id,
-          material_id: record.material_id,
-          transfer_date: outcome.transfer_date,
-        });
       }
     }
 
@@ -620,11 +551,7 @@ async function reopenAsset(sessionId, assetId, data, userId) {
             other_material_recovery_pct: outcome.other_material_recovery_pct,
             energy_recovery_pct: outcome.energy_recovery_pct,
             thermal_disposal_pct: outcome.thermal_disposal_pct,
-            landfill_disposal_pct: outcome.landfill_disposal_pct,
-            downstream_processor_id: outcome.downstream_processor_id,
-            transfer_date: outcome.transfer_date,
             notes: outcome.notes,
-            landfill_reason_code: outcome.landfill_reason_code,
           },
         });
       }

@@ -83,7 +83,6 @@ export default function SystemSettingsPage() {
       const { data } = await updateSettings({
         report_footer_text: settings.report_footer_text,
         max_skips_per_event: settings.max_skips_per_event,
-        require_downstream_processor: settings.require_downstream_processor,
       });
       setSettings(data.data);
       toast.success('Report defaults saved');
@@ -157,14 +156,6 @@ export default function SystemSettingsPage() {
               <label className={labelClass}>Max Parcels per Event</label>
               <input type="number" min={1} max={20} value={settings.max_skips_per_event}
                 onChange={(e) => handleChange('max_skips_per_event', parseInt(e.target.value) || 1)} className={inputClass} />
-            </div>
-            <div className="flex items-end pb-1">
-              <label className="flex items-center gap-3 cursor-pointer">
-                <input type="checkbox" checked={settings.require_downstream_processor}
-                  onChange={(e) => handleChange('require_downstream_processor', e.target.checked)}
-                  className="h-4 w-4 rounded border-grey-300 text-green-500 focus:ring-green-500" />
-                <span className="text-sm text-grey-700">Require downstream processor</span>
-              </label>
             </div>
           </div>
           <div className="flex justify-end pt-2">

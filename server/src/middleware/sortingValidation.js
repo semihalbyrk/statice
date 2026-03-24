@@ -1,6 +1,6 @@
 const prisma = require('../utils/prismaClient');
 
-const PCT_FIELDS = ['recycled_pct', 'reused_pct', 'disposed_pct', 'landfill_pct'];
+const PCT_FIELDS = ['recycled_pct', 'reused_pct', 'disposed_pct'];
 
 /**
  * Validate that recovery rate percentages sum to exactly 100.
@@ -14,7 +14,7 @@ function validatePctSum(req, res, next) {
   const missing = PCT_FIELDS.filter((f) => req.body[f] === undefined);
   if (missing.length > 0) {
     return res.status(422).json({
-      error: 'All four recovery rate fields are required when updating percentages',
+      error: 'All three recovery rate fields are required when updating percentages',
       missing_fields: missing,
     });
   }
@@ -30,7 +30,6 @@ function validatePctSum(req, res, next) {
         recycled_pct: Number(req.body.recycled_pct),
         reused_pct: Number(req.body.reused_pct),
         disposed_pct: Number(req.body.disposed_pct),
-        landfill_pct: Number(req.body.landfill_pct),
       },
     });
   }

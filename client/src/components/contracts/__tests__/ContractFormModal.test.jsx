@@ -70,7 +70,6 @@ describe('ContractFormModal', () => {
     render(<ContractFormModal onClose={vi.fn()} onSuccess={vi.fn()} />);
     expect(screen.getByText('Contamination')).toBeInTheDocument();
     expect(screen.getByText(/Tolerance/)).toBeInTheDocument();
-    expect(screen.getByText(/Requires finance review/)).toBeInTheDocument();
   });
 
   it('renders Create button when creating new contract', () => {
@@ -134,7 +133,6 @@ describe('ContractFormModal', () => {
       invoicing_frequency: 'QUARTERLY',
       currency: 'EUR',
       contamination_tolerance_pct: 5,
-      requires_finance_review: true,
     };
     render(<ContractFormModal contract={contract} onClose={vi.fn()} onSuccess={vi.fn()} />);
 

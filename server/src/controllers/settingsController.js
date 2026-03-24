@@ -21,7 +21,7 @@ const get = asyncHandler(async (req, res) => {
 const update = asyncHandler(async (req, res) => {
   const {
     facility_name, facility_address, facility_permit_number, facility_kvk,
-    report_footer_text, max_skips_per_event, require_downstream_processor,
+    report_footer_text, max_skips_per_event,
   } = req.body;
 
   const updateData = {};
@@ -45,10 +45,6 @@ const update = asyncHandler(async (req, res) => {
       throw new AppError('max_skips_per_event must be an integer between 1 and 20', 422);
     }
     updateData.max_skips_per_event = val;
-  }
-
-  if (require_downstream_processor !== undefined) {
-    updateData.require_downstream_processor = !!require_downstream_processor;
   }
 
   if (Object.keys(updateData).length === 0) {

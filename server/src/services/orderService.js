@@ -3,7 +3,7 @@ const { generateOrderNumber } = require('../utils/orderNumber');
 const { canTransition } = require('../utils/orderStateMachine');
 const { writeAuditLog } = require('../utils/auditLog');
 const { notifyRoles } = require('./notificationService');
-const { matchContractForOrder } = require('./contractService');
+const { matchContractForOrder, findActiveContractForSupplier } = require('./contractService');
 
 const VALID_ORDER_STATUSES = ['PLANNED', 'ARRIVED', 'IN_PROGRESS', 'DISPUTE', 'COMPLETED', 'INVOICED', 'CANCELLED'];
 
@@ -133,7 +133,22 @@ async function getOrder(id) {
       },
     },
   });
-  return enrichOrder(order);
+  if (!order) return null;
+
+  const enriched = enrichOrder(order);
+
+  let linkedContract = null;
+  try {
+    linkedContract = await findActiveContractForSupplier(
+      order.supplier_id,
+      order.planned_date || order.created_at,
+    );
+  } catch {
+    // No match found — that's OK
+  }
+  enriched.linked_contract = linkedContract;
+
+  return enriched;
 }
 
 async function createOrder(data, userId) {

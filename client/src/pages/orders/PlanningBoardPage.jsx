@@ -178,7 +178,7 @@ export default function PlanningBoardPage() {
         </div>
       ) : (
         <div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
             {orders.map((order) => {
               const wasteStreamLabel = order.waste_streams?.length > 0
                 ? order.waste_streams.map((ows) => ows.waste_stream?.name).filter(Boolean).join(', ')
@@ -196,7 +196,7 @@ export default function PlanningBoardPage() {
                     <span className="text-green-500 font-semibold text-sm hover:underline">
                       {order.order_number}
                     </span>
-                    <div className="flex items-center gap-1.5 flex-wrap">
+                    <div className="flex items-center gap-2 flex-wrap">
                       {order.is_lzv && (
                         <span className="inline-flex h-6 items-center px-2 rounded-md bg-purple-25 text-purple-700 border border-purple-300 text-[11px] font-semibold uppercase">
                           LZV
@@ -213,54 +213,54 @@ export default function PlanningBoardPage() {
                   </div>
 
                   {/* Card Body */}
-                  <div className="space-y-2.5 text-sm">
+                  <div className="space-y-3 text-sm">
                     {timeWindow && (
-                      <div className="flex items-center justify-between">
-                        <span className="text-grey-500">Time Window</span>
-                        <span className="text-xs px-2 py-0.5 rounded-full bg-blue-25 text-blue-700 border border-blue-200 font-medium">
+                      <div className="flex items-center justify-between gap-3 min-w-0">
+                        <span className="text-grey-500 flex-shrink-0">Time Window</span>
+                        <span className="text-xs px-2 py-0.5 rounded-full bg-blue-25 text-blue-700 border border-blue-200 font-medium truncate" title={timeWindow}>
                           {timeWindow}
                         </span>
                       </div>
                     )}
-                    <div className="flex items-center justify-between">
-                      <span className="text-grey-500">Carrier</span>
-                      <span className="text-grey-900 font-medium">{order.carrier?.name || '—'}</span>
+                    <div className="flex items-center justify-between gap-3 min-w-0">
+                      <span className="text-grey-500 flex-shrink-0">Carrier</span>
+                      <span className="text-grey-900 font-medium text-right truncate" title={order.carrier?.name || '—'}>{order.carrier?.name || '—'}</span>
                     </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-grey-500">Supplier</span>
-                      <div className="flex items-center gap-1.5">
-                        <span className="text-grey-900 font-medium">{order.supplier?.name || '—'}</span>
+                    <div className="flex items-center justify-between gap-3 min-w-0">
+                      <span className="text-grey-500 flex-shrink-0">Supplier</span>
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <span className="text-grey-900 font-medium truncate" title={order.supplier?.name || '—'}>{order.supplier?.name || '—'}</span>
                         <SupplierTypeBadge type={order.supplier?.supplier_type} />
                       </div>
                     </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-grey-500">Waste Stream</span>
-                      <span className="text-grey-900 text-right max-w-[60%] truncate" title={wasteStreamLabel}>{wasteStreamLabel || '—'}</span>
+                    <div className="flex items-center justify-between gap-3 min-w-0">
+                      <span className="text-grey-500 flex-shrink-0">Waste Stream</span>
+                      <span className="text-grey-900 font-medium text-right truncate" title={wasteStreamLabel || '—'}>{wasteStreamLabel || '—'}</span>
                     </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-grey-500">Expected Parcels</span>
-                      <span className="text-grey-900 font-medium">{order.expected_skip_count ?? '—'}</span>
+                    <div className="flex items-center justify-between gap-3 min-w-0">
+                      <span className="text-grey-500 flex-shrink-0">Expected Parcels</span>
+                      <span className="text-grey-900 font-medium text-right truncate">{order.expected_skip_count ?? '—'}</span>
                     </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-grey-500">Inbounds</span>
-                      <span className="text-grey-900 font-medium">
+                    <div className="flex items-center justify-between gap-3 min-w-0">
+                      <span className="text-grey-500 flex-shrink-0">Inbounds</span>
+                      <span className="text-grey-900 font-medium text-right truncate">
                         {order.inbound_count} / {order.expected_skip_count ?? '?'}
                       </span>
                     </div>
                     {order.total_net_weight_kg > 0 && (
-                      <div className="flex items-center justify-between">
-                        <span className="text-grey-500">Total Net Weight</span>
-                        <span className="text-grey-900 font-medium">
+                      <div className="flex items-center justify-between gap-3 min-w-0">
+                        <span className="text-grey-500 flex-shrink-0">Total Net Weight</span>
+                        <span className="text-grey-900 font-medium text-right truncate">
                           {Number(order.total_net_weight_kg).toLocaleString('nl-NL', { maximumFractionDigits: 0 })} kg
                         </span>
                       </div>
                     )}
                     {order.vehicle_plate && (
-                      <div className="flex items-center justify-between">
-                        <span className="text-grey-500">Vehicle</span>
-                        <div className="flex items-center gap-1.5">
-                          <TruckIcon size={14} className="text-grey-400" />
-                          <span className="font-mono text-grey-900">{order.vehicle_plate}</span>
+                      <div className="flex items-center justify-between gap-3 min-w-0">
+                        <span className="text-grey-500 flex-shrink-0">Vehicle</span>
+                        <div className="flex items-center gap-1.5 min-w-0">
+                          <TruckIcon size={14} className="text-grey-400 flex-shrink-0" />
+                          <span className="font-mono text-grey-900 truncate" title={order.vehicle_plate}>{order.vehicle_plate}</span>
                         </div>
                       </div>
                     )}

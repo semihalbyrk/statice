@@ -125,7 +125,7 @@ async function createProductCategory(req, res, next) {
   try {
     const {
       code_cbs, description_en, description_nl, waste_stream_id,
-      recycled_pct_default, reused_pct_default, disposed_pct_default, landfill_pct_default,
+      recycled_pct_default, reused_pct_default, disposed_pct_default,
     } = req.body;
 
     if (!code_cbs || !description_en || !description_nl || !waste_stream_id) {
@@ -139,7 +139,6 @@ async function createProductCategory(req, res, next) {
           recycled_pct_default: recycled_pct_default || 0,
           reused_pct_default: reused_pct_default || 0,
           disposed_pct_default: disposed_pct_default || 0,
-          landfill_pct_default: landfill_pct_default || 0,
         },
       });
       await writeAuditLog({
@@ -168,7 +167,7 @@ async function updateProductCategory(req, res, next) {
 
     const {
       code_cbs, description_en, description_nl, waste_stream_id,
-      recycled_pct_default, reused_pct_default, disposed_pct_default, landfill_pct_default, is_active,
+      recycled_pct_default, reused_pct_default, disposed_pct_default, is_active,
     } = req.body;
 
     const category = await prisma.$transaction(async (tx) => {
@@ -176,7 +175,7 @@ async function updateProductCategory(req, res, next) {
         where: { id },
         data: {
           code_cbs, description_en, description_nl, waste_stream_id,
-          recycled_pct_default, reused_pct_default, disposed_pct_default, landfill_pct_default, is_active,
+          recycled_pct_default, reused_pct_default, disposed_pct_default, is_active,
         },
       });
       await writeAuditLog({

@@ -23,9 +23,10 @@ import {
   reopenAssetProcessing,
   updateProcessingOutcome,
 } from '../../api/processing';
-import { listProcessors } from '../../api/processors';
 import { generateReport, getReports, downloadReport } from '../../api/reports';
 import { getSortingName } from '../../utils/entityNames';
+import ContaminationRecordModal from '../../components/sorting/ContaminationRecordModal';
+import { listContaminationIncidents } from '../../api/contamination';
 
 const inputClass = 'w-full h-10 px-3.5 rounded-md border border-grey-300 text-sm text-grey-900 focus:border-green-500 focus:ring-[3px] focus:ring-green-500/15 outline-none transition-colors';
 const selectClass = `${inputClass} bg-white`;
@@ -59,7 +60,6 @@ function emptyOutcomeForm() {
     other_material_recovery_pct: '0',
     energy_recovery_pct: '0',
     thermal_disposal_pct: '0',
-    landfill_disposal_pct: '0',
     notes: '',
   };
 }
@@ -75,7 +75,6 @@ function buildOutcomeFormFromFraction(fraction, currentForm = emptyOutcomeForm()
     other_material_recovery_pct: String(fraction.other_material_recovery_pct_default ?? 0),
     energy_recovery_pct: String(fraction.energy_recovery_pct_default ?? 0),
     thermal_disposal_pct: String(fraction.thermal_disposal_pct_default ?? 0),
-    landfill_disposal_pct: String(fraction.landfill_disposal_pct_default ?? 0),
   };
 }
 
@@ -86,7 +85,6 @@ function percentageSum(form) {
     form.other_material_recovery_pct,
     form.energy_recovery_pct,
     form.thermal_disposal_pct,
-    form.landfill_disposal_pct,
   ].reduce((sum, value) => sum + Number(value || 0), 0);
 }
 
@@ -105,8 +103,6 @@ export default function SortingPage() {
     clearSession,
   } = useSortingStore();
 
-  const [processors, setProcessors] = useState([]);
-  const [processorsLoading, setProcessorsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('catalogue');
   const [activeAssetId, setActiveAssetId] = useState(null);
   const [catalogueForm, setCatalogueForm] = useState(emptyCatalogueForm());
@@ -125,6 +121,8 @@ export default function SortingPage() {
   const [sessionReports, setSessionReports] = useState([]);
   const [reportsLoading, setReportsLoading] = useState(false);
   const [generatingEntryId, setGeneratingEntryId] = useState(null);
+  const [showContaminationModal, setShowContaminationModal] = useState(false);
+  const [contaminationCount, setContaminationCount] = useState(0);
 
   const canOperate = ['ADMIN', 'GATE_OPERATOR', 'SORTING_EMPLOYEE', 'COMPLIANCE_OFFICER'].includes(user?.role);
   const canConfirm = ['ADMIN', 'COMPLIANCE_OFFICER'].includes(user?.role);
@@ -132,14 +130,6 @@ export default function SortingPage() {
   useEffect(() => {
     fetchSession(sessionId);
     loadAll();
-    setProcessorsLoading(true);
-    listProcessors({ active: 'true' })
-      .then(({ data }) => setProcessors(data.data))
-      .catch(() => {
-        setProcessors([]);
-        toast.error('Failed to load processors');
-      })
-      .finally(() => setProcessorsLoading(false));
     return () => clearSession();
   }, [sessionId, fetchSession, clearSession, loadAll]);
 
@@ -147,6 +137,13 @@ export default function SortingPage() {
     if (!session?.inbound?.assets?.length) return;
     setActiveAssetId((current) => current || session.inbound.assets[0].id);
   }, [session]);
+
+  useEffect(() => {
+    if (!session?.order_id) return;
+    listContaminationIncidents({ order_id: session.order_id, limit: 1 })
+      .then((res) => setContaminationCount(res.data?.total || 0))
+      .catch(() => {});
+  }, [session?.order_id]);
 
   const assets = session?.inbound?.assets || [];
   const activeAsset = assets.find((asset) => asset.id === activeAssetId) || null;
@@ -383,6 +380,20 @@ export default function SortingPage() {
             Shredding and sorting drive the process; downstream statements are generated from the material and fraction records captured here.
           </p>
         </div>
+        {canOperate && (
+          <button
+            onClick={() => setShowContaminationModal(true)}
+            className="flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium bg-orange-100 text-orange-700 hover:bg-orange-200 transition-colors"
+          >
+            <AlertTriangle size={16} />
+            Record Contamination
+            {contaminationCount > 0 && (
+              <span className="ml-1 bg-orange-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                {contaminationCount}
+              </span>
+            )}
+          </button>
+        )}
       </div>
 
       <div className="bg-white rounded-lg border border-grey-200 shadow-sm p-4 mb-4">
@@ -397,6 +408,13 @@ export default function SortingPage() {
           <InfoField label="Carrier" value={order?.carrier?.name} />
           <InfoField label="Vehicle Plate" value={session.inbound?.vehicle?.registration_plate} mono />
           <InfoField label="Waste Stream" value={order?.waste_stream?.name} />
+          <InfoField label="Contract">
+            {session.inbound?.linked_contract ? (
+              <Link className="text-sm font-semibold text-green-700 hover:underline mt-0.5 inline-block" to={`/contracts/${session.inbound.linked_contract.id}`}>
+                {session.inbound.linked_contract.contract_number}
+              </Link>
+            ) : <span className="text-sm text-grey-400 mt-0.5 block">—</span>}
+          </InfoField>
           <InfoField label="Recorded" value={session.recorded_at ? format(new Date(session.recorded_at), 'dd MMM yyyy HH:mm') : '—'} />
           <InfoField label="Parcels" value={String(assets.length)} />
         </div>
@@ -817,7 +835,6 @@ export default function SortingPage() {
                                                   other_material_recovery_pct: String(Number(outcome.other_material_recovery_pct || 0)),
                                                   energy_recovery_pct: String(Number(outcome.energy_recovery_pct || 0)),
                                                   thermal_disposal_pct: String(Number(outcome.thermal_disposal_pct || 0)),
-                                                  landfill_disposal_pct: String(Number(outcome.landfill_disposal_pct || 0)),
                                                   notes: outcome.notes || '',
                                                 },
                                               }));
@@ -940,13 +957,12 @@ export default function SortingPage() {
                                 />
                               </div>
                             </div>
-                            <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3 mb-3">
+                            <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-3 mb-3">
                               <PercentageInput label="% Prepared for re-use" value={form.prepared_for_reuse_pct} disabled={record.status !== 'DRAFT'} onChange={(value) => setOutcomeForms((current) => ({ ...current, [record.id]: { ...form, prepared_for_reuse_pct: value } }))} />
                               <PercentageInput label="% Recycling" value={form.recycling_pct} disabled={record.status !== 'DRAFT'} onChange={(value) => setOutcomeForms((current) => ({ ...current, [record.id]: { ...form, recycling_pct: value } }))} />
                               <PercentageInput label="% Other MR" value={form.other_material_recovery_pct} disabled={record.status !== 'DRAFT'} onChange={(value) => setOutcomeForms((current) => ({ ...current, [record.id]: { ...form, other_material_recovery_pct: value } }))} />
                               <PercentageInput label="% Energy" value={form.energy_recovery_pct} disabled={record.status !== 'DRAFT'} onChange={(value) => setOutcomeForms((current) => ({ ...current, [record.id]: { ...form, energy_recovery_pct: value } }))} />
                               <PercentageInput label="% Thermal" value={form.thermal_disposal_pct} disabled={record.status !== 'DRAFT'} onChange={(value) => setOutcomeForms((current) => ({ ...current, [record.id]: { ...form, thermal_disposal_pct: value } }))} />
-                              <PercentageInput label="% Landfill" value={form.landfill_disposal_pct} disabled={record.status !== 'DRAFT'} onChange={(value) => setOutcomeForms((current) => ({ ...current, [record.id]: { ...form, landfill_disposal_pct: value } }))} />
                             </div>
                             <div className={`mb-3 rounded-md border px-3 py-2 text-xs ${Math.abs(percentageSum(form) - 100) < 0.01 ? 'border-green-200 bg-green-25 text-green-700' : 'border-orange-200 bg-orange-25 text-orange-700'}`}>
                               Recovery profile total: {percentageSum(form).toFixed(2)}%
@@ -1145,7 +1161,7 @@ export default function SortingPage() {
                                   Generate Report
                                 </button>
                               ) : (
-                                <span className="text-xs text-grey-400">Confirm disassembly first</span>
+                                <span className="text-xs text-grey-400">Confirm all records first</span>
                               )}
                             </div>
                           </div>
@@ -1222,6 +1238,17 @@ export default function SortingPage() {
             </div>
           </div>
         </div>
+      )}
+
+      {showContaminationModal && (
+        <ContaminationRecordModal
+          isOpen={showContaminationModal}
+          onClose={() => setShowContaminationModal(false)}
+          onSuccess={() => setContaminationCount((prev) => prev + 1)}
+          orderId={session?.order_id}
+          supplierId={session?.inbound?.order?.supplier_id}
+          sortingSessionId={session?.id}
+        />
       )}
     </div>
   );
