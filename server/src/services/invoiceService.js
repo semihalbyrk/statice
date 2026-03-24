@@ -374,7 +374,7 @@ async function getCompletedOrdersForInvoicing(supplierId) {
       status: 'COMPLETED',
     },
     include: {
-      inbounds: { select: { id: true, net_weight: true } },
+      inbounds: { select: { id: true, net_weight_kg: true, inbound_number: true } },
       waste_stream: { select: { id: true, name: true, code: true } },
     },
     orderBy: { planned_date: 'desc' },
