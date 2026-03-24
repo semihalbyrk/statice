@@ -125,26 +125,27 @@ export default function Sidebar({ open, onClose }) {
           )}
         </nav>
 
-        <div className="px-3 pb-3">
-          <div className="border-t border-white/20 pt-3">
-            <LanguageSelector />
+        <div className="px-3 pb-3 space-y-3">
+          <div className="border-t border-white/10 pt-3">
+            <div className="flex items-center justify-between">
+              <LanguageSelector />
+              <button
+                onClick={handleLogout}
+                className="flex items-center gap-1.5 px-2 py-1.5 rounded-md text-[13px] font-medium text-[#f04438] transition-colors hover:text-[#ff6b5b] hover:bg-white/[0.06]"
+              >
+                <LogOut size={14} strokeWidth={1.8} />
+                {t('nav:logout')}
+              </button>
+            </div>
+          </div>
 
-            <button
-              onClick={handleLogout}
-              className="mb-3 flex items-center gap-2 text-[14px] font-medium text-[#f04438] transition-colors hover:text-[#ff6b5b]"
-            >
-              <LogOut size={15} strokeWidth={1.8} />
-              {t('nav:logout')}
-            </button>
-
-            <div className="flex items-center gap-3 rounded-xl">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border-2 border-white/80 bg-[#d8f0cf] text-[13px] font-semibold text-[#5f7f59]">
-                {initials}
-              </div>
-              <div className="min-w-0">
-                <p className="truncate text-[14px] font-semibold text-white">{user?.full_name || 'Statice User'}</p>
-                <p className="truncate text-[12px] text-white/72">{t('common:roles.' + role, { defaultValue: role || 'User' })}</p>
-              </div>
+          <div className="flex items-center gap-3 rounded-xl">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border-2 border-white/80 bg-[#d8f0cf] text-[13px] font-semibold text-[#5f7f59]">
+              {initials}
+            </div>
+            <div className="min-w-0">
+              <p className="truncate text-[14px] font-semibold text-white">{user?.full_name || 'Statice User'}</p>
+              <p className="truncate text-[12px] text-white/72">{t('common:roles.' + role, { defaultValue: role || 'User' })}</p>
             </div>
           </div>
         </div>
