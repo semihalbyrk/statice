@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, ClipboardList, Truck, Scale, Building2, Users, Recycle, FileBarChart,
-  UserCog, ScrollText, Settings2, Boxes, ChevronDown, ChevronRight, LogOut, CalendarDays, Receipt, FileText,
+  UserCog, ScrollText, Settings2, Boxes, ChevronDown, ChevronRight, LogOut, CalendarDays, Receipt, FileText, Box,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useTranslation } from 'react-i18next';
@@ -64,6 +64,7 @@ export default function Sidebar({ open, onClose }) {
     { to: '/admin/users', label: t('nav:users'), icon: UserCog },
     { to: '/admin/carriers', label: t('nav:carriers'), icon: Building2 },
     { to: '/admin/suppliers', label: t('nav:suppliers'), icon: Users },
+    { to: '/admin/containers', label: t('nav:containers'), icon: Box },
     { to: '/admin/materials', label: t('nav:materials'), icon: Recycle },
     { to: '/admin/fees', label: t('nav:feeMaster'), icon: Receipt },
     { to: '/admin/audit-log', label: t('nav:auditLog'), icon: ScrollText },

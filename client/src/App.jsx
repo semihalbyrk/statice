@@ -25,6 +25,7 @@ import ContractsDashboardPage from './pages/contracts/ContractsDashboardPage';
 import ContractCreatePage from './pages/contracts/ContractCreatePage';
 import ContractDetailPage from './pages/contracts/ContractDetailPage';
 import FeeMasterPage from './pages/admin/FeeMasterPage';
+import ContainerRegistryPage from './pages/admin/ContainerRegistryPage';
 import InvoicesPage from './pages/invoices/InvoicesPage';
 import InvoiceCreatePage from './pages/invoices/InvoiceCreatePage';
 import InvoiceDetailPage from './pages/invoices/InvoiceDetailPage';
@@ -73,6 +74,7 @@ export default function App() {
           <Route path="/admin/carriers" element={<ProtectedRoute allowedRoles={['ADMIN']}><CarriersPage /></ProtectedRoute>} />
           <Route path="/admin/suppliers" element={<ProtectedRoute allowedRoles={['ADMIN']}><SuppliersPage /></ProtectedRoute>} />
           <Route path="/admin/materials" element={<ProtectedRoute allowedRoles={['ADMIN']}><MaterialsManagementPage /></ProtectedRoute>} />
+          <Route path="/admin/containers" element={<ProtectedRoute allowedRoles={['ADMIN']}><ContainerRegistryPage /></ProtectedRoute>} />
           <Route path="/contracts" element={<ProtectedRoute allowedRoles={['ADMIN', 'FINANCE_MANAGER', 'FINANCE_USER']}><ContractsDashboardPage /></ProtectedRoute>} />
           <Route path="/contracts/new" element={<ProtectedRoute allowedRoles={['ADMIN', 'FINANCE_MANAGER']}><ContractCreatePage /></ProtectedRoute>} />
           <Route path="/contracts/:id/edit" element={<ProtectedRoute allowedRoles={['ADMIN', 'FINANCE_MANAGER']}><ContractCreatePage /></ProtectedRoute>} />
