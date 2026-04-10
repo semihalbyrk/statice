@@ -135,6 +135,12 @@ enum ParcelType {
   MATERIAL
 }
 
+enum WeighingMode {
+  SWAP
+  DIRECT
+  BULK
+}
+
 enum InvoiceStatus {
   DRAFT
   FINALIZED
@@ -328,6 +334,7 @@ model Inbound {
   matched_at        DateTime?
   is_manual_match   Boolean            @default(false)
   device_id         String?
+  weighing_mode     WeighingMode?
 
   order             InboundOrder     @relation(fields: [order_id], references: [id])
   vehicle           Vehicle          @relation(fields: [vehicle_id], references: [id])
@@ -412,6 +419,18 @@ model Asset {
   processing_records ProcessingRecord[]
 
   @@index([container_label])
+}
+
+model ContainerRegistry {
+  id              String    @id @default(uuid())
+  container_label String    @unique
+  container_type  SkipType
+  tare_weight_kg  Decimal
+  volume_m3       Decimal?
+  notes           String?
+  is_active       Boolean   @default(true)
+  created_at      DateTime  @default(now())
+  updated_at      DateTime  @updatedAt
 }
 
 model SortingSession {
