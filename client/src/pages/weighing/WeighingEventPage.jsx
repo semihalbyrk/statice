@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback, Fragment } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { Loader2, Scale, Download, Pencil, Trash2, Plus, AlertTriangle, ExternalLink, Package, Box, Check } from 'lucide-react';
+import { Loader2, Scale, Download, Pencil, Trash2, Plus, AlertTriangle, ExternalLink, Package, Box, Check, Info, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useTranslation } from 'react-i18next';
 import useAuthStore from '../../store/authStore';
@@ -27,6 +27,8 @@ const CONTAINER_TARE_WEIGHTS = { OPEN_TOP: 300, CLOSED_TOP: 350, GITTERBOX: 85, 
 
 const inputClass = "w-full h-10 px-3.5 rounded-md border border-grey-300 text-sm text-grey-900 focus:border-green-500 focus:ring-[3px] focus:ring-green-500/15 outline-none transition-colors";
 const selectClass = `${inputClass} bg-white`;
+
+const WEIGHBRIDGE_DEVICES = ['WB_1', 'WB_2', 'WB_3'];
 
 const MANUAL_TRANSITIONS = {
   WEIGHED_OUT: ['READY_FOR_SORTING'],
@@ -354,13 +356,19 @@ function WeighingFlowSection({ inbound, inboundId, weighings, assets, orderWaste
   const [showManualFallback, setShowManualFallback] = useState(false);
   const [showOverride, setShowOverride] = useState(false);
   const [registeredParcel, setRegisteredParcel] = useState(null);
+  const [selectedDevice, setSelectedDevice] = useState(() =>
+    WEIGHBRIDGE_DEVICES.length === 1 ? WEIGHBRIDGE_DEVICES[0] : ''
+  );
 
   const isTerminal = ['READY_FOR_SORTING', 'SORTED'].includes(inbound.status);
 
   const handleWeighing = useCallback(async (isTare = false) => {
     setTriggering(true);
     try {
-      const { data } = await triggerNextWeighing(inboundId, { is_tare: isTare });
+      const { data } = await triggerNextWeighing(inboundId, {
+        is_tare: isTare,
+        device_id: selectedDevice || inbound.device_id || undefined,
+      });
       setInbound(data.data);
       const label = weighings.length === 0
         ? t('weighingFlow.firstWeighingLabel')
@@ -369,12 +377,27 @@ function WeighingFlowSection({ inbound, inboundId, weighings, assets, orderWaste
           : t('weighingFlow.weighingLabel');
       toast.success(t('toast.weighingComplete', { label }));
     } catch (err) {
-      toast.error(err.response?.data?.error || t('toast.weighingFailed'));
+      const serverMsg = err.response?.data?.error || '';
+      let displayMsg;
+      if (serverMsg.toLowerCase().includes('timeout')) {
+        displayMsg = 'Could not connect to weighbridge — request timed out';
+      } else if (serverMsg.toLowerCase().includes('connection failed')) {
+        displayMsg = 'Could not reach weighbridge — connection refused';
+      } else if (serverMsg.toLowerCase().includes('pfister api returned http')) {
+        displayMsg = `Weighbridge returned an error (${serverMsg.match(/\d+/)?.[0] || '?'})`;
+      } else if (serverMsg.toLowerCase().includes('pfister weighing error')) {
+        displayMsg = serverMsg.replace('Pfister weighing error', 'Weighbridge error');
+      } else if (serverMsg) {
+        displayMsg = serverMsg;
+      } else {
+        displayMsg = 'Could not reach weighbridge';
+      }
+      toast.error(displayMsg);
       setShowManualFallback(true);
     } finally {
       setTriggering(false);
     }
-  }, [inboundId, weighings.length, setTriggering, setInbound, t]);
+  }, [inboundId, weighings.length, setTriggering, setInbound, t, selectedDevice, inbound.device_id]);
 
   const handleParcelRegistered = useCallback((parcel) => {
     setRegisteredParcel(parcel);
@@ -388,6 +411,9 @@ function WeighingFlowSection({ inbound, inboundId, weighings, assets, orderWaste
       {/* Summary stats */}
       {weighings.length > 0 && (
         <div className="flex items-center gap-3 flex-wrap mb-3">
+          {inbound.device_id && (
+            <span className="text-xs text-grey-500">{t('weighingFlow.device')}: <strong className="text-grey-700">{inbound.device_id}</strong></span>
+          )}
           {inbound.gross_weight_kg && (
             <span className="text-xs text-grey-500">{t('weighingFlow.gross')}: <strong className="text-grey-700">{Number(inbound.gross_weight_kg).toLocaleString()} kg</strong></span>
           )}
@@ -413,12 +439,32 @@ function WeighingFlowSection({ inbound, inboundId, weighings, assets, orderWaste
         <WeighingTimeline weighings={weighings} assets={assets} user={user} onConfirmWeighing={onConfirmWeighing} />
       )}
 
-      {/* First Weighing Button */}
+      {/* Device Selection + First Weighing Button */}
       {inbound.can_weigh_first && !isTerminal && (
         <div className="mt-3">
+          {!inbound.device_id && (
+            <div className="mb-2">
+              <label className="block text-xs font-medium text-grey-700 mb-1">
+                {t('weighingFlow.selectDevice')} <span className="text-red-500">*</span>
+              </label>
+              <select
+                value={selectedDevice}
+                onChange={(e) => setSelectedDevice(e.target.value)}
+                className={selectClass}
+                style={{ maxWidth: '220px' }}
+              >
+                {WEIGHBRIDGE_DEVICES.length > 1 && (
+                  <option value="">{t('weighingFlow.selectDevicePlaceholder')}</option>
+                )}
+                {WEIGHBRIDGE_DEVICES.map((d) => (
+                  <option key={d} value={d}>{d}</option>
+                ))}
+              </select>
+            </div>
+          )}
           <button
             onClick={() => handleWeighing(false)}
-            disabled={isTriggering}
+            disabled={isTriggering || (!inbound.device_id && !selectedDevice)}
             className="h-12 px-6 flex items-center gap-2 bg-green-500 text-white rounded-md font-semibold text-sm hover:bg-green-700 disabled:opacity-50 transition-colors"
           >
             {isTriggering ? <Loader2 className="animate-spin" size={18} /> : <Scale size={18} />}
@@ -527,6 +573,8 @@ function WeighingFlowSection({ inbound, inboundId, weighings, assets, orderWaste
 /* ───── Weighing Timeline ───── */
 function WeighingTimeline({ weighings, assets, user, onConfirmWeighing }) {
   const { t } = useTranslation(['weighing']);
+  const [openJsonId, setOpenJsonId] = useState(null);
+
   // Build interleaved list: W1, P1, W2, P2, ... Wn
   const items = [];
   weighings.forEach((w) => {
@@ -546,6 +594,9 @@ function WeighingTimeline({ weighings, assets, user, onConfirmWeighing }) {
             : w.is_tare
               ? t('weighingFlow.typeTare')
               : t('weighingFlow.typeWeighing', { sequence: w.sequence });
+          const rawJson = ticket?.raw_payload
+            ? (() => { try { return JSON.stringify(JSON.parse(ticket.raw_payload), null, 2); } catch { return ticket.raw_payload; } })()
+            : null;
           return (
             <div key={w.id} className="inline-block bg-green-25 border border-green-200 rounded-lg px-4 py-2.5">
               <div className="flex items-center gap-2">
@@ -556,9 +607,31 @@ function WeighingTimeline({ weighings, assets, user, onConfirmWeighing }) {
                 {ticket?.is_confirmed && (
                   <span className="text-xs text-green-600" title={t('weighingFlow.confirmed')}>&#x1f512;</span>
                 )}
+                {rawJson && (
+                  <button
+                    onClick={() => setOpenJsonId(openJsonId === w.id ? null : w.id)}
+                    className="ml-1 text-grey-400 hover:text-grey-600 transition-colors"
+                    title="Show weighbridge response"
+                  >
+                    <Info size={14} />
+                  </button>
+                )}
               </div>
               {ticket && (
                 <p className="text-xs text-green-500 font-mono mt-1 ml-6">{ticket.ticket_number} &middot; {format(new Date(ticket.timestamp), 'dd.MM.yyyy HH:mm')}</p>
+              )}
+              {openJsonId === w.id && rawJson && (
+                <div className="mt-2 ml-6 relative">
+                  <button
+                    onClick={() => setOpenJsonId(null)}
+                    className="absolute top-2 right-2 text-grey-400 hover:text-grey-600"
+                  >
+                    <X size={12} />
+                  </button>
+                  <pre className="text-[11px] font-mono bg-grey-50 border border-grey-200 rounded p-3 pr-6 text-grey-700 overflow-x-auto whitespace-pre-wrap break-all leading-relaxed">
+                    {rawJson}
+                  </pre>
+                </div>
               )}
             </div>
           );

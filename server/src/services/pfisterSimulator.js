@@ -1,92 +1,157 @@
 /**
- * Pfister Weighbridge Simulator
+ * Pfister Cloud Weighbridge Client
  *
  * PRD §6.2 Interface Contract:
- *   requestWeighing(weighingType, previousWeightKg?) → Promise<PfisterTicket>
+ *   requestWeighing(weighingType, previousWeightKg?, deviceId?, extra?) → Promise<PfisterTicket>
  *
  * This module is the ONLY place Pfister integration lives.
- * Replacing this file with a real Pfister API client requires zero changes elsewhere.
+ * Makes real HTTP calls to the Pfister Cloud Service API.
  *
- * Simulated behaviour:
- *   - 1500ms network delay
- *   - GROSS: random weight 8000–24000 kg
- *   - INTERMEDIATE: previousWeight minus a realistic parcel weight (500–4000 kg)
- *   - TARE: random 4000–7000 kg, capped at previousWeight - 200
- *   - Ticket number: PF-NNNNN (random 5-digit)
- *   - Creates PfisterTicket record in DB
+ * API: GET {baseUrl}/{deviceId}?command=weigh&timeout={ms}&format=json
+ * Auth: HTTP Basic Authentication
  */
 
 const prisma = require('../utils/prismaClient');
 
+const ALLOWED_DEVICES = ['WB_1', 'WB_2', 'WB_3'];
+
 /**
- * Generate a random 5-digit Pfister ticket number.
- * @returns {string}
+ * Parse Pfister timestamp format: "06-04-2026 11:52:16" (DD-MM-YYYY HH:MM:SS)
+ * @param {string} ts
+ * @returns {Date}
  */
-function generateTicketNumber() {
-  const num = Math.floor(10000 + Math.random() * 90000);
-  return `PF-${num}`;
+function parsePfisterTimestamp(ts) {
+  const match = ts.match(/^(\d{2})-(\d{2})-(\d{4})\s+(\d{2}):(\d{2}):(\d{2})$/);
+  if (!match) throw new Error(`Cannot parse Pfister timestamp: "${ts}"`);
+
+  const [, day, month, year, hours, minutes, seconds] = match;
+  return new Date(
+    parseInt(year, 10),
+    parseInt(month, 10) - 1,
+    parseInt(day, 10),
+    parseInt(hours, 10),
+    parseInt(minutes, 10),
+    parseInt(seconds, 10),
+  );
 }
 
 /**
- * Simulate a random weight within a range.
- * @param {number} min
- * @param {number} max
+ * Parse weight from Pfister result string, e.g. "06040 kg" → 6040
+ * @param {string} result
  * @returns {number}
  */
-function randomWeight(min, max) {
-  return Math.round(min + Math.random() * (max - min));
+function parsePfisterWeight(result) {
+  const match = result.match(/(\d+)\s*kg/i);
+  if (!match) throw new Error(`Cannot parse Pfister weight: "${result}"`);
+  return parseInt(match[1], 10);
 }
 
 /**
- * Request a weighing from the Pfister weighbridge.
+ * Request a weighing from the Pfister Cloud weighbridge.
  *
  * @param {'GROSS' | 'INTERMEDIATE' | 'TARE'} weighingType
  * @param {number} [previousWeightKg] - required for INTERMEDIATE and TARE
+ * @param {string} [deviceId] - weighbridge device (WB_1, WB_2, WB_3)
+ * @param {object} [extra] - optional extra params (e.g. inboundNumber for object param)
  * @returns {Promise<object>} PfisterTicket record
  */
-async function requestWeighing(weighingType, previousWeightKg) {
-  // Simulate network/hardware delay
-  await new Promise((r) => setTimeout(r, 1500));
+async function requestWeighing(weighingType, previousWeightKg, deviceId, extra = {}) {
+  const baseUrl = process.env.PFISTER_BASE_URL;
+  const username = process.env.PFISTER_USERNAME;
+  const password = process.env.PFISTER_PASSWORD;
+  const timeoutMs = parseInt(process.env.PFISTER_TIMEOUT_MS || '5000', 10);
+  const device = deviceId || process.env.PFISTER_DEFAULT_DEVICE || 'WB_1';
 
-  let weightKg;
-  if (weighingType === 'GROSS') {
-    weightKg = randomWeight(8000, 24000);
-  } else if (weighingType === 'INTERMEDIATE') {
-    if (!previousWeightKg) throw new Error('previousWeightKg required for INTERMEDIATE weighing');
-    const parcelWeight = randomWeight(500, 4000);
-    weightKg = Math.max(5000, previousWeightKg - parcelWeight);
-  } else if (weighingType === 'TARE') {
-    const rawTare = randomWeight(4000, 7000);
-    const maxTare = previousWeightKg ? previousWeightKg - 200 : 7000;
-    weightKg = Math.min(rawTare, maxTare);
-  } else {
-    throw new Error(`Invalid weighing type: ${weighingType}`);
+  if (!baseUrl) throw new Error('PFISTER_BASE_URL environment variable is not configured');
+  if (!username) throw new Error('PFISTER_USERNAME environment variable is not configured');
+  if (!password) throw new Error('PFISTER_PASSWORD environment variable is not configured');
+
+  // Validate device against allowlist (defence-in-depth, primary check is in inboundService)
+  if (!ALLOWED_DEVICES.includes(device)) {
+    const err = new Error(`Invalid device ID: "${device}". Allowed: ${ALLOWED_DEVICES.join(', ')}`);
+    err.statusCode = 400;
+    throw err;
   }
 
-  const timestamp = new Date();
+  // Build URL
+  const url = new URL(`/${device}`, baseUrl);
+  url.searchParams.set('command', 'weigh');
+  url.searchParams.set('timeout', String(timeoutMs));
+  url.searchParams.set('format', 'json');
+  if (extra.inboundNumber) {
+    url.searchParams.set('object', extra.inboundNumber);
+  }
 
-  const ticket = await prisma.$transaction(async (tx) => {
-    const ticketNumber = generateTicketNumber();
+  // HTTP Basic Auth
+  const authHeader = 'Basic ' + Buffer.from(`${username}:${password}`).toString('base64');
 
-    return tx.pfisterTicket.create({
-      data: {
-        ticket_number: ticketNumber,
-        weighing_type: weighingType,
-        weight_kg: weightKg,
-        unit: 'kg',
-        timestamp,
-        raw_payload: JSON.stringify({
-          simulator: true,
-          weighing_type: weighingType,
-          weight_kg: weightKg,
-          ticket_number: ticketNumber,
-          timestamp: timestamp.toISOString(),
-        }),
-      },
+  // Client-side timeout (slightly longer than Pfister's own timeout)
+  const controller = new AbortController();
+  const clientTimeout = setTimeout(() => controller.abort(), timeoutMs + 3000);
+
+  let response;
+  try {
+    response = await fetch(url.toString(), {
+      method: 'GET',
+      headers: { Authorization: authHeader },
+      signal: controller.signal,
     });
+  } catch (err) {
+    if (err.name === 'AbortError') {
+      const error = new Error(`Pfister weighbridge timeout after ${timeoutMs + 3000}ms`);
+      error.statusCode = 504;
+      throw error;
+    }
+    const error = new Error(`Pfister weighbridge connection failed: ${err.message}`);
+    error.statusCode = 502;
+    throw error;
+  } finally {
+    clearTimeout(clientTimeout);
+  }
+
+  if (!response.ok) {
+    const error = new Error(`Pfister API returned HTTP ${response.status}`);
+    error.statusCode = 502;
+    throw error;
+  }
+
+  let data;
+  try {
+    data = await response.json();
+  } catch (parseErr) {
+    const error = new Error('Pfister API returned non-JSON response');
+    error.statusCode = 502;
+    throw error;
+  }
+
+  // Check Pfister-level error
+  if (data.error !== '0') {
+    const error = new Error(
+      `Pfister weighing error (code ${data.error}): ${data.errortext || 'Unknown error'}`,
+    );
+    error.statusCode = 502;
+    throw error;
+  }
+
+  // Parse response fields
+  const weightKg = parsePfisterWeight(data.result);
+  const scaleTimestamp = parsePfisterTimestamp(data.timestamp);
+  const ticketNumber = data.sequencenumber;
+
+  // Persist to database (plain insert — no transaction needed for a single write)
+  const ticket = await prisma.pfisterTicket.create({
+    data: {
+      ticket_number: ticketNumber,
+      weighing_type: weighingType,
+      weight_kg: weightKg,
+      unit: 'kg',
+      timestamp: scaleTimestamp,
+      device_id: device,
+      raw_payload: JSON.stringify(data),
+    },
   });
 
   return ticket;
 }
 
-module.exports = { requestWeighing };
+module.exports = { requestWeighing, ALLOWED_DEVICES };

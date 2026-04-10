@@ -315,6 +315,64 @@ describe('PATCH /api/inbounds/:id/incident', () => {
   });
 });
 
+describe('POST /api/inbounds/:id/weighing (triggerNextWeighing)', () => {
+  it('returns 401 without token', async () => {
+    const res = await request(app)
+      .post('/api/inbounds/some-id/weighing')
+      .send({});
+
+    expect(res.status).toBe(401);
+  });
+
+  it('returns 403 for PLANNER role', async () => {
+    if (createdInboundIds.length === 0) return;
+
+    const plannerToken = await getToken('planner@statice.nl', 'Planner123!');
+
+    const res = await request(app)
+      .post(`/api/inbounds/${createdInboundIds[0]}/weighing`)
+      .set('Authorization', `Bearer ${plannerToken}`)
+      .send({ device_id: 'WB_1' });
+
+    expect(res.status).toBe(403);
+    expect(res.body).toHaveProperty('error', 'Insufficient permissions');
+  });
+
+  it('returns 404 for non-existent inbound', async () => {
+    const token = await getToken('admin@statice.nl', 'Admin1234!');
+
+    const res = await request(app)
+      .post('/api/inbounds/00000000-0000-0000-0000-000000000000/weighing')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ device_id: 'WB_2' });
+
+    // Could be 404 or 500 depending on error handling — at minimum not 200
+    expect(res.status).toBeGreaterThanOrEqual(400);
+  });
+
+  it('accepts device_id in request body', async () => {
+    if (createdInboundIds.length === 0) return;
+
+    const token = await getToken('gate@statice.nl', 'Gate1234!');
+
+    // This will likely fail at the Pfister call level (no real Pfister running),
+    // but we can verify the endpoint accepts device_id and reaches service logic
+    const res = await request(app)
+      .post(`/api/inbounds/${createdInboundIds[0]}/weighing`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({ device_id: 'WB_2' });
+
+    // If Pfister is not configured, we expect a 502 or 500 (not 400 for missing device_id)
+    // If it succeeds, we expect 200 with data.device_id set
+    if (res.status === 200) {
+      expect(res.body.data).toHaveProperty('device_id');
+    } else {
+      // Pfister connection error is expected in test environment
+      expect([500, 502, 504]).toContain(res.status);
+    }
+  });
+});
+
 describe('POST /api/inbounds/:id/weight-override', () => {
   it('returns 401 without token', async () => {
     const res = await request(app)

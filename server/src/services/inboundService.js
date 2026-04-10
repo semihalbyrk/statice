@@ -3,6 +3,7 @@ const { canTransition, getAllowedTransitions } = require('../utils/inboundStateM
 const { canTransition: canOrderTransition } = require('../utils/orderStateMachine');
 const { writeAuditLog } = require('../utils/auditLog');
 const { requestPfisterWeighing } = require('./pfisterGateway');
+const { ALLOWED_DEVICES } = require('./pfisterSimulator');
 const { generateInboundNumber } = require('../utils/inboundNumber');
 const { generateAssetLabel, generateContainerLabel, CONTAINER_TARE_WEIGHTS } = require('../utils/assetLabel');
 const { notifyRoles } = require('./notificationService');
@@ -329,52 +330,91 @@ async function createInbound(data, userId) {
  * Handles first weighing (gross), intermediate weighings, and final weighing (tare).
  */
 async function triggerNextWeighing(inboundId, options, userId) {
-  const { is_tare = false, is_manual = false, manual_weight_kg, manual_reason } = options || {};
+  const { is_tare = false, is_manual = false, manual_weight_kg, manual_reason, device_id } = options || {};
 
+  // ── Phase 1: Read & validate (no transaction — just a query) ──────────────
+  const inboundForValidation = await prisma.inbound.findUnique({
+    where: { id: inboundId },
+    include: {
+      order: { select: { is_lzv: true, id: true, status: true } },
+      assets: { orderBy: { sequence: 'asc' } },
+      weighings: { orderBy: { sequence: 'asc' } },
+    },
+  });
+  if (!inboundForValidation) throw new Error('Inbound not found');
+
+  const weighings = inboundForValidation.weighings;
+  const assets = inboundForValidation.assets;
+  const nextSeq = weighings.length + 1;
+
+  // Validation
+  if (nextSeq === 1) {
+    if (inboundForValidation.status !== 'ARRIVED') {
+      const err = new Error('Inbound must be in ARRIVED status for first weighing');
+      err.statusCode = 409;
+      throw err;
+    }
+  } else {
+    const maxParcels = inboundForValidation.order?.is_lzv ? 3 : 2;
+    const hasExcessWeighing = weighings.length > assets.length && assets.length >= maxParcels;
+    if (assets.length !== weighings.length && !(is_tare && hasExcessWeighing)) {
+      const err = new Error('A parcel must be registered before the next weighing');
+      err.statusCode = 400;
+      throw err;
+    }
+    if (is_tare && assets.length === 0) {
+      const err = new Error('At least one parcel must be registered before tare weighing');
+      err.statusCode = 400;
+      throw err;
+    }
+  }
+
+  const previousWeight = weighings.length > 0 ? Number(weighings[weighings.length - 1].weight_kg) : null;
+
+  // Server-side device allowlist validation
+  const resolvedDeviceId = inboundForValidation.device_id || device_id || process.env.PFISTER_DEFAULT_DEVICE;
+  if (!is_manual) {
+    if (!resolvedDeviceId) {
+      const err = new Error('Device ID is required for weighing');
+      err.statusCode = 400;
+      throw err;
+    }
+    if (!ALLOWED_DEVICES.includes(resolvedDeviceId)) {
+      const err = new Error(`Invalid device ID: "${resolvedDeviceId}". Allowed: ${ALLOWED_DEVICES.join(', ')}`);
+      err.statusCode = 400;
+      throw err;
+    }
+  }
+
+  // ── Phase 2: Pfister HTTP call — OUTSIDE any transaction ─────────────────
+  // External network I/O must not hold a DB connection open.
+  let automaticTicket = null;
+  if (!is_manual) {
+    const weighingType = nextSeq === 1 ? 'GROSS' : is_tare ? 'TARE' : 'INTERMEDIATE';
+    const pfisterContext = {
+      inboundId,
+      sequence: nextSeq,
+      deviceId: resolvedDeviceId,
+      inboundNumber: inboundForValidation.inbound_number,
+    };
+    automaticTicket = await requestPfisterWeighing(weighingType, previousWeight, pfisterContext);
+  }
+
+  // ── Phase 3: Write transaction — DB writes only, no network I/O ──────────
   return prisma.$transaction(async (tx) => {
+    // Re-fetch for up-to-date inbound state inside the write lock
     const inbound = await tx.inbound.findUnique({
       where: { id: inboundId },
       include: {
-        order: { select: { is_lzv: true } },
+        order: { select: { is_lzv: true, id: true, status: true } },
         assets: { orderBy: { sequence: 'asc' } },
         weighings: { orderBy: { sequence: 'asc' } },
       },
     });
     if (!inbound) throw new Error('Inbound not found');
 
-    const weighings = inbound.weighings;
-    const assets = inbound.assets;
-    const nextSeq = weighings.length + 1;
-
-    // Validation
-    if (nextSeq === 1) {
-      // First weighing (gross): status must be ARRIVED
-      if (inbound.status !== 'ARRIVED') {
-        const err = new Error('Inbound must be in ARRIVED status for first weighing');
-        err.statusCode = 409;
-        throw err;
-      }
-    } else {
-      // Subsequent weighings: a parcel must have been registered since last weighing
-      // 1:1 rule: assets.length must equal weighings.length (one parcel per gap)
-      // Exception: tare is allowed when max parcels reached but an excess weighing exists (recovery from stuck state)
-      const maxParcels = inbound.order?.is_lzv ? 3 : 2;
-      const hasExcessWeighing = weighings.length > assets.length && assets.length >= maxParcels;
-      if (assets.length !== weighings.length && !(is_tare && hasExcessWeighing)) {
-        const err = new Error('A parcel must be registered before the next weighing');
-        err.statusCode = 400;
-        throw err;
-      }
-      if (is_tare && assets.length === 0) {
-        const err = new Error('At least one parcel must be registered before tare weighing');
-        err.statusCode = 400;
-        throw err;
-      }
-    }
-
     // Determine weighing type and get/create ticket
     let ticket;
-    const previousWeight = weighings.length > 0 ? Number(weighings[weighings.length - 1].weight_kg) : null;
 
     if (is_manual) {
       const weightKg = parseFloat(manual_weight_kg);
@@ -414,23 +454,16 @@ async function triggerNextWeighing(inboundId, options, userId) {
       });
 
       // PFI-07: Alert admins on manual weight entry
-      if (is_manual) {
-        await notifyRoles(tx, ['ADMIN'], {
-          type: 'MANUAL_WEIGHING_ALERT',
-          title: 'Manual weight entry recorded',
-          message: `Manual weight ${manual_weight_kg} kg for inbound ${inbound.inbound_number}, reason: ${manual_reason}`,
-          entityType: 'Inbound',
-          entityId: inboundId,
-        });
-      }
+      await notifyRoles(tx, ['ADMIN'], {
+        type: 'MANUAL_WEIGHING_ALERT',
+        title: 'Manual weight entry recorded',
+        message: `Manual weight ${manual_weight_kg} kg for inbound ${inbound.inbound_number}, reason: ${manual_reason}`,
+        entityType: 'Inbound',
+        entityId: inboundId,
+      });
     } else {
-      if (nextSeq === 1) {
-        ticket = await requestPfisterWeighing('GROSS', null, { inboundId, sequence: nextSeq });
-      } else if (is_tare) {
-        ticket = await requestPfisterWeighing('TARE', previousWeight, { inboundId, sequence: nextSeq });
-      } else {
-        ticket = await requestPfisterWeighing('INTERMEDIATE', previousWeight, { inboundId, sequence: nextSeq });
-      }
+      // Ticket already created by Pfister HTTP call in Phase 2
+      ticket = automaticTicket;
     }
 
     // Create InboundWeighing record
@@ -451,6 +484,9 @@ async function triggerNextWeighing(inboundId, options, userId) {
       // First weighing = gross
       updateData.gross_ticket_id = ticket.id;
       updateData.gross_weight_kg = ticket.weight_kg;
+      if (!is_manual) {
+        updateData.device_id = resolvedDeviceId;
+      }
       if (inbound.status === 'ARRIVED' && canTransition('ARRIVED', 'WEIGHED_IN')) {
         updateData.status = 'WEIGHED_IN';
       }

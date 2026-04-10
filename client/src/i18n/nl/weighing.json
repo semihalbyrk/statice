@@ -32,7 +32,10 @@
     "typeTare": "Tarra",
     "typeWeighing": "Weging {{sequence}}",
     "manual": "(handmatig)",
-    "confirmed": "Bevestigd"
+    "confirmed": "Bevestigd",
+    "selectDevice": "Weegbrug",
+    "selectDevicePlaceholder": "Selecteer weegbrug...",
+    "device": "Apparaat"
   },
   "manualWeighing": {
     "title": "Handmatige Gewichtsinvoer",

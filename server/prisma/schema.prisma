@@ -327,6 +327,7 @@ model Inbound {
   matched_by        String?
   matched_at        DateTime?
   is_manual_match   Boolean            @default(false)
+  device_id         String?
 
   order             InboundOrder     @relation(fields: [order_id], references: [id])
   vehicle           Vehicle          @relation(fields: [vehicle_id], references: [id])
@@ -372,6 +373,7 @@ model PfisterTicket {
   is_confirmed       Boolean  @default(false)
   confirmed_by       String?
   confirmed_at       DateTime?
+  device_id          String?
   created_at         DateTime @default(now())
 
   gross_inbound    Inbound?          @relation("GrossTicket")

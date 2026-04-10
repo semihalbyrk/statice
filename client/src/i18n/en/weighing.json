@@ -32,7 +32,10 @@
     "typeTare": "Tare",
     "typeWeighing": "Weighing {{sequence}}",
     "manual": "(manual)",
-    "confirmed": "Confirmed"
+    "confirmed": "Confirmed",
+    "selectDevice": "Weighbridge",
+    "selectDevicePlaceholder": "Select weighbridge...",
+    "device": "Device"
   },
   "manualWeighing": {
     "title": "Manual Weight Entry",

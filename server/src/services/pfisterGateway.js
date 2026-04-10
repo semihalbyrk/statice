@@ -20,18 +20,21 @@ async function requestPfisterWeighing(weighingType, previousWeightKg, context = 
     previous_weight_kg: previousWeightKg ?? null,
     inbound_id: context.inboundId || null,
     sequence: context.sequence || null,
-    mode: context.mode || 'SIMULATOR',
+    device_id: context.deviceId || null,
+    mode: context.mode || 'CLOUD_API',
   };
 
   const ingress = await logPfisterIngress({
     source: context.source || 'PFISTER_GATEWAY',
-    protocol: context.protocol || 'SIMULATOR',
+    protocol: context.protocol || 'PFISTER_CLOUD_HTTP',
     payload,
     status: 'REQUESTED',
   });
 
   try {
-    const ticket = await requestWeighing(weighingType, previousWeightKg);
+    const ticket = await requestWeighing(weighingType, previousWeightKg, context.deviceId, {
+      inboundNumber: context.inboundNumber,
+    });
     await prisma.pfisterIngressLog.update({
       where: { id: ingress.id },
       data: {
