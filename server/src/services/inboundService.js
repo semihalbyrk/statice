@@ -600,6 +600,28 @@ async function triggerNextWeighing(inboundId, options, userId) {
       }
     }
 
+    // After inbound transitions to WEIGHED_OUT, check if order should go to IN_PROGRESS
+    if (updateData.status === 'WEIGHED_OUT') {
+      const order = await tx.inboundOrder.findUnique({
+        where: { id: inbound.order_id },
+        include: { inbounds: { select: { status: true } } },
+      });
+      if (order && order.status === 'ARRIVED' && canOrderTransition('ARRIVED', 'IN_PROGRESS')) {
+        await tx.inboundOrder.update({
+          where: { id: order.id },
+          data: { status: 'IN_PROGRESS' },
+        });
+        await writeAuditLog({
+          userId,
+          action: 'UPDATE',
+          entityType: 'InboundOrder',
+          entityId: order.id,
+          before: { status: 'ARRIVED' },
+          after: { status: 'IN_PROGRESS' },
+        }, tx);
+      }
+    }
+
     return enrichInbound(updated);
   });
 }
@@ -851,6 +873,29 @@ async function updateInboundStatus(id, newStatus, userId) {
       }, tx);
 
       updated.sorting_session = { id: session.id, status: session.status };
+    }
+
+    // After inbound reaches SORTED, check if all inbounds for the order are SORTED
+    if (newStatus === 'SORTED') {
+      const order = await tx.inboundOrder.findUnique({
+        where: { id: inbound.order_id },
+        include: { inbounds: { select: { status: true } } },
+      });
+      const allSorted = order.inbounds.every((ib) => ib.status === 'SORTED');
+      if (allSorted && canOrderTransition(order.status, 'COMPLETED')) {
+        await tx.inboundOrder.update({
+          where: { id: order.id },
+          data: { status: 'COMPLETED' },
+        });
+        await writeAuditLog({
+          userId,
+          action: 'UPDATE',
+          entityType: 'InboundOrder',
+          entityId: order.id,
+          before: { status: order.status },
+          after: { status: 'COMPLETED' },
+        }, tx);
+      }
     }
 
     return enrichInbound(updated);
