@@ -12,6 +12,14 @@ import { updateOrder, setOrderIncident } from '../../api/orders';
 import { format } from 'date-fns';
 import Breadcrumb from '../../components/ui/Breadcrumb';
 
+const SKIP_TYPE_LABELS = {
+  OPEN_TOP: 'Open Top',
+  CLOSED_TOP: 'Closed Top',
+  GITTERBOX: 'Gitterbox',
+  PALLET: 'Pallet',
+  OTHER: 'Other',
+};
+
 const ORDER_TRANSITIONS = {
   PLANNED: ['ARRIVED', 'CANCELLED'],
   ARRIVED: ['IN_PROGRESS', 'DISPUTE', 'CANCELLED'],
@@ -322,6 +330,54 @@ export default function OrderDetailPage() {
                         value={inbound.sorting_session ? t('orders:detail.inbounds.sortingAvailable') : t('orders:detail.inbounds.notStarted')}
                       />
                     </div>
+
+                    {inbound.assets && inbound.assets.length > 0 && (
+                      <div
+                        className="mt-2 overflow-x-auto"
+                        onClick={(e) => e.stopPropagation()}
+                        onKeyDown={(e) => e.stopPropagation()}
+                        role="presentation"
+                      >
+                        <table className="min-w-full text-xs">
+                          <thead>
+                            <tr className="text-grey-500 text-left border-b border-grey-100">
+                              <th className="py-1.5 pr-3">Parcel ID</th>
+                              <th className="py-1.5 pr-3">Container ID</th>
+                              <th className="py-1.5 pr-3">Type</th>
+                              <th className="py-1.5 pr-3 text-right">Cargo Net</th>
+                              {inbound.weighing_mode === 'DIRECT' && <th className="py-1.5 pr-3 text-right">Tare</th>}
+                              <th className="py-1.5 pr-3 text-right">Material Net</th>
+                              <th className="py-1.5 pr-3 text-right">Volume</th>
+                              <th className="py-1.5">Notes</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {inbound.assets.map((asset) => (
+                              <tr key={asset.id}>
+                                <td className="py-1.5 pr-3 font-medium text-grey-900">{asset.asset_label}</td>
+                                <td className="py-1.5 pr-3">{asset.container_label || '—'}</td>
+                                <td className="py-1.5 pr-3">{SKIP_TYPE_LABELS[asset.container_type] || '—'}</td>
+                                <td className="py-1.5 pr-3 text-right tabular-nums">
+                                  {asset.net_weight_kg ? `${Number(asset.net_weight_kg).toLocaleString()} kg` : '—'}
+                                </td>
+                                {inbound.weighing_mode === 'DIRECT' && (
+                                  <td className="py-1.5 pr-3 text-right tabular-nums">
+                                    {asset.estimated_tare_weight_kg ? `${Number(asset.estimated_tare_weight_kg).toLocaleString()} kg` : '—'}
+                                  </td>
+                                )}
+                                <td className="py-1.5 pr-3 text-right tabular-nums">
+                                  {asset.net_weight_kg ? `${Number(asset.net_weight_kg).toLocaleString()} kg` : '—'}
+                                </td>
+                                <td className="py-1.5 pr-3 text-right tabular-nums">
+                                  {asset.estimated_volume_m3 ? `${Number(asset.estimated_volume_m3)} m³` : '—'}
+                                </td>
+                                <td className="py-1.5 text-grey-500 max-w-[150px] truncate">{asset.notes || '—'}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
                   </div>
                 </div>
               ))}

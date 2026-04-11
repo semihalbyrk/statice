@@ -132,6 +132,13 @@ async function getOrder(id) {
         include: {
           vehicle: true,
           sorting_session: { select: { id: true, status: true } },
+          assets: {
+            include: {
+              waste_stream: true,
+              material_category: true,
+            },
+            orderBy: { created_at: 'asc' },
+          },
         },
         orderBy: { arrived_at: 'desc' },
       },
