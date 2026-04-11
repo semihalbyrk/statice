@@ -80,35 +80,74 @@ async function recalculateInboundWeights(tx, inboundId) {
 
   if (!inbound) return null;
 
+  const mode = inbound.weighing_mode;
+  const w1 = inbound.weighings.find((w) => w.sequence === 1);
+  const w2 = inbound.weighings.find((w) => w.sequence === 2);
+
   for (const asset of inbound.assets) {
-    const grossWeighing = inbound.weighings.find((weighing) => weighing.sequence === asset.sequence);
-    const tareWeighing = inbound.weighings.find((weighing) => weighing.sequence === (asset.sequence || 0) + 1);
+    let assetUpdate;
 
-    const assetUpdate = {
-      gross_weighing_id: grossWeighing?.id || null,
-      gross_weight_kg: grossWeighing ? Number(grossWeighing.weight_kg) : null,
-      tare_weighing_id: tareWeighing?.id || null,
-      tare_weight_kg: tareWeighing ? Number(tareWeighing.weight_kg) : null,
-      net_weight_kg: grossWeighing && tareWeighing
-        ? roundWeight(Number(grossWeighing.weight_kg) - Number(tareWeighing.weight_kg))
-        : null,
-    };
+    if (mode && w1 && w2) {
+      // New 1:1 mode (SWAP / DIRECT / BULK)
+      const diff = roundWeight(Number(w1.weight_kg) - Number(w2.weight_kg));
 
-    await tx.asset.update({
-      where: { id: asset.id },
-      data: assetUpdate,
-    });
+      if (mode === 'DIRECT' && asset.estimated_tare_weight_kg) {
+        // Known container: diff = container + cargo, net = diff - known tare
+        assetUpdate = {
+          gross_weighing_id: w1.id,
+          tare_weighing_id: w2.id,
+          gross_weight_kg: diff,
+          tare_weight_kg: Number(asset.estimated_tare_weight_kg),
+          net_weight_kg: roundWeight(diff - Number(asset.estimated_tare_weight_kg)),
+        };
+      } else {
+        // SWAP or BULK: W1-W2 = net
+        assetUpdate = {
+          gross_weighing_id: w1.id,
+          tare_weighing_id: w2.id,
+          gross_weight_kg: Number(w1.weight_kg),
+          tare_weight_kg: Number(w2.weight_kg),
+          net_weight_kg: diff,
+        };
+      }
+    } else {
+      // Legacy interleaved mode (no weighing_mode set)
+      const grossWeighing = inbound.weighings.find((w) => w.sequence === asset.sequence);
+      const tareWeighing = inbound.weighings.find((w) => w.sequence === (asset.sequence || 0) + 1);
+      assetUpdate = {
+        gross_weighing_id: grossWeighing?.id || null,
+        gross_weight_kg: grossWeighing ? Number(grossWeighing.weight_kg) : null,
+        tare_weighing_id: tareWeighing?.id || null,
+        tare_weight_kg: tareWeighing ? Number(tareWeighing.weight_kg) : null,
+        net_weight_kg: grossWeighing && tareWeighing
+          ? roundWeight(Number(grossWeighing.weight_kg) - Number(tareWeighing.weight_kg))
+          : null,
+      };
+    }
+
+    await tx.asset.update({ where: { id: asset.id }, data: assetUpdate });
   }
 
+  // Inbound totals
   const firstWeighing = inbound.weighings[0];
-  const tareWeighing = inbound.weighings.find((weighing) => weighing.is_tare) || null;
+  const tareWeighing = inbound.weighings.find((w) => w.is_tare) || null;
+
   const inboundUpdate = {
     gross_weight_kg: firstWeighing ? Number(firstWeighing.weight_kg) : null,
     tare_weight_kg: tareWeighing ? Number(tareWeighing.weight_kg) : null,
-    net_weight_kg: firstWeighing && tareWeighing
-      ? roundWeight(Number(firstWeighing.weight_kg) - Number(tareWeighing.weight_kg))
-      : null,
   };
+
+  if (mode) {
+    // New mode: sum asset nets after update
+    const updatedAssets = await tx.asset.findMany({ where: { inbound_id: inboundId } });
+    const totalNet = updatedAssets.reduce((sum, a) => sum + (a.net_weight_kg ? Number(a.net_weight_kg) : 0), 0);
+    inboundUpdate.net_weight_kg = totalNet > 0 ? roundWeight(totalNet) : null;
+  } else {
+    // Legacy: first weighing minus tare weighing
+    inboundUpdate.net_weight_kg = firstWeighing && tareWeighing
+      ? roundWeight(Number(firstWeighing.weight_kg) - Number(tareWeighing.weight_kg))
+      : null;
+  }
 
   await tx.inbound.update({
     where: { id: inboundId },
@@ -330,7 +369,7 @@ async function createInbound(data, userId) {
  * Handles first weighing (gross), intermediate weighings, and final weighing (tare).
  */
 async function triggerNextWeighing(inboundId, options, userId) {
-  const { is_tare = false, is_manual = false, manual_weight_kg, manual_reason, device_id } = options || {};
+  let { is_tare = false, is_manual = false, manual_weight_kg, manual_reason, device_id } = options || {};
 
   // ── Phase 1: Read & validate (no transaction — just a query) ──────────────
   const inboundForValidation = await prisma.inbound.findUnique({
@@ -346,6 +385,16 @@ async function triggerNextWeighing(inboundId, options, userId) {
   const weighings = inboundForValidation.weighings;
   const assets = inboundForValidation.assets;
   const nextSeq = weighings.length + 1;
+
+  // New 1:1 mode: max 2 weighings
+  if (inboundForValidation.weighing_mode && nextSeq > 2) {
+    throw Object.assign(new Error('Maximum 2 weighings per inbound in 1:1 mode'), { statusCode: 400 });
+  }
+
+  // New 1:1 mode: W2 is always tare
+  if (inboundForValidation.weighing_mode && nextSeq === 2) {
+    is_tare = true;
+  }
 
   // Validation
   if (nextSeq === 1) {
@@ -595,21 +644,48 @@ async function registerParcel(inboundId, data, userId) {
       throw err;
     }
 
-    // Validate parcel type fields
-    if (data.parcel_type === 'CONTAINER' && !data.container_type && !data.existing_container_label) {
+    // Validate parcel type fields (container_registry_id also satisfies the requirement)
+    if (data.parcel_type === 'CONTAINER' && !data.container_type && !data.existing_container_label && !data.container_registry_id) {
       const err = new Error('Container type is required for CONTAINER parcels');
       err.statusCode = 400;
       throw err;
     }
 
-    // LZV enforcement (SKP-01)
+    // 1:1 mode enforcement: max 1 asset per inbound
     const currentParcelCount = await tx.asset.count({ where: { inbound_id: inboundId } });
-    const maxParcels = inbound.order.is_lzv ? 3 : 2;
-    if (currentParcelCount >= maxParcels) {
-      const err = new Error(`Maximum ${maxParcels} parcels allowed for this vehicle${inbound.order.is_lzv ? ' (LZV)' : ''}. Currently ${currentParcelCount} registered.`);
-      err.statusCode = 400;
-      throw err;
+    if (currentParcelCount >= 1) {
+      throw Object.assign(new Error('Maximum 1 asset per inbound'), { statusCode: 400 });
     }
+
+    // Determine and set weighing_mode
+    let weighingMode;
+    if (data.parcel_type === 'MATERIAL') {
+      weighingMode = 'BULK';
+    } else if (data.container_registry_id) {
+      weighingMode = 'DIRECT';
+      // Lookup registry container
+      const registryContainer = await tx.containerRegistry.findUnique({
+        where: { id: data.container_registry_id },
+      });
+      if (!registryContainer || !registryContainer.is_active) {
+        throw Object.assign(new Error('Container not found or inactive'), { statusCode: 400 });
+      }
+      // Auto-populate fields from registry
+      data.container_label = registryContainer.container_label;
+      data.container_type = registryContainer.container_type;
+      data.estimated_tare_weight_kg = Number(registryContainer.tare_weight_kg);
+      if (registryContainer.volume_m3) {
+        data.estimated_volume_m3 = Number(registryContainer.volume_m3);
+      }
+    } else {
+      weighingMode = 'SWAP';
+    }
+
+    // Set weighing_mode on the inbound
+    await tx.inbound.update({
+      where: { id: inboundId },
+      data: { weighing_mode: weighingMode },
+    });
 
     const sequence = inbound.weighings.length;
     const assetLabel = await generateAssetLabel(tx);
