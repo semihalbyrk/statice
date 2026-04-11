@@ -16,10 +16,14 @@ import {
   setInboundIncident,
   confirmWeighing,
   getWeighingAmendments,
+  getInboundsByOrder,
 } from '../../api/weighingEvents';
 import { deleteAsset, getNextContainerLabel, lookupContainerByLabel } from '../../api/assets';
+import { getContainers } from '../../api/containers';
+import { getProductCategories } from '../../api/wasteStreams';
 import { format } from 'date-fns';
 import Breadcrumb from '../../components/ui/Breadcrumb';
+import StatusBadge from '../../components/ui/StatusBadge';
 
 const CONTAINER_TYPES = ['OPEN_TOP', 'CLOSED_TOP', 'GITTERBOX', 'PALLET', 'OTHER'];
 const CONTAINER_TYPE_LABELS = { OPEN_TOP: 'Open Top', CLOSED_TOP: 'Closed Top', GITTERBOX: 'Gitterbox', PALLET: 'Pallet', OTHER: 'Other' };
@@ -87,6 +91,7 @@ export default function InboundDetailPage() {
   const [isTriggering, setTriggering] = useState(false);
   const [incidentCategory, setIncidentCategory] = useState('');
   const [incidentNotes, setIncidentNotes] = useState('');
+  const [siblingInbounds, setSiblingInbounds] = useState([]);
 
   const progressSteps = [
     { key: 'ARRIVED', label: t('progress.arrived') },
@@ -111,6 +116,14 @@ export default function InboundDetailPage() {
   useEffect(() => {
     fetchInbound(inboundId);
   }, [inboundId, fetchInbound]);
+
+  // Fetch sibling inbounds for the order context bar
+  useEffect(() => {
+    if (!inbound?.order_id) return;
+    getInboundsByOrder(inbound.order_id)
+      .then(({ data }) => setSiblingInbounds(data.data || []))
+      .catch(() => setSiblingInbounds([]));
+  }, [inbound?.order_id]);
 
   const handleStatusChange = useCallback(async (newStatus) => {
     try {
@@ -269,29 +282,50 @@ export default function InboundDetailPage() {
         )}
       </div>
 
-      {/* Weighing + Parcels side by side */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
-        <WeighingFlowSection
-          inbound={inbound}
-          inboundId={inboundId}
-          weighings={weighings}
-          assets={assets}
-          orderWasteStreams={orderWasteStreams}
-          isTriggering={isTriggering}
-          setTriggering={setTriggering}
-          setInbound={setInbound}
-          refreshInbound={refreshInbound}
-          isAdmin={isAdmin}
-          user={user}
-          onConfirmWeighing={handleConfirmWeighing}
-        />
+      {/* Layout: single-flow for new mode, dual-panel for legacy */}
+      {inbound.weighing_mode ? (
+        /* ── New single-asset layout ── */
+        <div className="mb-4">
+          <SingleAssetFlowSection
+            inbound={inbound}
+            inboundId={inboundId}
+            weighings={weighings}
+            assets={assets}
+            orderWasteStreams={orderWasteStreams}
+            isTriggering={isTriggering}
+            setTriggering={setTriggering}
+            setInbound={setInbound}
+            refreshInbound={refreshInbound}
+            isAdmin={isAdmin}
+            user={user}
+            onConfirmWeighing={handleConfirmWeighing}
+          />
+        </div>
+      ) : (
+        /* ── Legacy dual-panel layout ── */
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
+          <WeighingFlowSection
+            inbound={inbound}
+            inboundId={inboundId}
+            weighings={weighings}
+            assets={assets}
+            orderWasteStreams={orderWasteStreams}
+            isTriggering={isTriggering}
+            setTriggering={setTriggering}
+            setInbound={setInbound}
+            refreshInbound={refreshInbound}
+            isAdmin={isAdmin}
+            user={user}
+            onConfirmWeighing={handleConfirmWeighing}
+          />
 
-        <ParcelsTable
-          inbound={inbound}
-          assets={assets}
-          refreshInbound={refreshInbound}
-        />
-      </div>
+          <ParcelsTable
+            inbound={inbound}
+            assets={assets}
+            refreshInbound={refreshInbound}
+          />
+        </div>
+      )}
 
       {/* Actions */}
       <ActionsFooter
@@ -301,6 +335,14 @@ export default function InboundDetailPage() {
         setTriggering={setTriggering}
         setInbound={setInbound}
       />
+
+      {/* Order Context Bar */}
+      {siblingInbounds.length > 0 && (
+        <OrderContextBar
+          inbound={inbound}
+          siblingInbounds={siblingInbounds}
+        />
+      )}
     </div>
   );
 }
@@ -1289,6 +1331,557 @@ function OverrideDialog({ inboundId, weighings, onClose, onSuccess }) {
             </button>
           </div>
         </form>
+      </div>
+    </div>
+  );
+}
+
+/* ───── Single Asset Flow Section (new 1:1 mode) ───── */
+function SingleAssetFlowSection({ inbound, inboundId, weighings, assets, orderWasteStreams, isTriggering, setTriggering, setInbound, refreshInbound, isAdmin, user, onConfirmWeighing }) {
+  const { t } = useTranslation(['weighing', 'common']);
+  const [showManualFallback, setShowManualFallback] = useState(false);
+  const [showOverride, setShowOverride] = useState(false);
+  const [registeredParcel, setRegisteredParcel] = useState(null);
+  const [selectedDevice, setSelectedDevice] = useState(() =>
+    WEIGHBRIDGE_DEVICES.length === 1 ? WEIGHBRIDGE_DEVICES[0] : ''
+  );
+
+  const isTerminal = ['READY_FOR_SORTING', 'SORTED'].includes(inbound.status);
+  const asset = assets[0] || null;
+
+  const handleWeighing = useCallback(async (isTare = false) => {
+    setTriggering(true);
+    try {
+      const { data } = await triggerNextWeighing(inboundId, {
+        is_tare: isTare,
+        device_id: selectedDevice || inbound.device_id || undefined,
+      });
+      setInbound(data.data);
+      const label = weighings.length === 0
+        ? t('weighingFlow.firstWeighingLabel')
+        : isTare
+          ? t('weighingFlow.tareWeighingLabel')
+          : t('weighingFlow.weighingLabel');
+      toast.success(t('toast.weighingComplete', { label }));
+    } catch (err) {
+      const serverMsg = err.response?.data?.error || '';
+      let displayMsg;
+      if (serverMsg.toLowerCase().includes('timeout')) {
+        displayMsg = 'Could not connect to weighbridge — request timed out';
+      } else if (serverMsg.toLowerCase().includes('connection failed')) {
+        displayMsg = 'Could not reach weighbridge — connection refused';
+      } else if (serverMsg.toLowerCase().includes('pfister api returned http')) {
+        displayMsg = `Weighbridge returned an error (${serverMsg.match(/\d+/)?.[0] || '?'})`;
+      } else if (serverMsg.toLowerCase().includes('pfister weighing error')) {
+        displayMsg = serverMsg.replace('Pfister weighing error', 'Weighbridge error');
+      } else if (serverMsg) {
+        displayMsg = serverMsg;
+      } else {
+        displayMsg = 'Could not reach weighbridge';
+      }
+      toast.error(displayMsg);
+      setShowManualFallback(true);
+    } finally {
+      setTriggering(false);
+    }
+  }, [inboundId, weighings.length, setTriggering, setInbound, t, selectedDevice, inbound.device_id]);
+
+  const handleParcelRegistered = useCallback((parcel) => {
+    setRegisteredParcel(parcel);
+    refreshInbound();
+  }, [refreshInbound]);
+
+  // State-based visibility:
+  // ARRIVED, 0 weighings -> "Trigger Gross Weighing"
+  // WEIGHED_IN, 1 weighing, 0 assets -> Asset registration form
+  // WEIGHED_IN, 1 weighing, 1 asset -> "Trigger Tare Weighing"
+  // WEIGHED_OUT -> "Download Weight Bill" + "Confirm"
+  // READY_FOR_SORTING+ -> Read-only summary
+
+  const showGrossButton = inbound.status === 'ARRIVED' && weighings.length === 0;
+  const showAssetForm = inbound.status === 'WEIGHED_IN' && weighings.length >= 1 && assets.length === 0;
+  const showTareButton = inbound.status === 'WEIGHED_IN' && weighings.length >= 1 && assets.length >= 1;
+
+  return (
+    <div className="bg-white rounded-lg border border-grey-200 shadow-sm p-4">
+      <div className="flex items-center justify-between mb-2">
+        <h2 className="text-sm font-semibold text-grey-900">{t('weighingFlow.weighingProcess')}</h2>
+        {isAdmin && weighings.length > 0 && (
+          <button
+            onClick={() => setShowOverride(true)}
+            className="h-7 px-2.5 flex items-center gap-1 border border-grey-300 rounded-md text-[11px] font-medium text-grey-700 hover:bg-grey-50 transition-colors"
+          >
+            <Pencil size={11} /> {t('weighingFlow.override')}
+          </button>
+        )}
+      </div>
+
+      {/* Summary stats */}
+      {weighings.length > 0 && (
+        <div className="flex items-center gap-3 flex-wrap mb-3">
+          {inbound.device_id && (
+            <span className="text-xs text-grey-500">{t('weighingFlow.device')}: <strong className="text-grey-700">{inbound.device_id}</strong></span>
+          )}
+        </div>
+      )}
+
+      {/* Single Asset Timeline */}
+      {weighings.length > 0 && (
+        <SingleAssetTimeline
+          weighings={weighings}
+          asset={asset}
+          inbound={inbound}
+          user={user}
+          onConfirmWeighing={onConfirmWeighing}
+        />
+      )}
+
+      {/* Device Selection + Gross Weighing Button */}
+      {showGrossButton && !isTerminal && (
+        <div className="mt-3">
+          {!inbound.device_id && (
+            <div className="mb-2">
+              <label className="block text-xs font-medium text-grey-700 mb-1">
+                {t('weighingFlow.selectDevice')} <span className="text-red-500">*</span>
+              </label>
+              <select
+                value={selectedDevice}
+                onChange={(e) => setSelectedDevice(e.target.value)}
+                className={selectClass}
+                style={{ maxWidth: '220px' }}
+              >
+                {WEIGHBRIDGE_DEVICES.length > 1 && (
+                  <option value="">{t('weighingFlow.selectDevicePlaceholder')}</option>
+                )}
+                {WEIGHBRIDGE_DEVICES.map((d) => (
+                  <option key={d} value={d}>{d}</option>
+                ))}
+              </select>
+            </div>
+          )}
+          <button
+            onClick={() => handleWeighing(false)}
+            disabled={isTriggering || (!inbound.device_id && !selectedDevice)}
+            className="h-12 px-6 flex items-center gap-2 bg-green-500 text-white rounded-md font-semibold text-sm hover:bg-green-700 disabled:opacity-50 transition-colors"
+          >
+            {isTriggering ? <Loader2 className="animate-spin" size={18} /> : <Scale size={18} />}
+            {t('weighingFlow.triggerGross')}
+          </button>
+        </div>
+      )}
+
+      {/* Asset Registration Form (3-mode) */}
+      {showAssetForm && !isTerminal && (
+        <div className="mt-4">
+          <AssetRegistrationForm
+            inboundId={inboundId}
+            weighingMode={inbound.weighing_mode}
+            orderWasteStreams={orderWasteStreams}
+            onSuccess={handleParcelRegistered}
+          />
+        </div>
+      )}
+
+      {/* Tare Weighing Button */}
+      {showTareButton && !isTerminal && (
+        <div className="mt-4">
+          <button
+            onClick={() => handleWeighing(true)}
+            disabled={isTriggering}
+            className="h-12 px-6 flex items-center gap-2 bg-green-500 text-white rounded-md font-semibold text-sm hover:bg-green-700 disabled:opacity-50 transition-colors"
+          >
+            {isTriggering ? <Loader2 className="animate-spin" size={18} /> : <Scale size={18} />}
+            {t('weighingFlow.triggerTare')}
+          </button>
+        </div>
+      )}
+
+      {/* Registered Parcel Confirmation */}
+      {registeredParcel && (
+        <div className="mt-3 bg-green-25 border border-green-300 rounded-lg p-4">
+          <div className="flex items-center gap-2 mb-1">
+            <Check size={16} className="text-green-700" />
+            <span className="text-sm font-semibold text-green-700">{t('parcelConfirmation.parcelRegistered')}</span>
+          </div>
+          <p className="text-2xl font-mono font-bold text-green-700 tracking-wider">{registeredParcel.asset_label}</p>
+          <p className="text-xs text-green-600 mt-1">{t('parcelConfirmation.writeIdOnCargo')}</p>
+          <div className="mt-3 flex gap-3">
+            <button onClick={() => printAssetLabel(registeredParcel, t)} className="text-xs font-semibold text-green-700 underline">{t('parcelConfirmation.printLabel')}</button>
+            <button onClick={() => setRegisteredParcel(null)} className="text-xs text-green-700 underline">{t('common:buttons.dismiss')}</button>
+          </div>
+        </div>
+      )}
+
+      {/* Manual Weighing Fallback */}
+      {showManualFallback && (
+        <ManualWeighingDialog
+          inboundId={inboundId}
+          isTare={showTareButton}
+          onSuccess={async (data) => { setInbound(data); setShowManualFallback(false); }}
+          onClose={() => setShowManualFallback(false)}
+        />
+      )}
+
+      {/* Override Dialog */}
+      {showOverride && (
+        <OverrideDialog
+          inboundId={inboundId}
+          weighings={weighings}
+          onClose={() => setShowOverride(false)}
+          onSuccess={async () => { setShowOverride(false); await refreshInbound(); }}
+        />
+      )}
+    </div>
+  );
+}
+
+/* ───── Single Asset Timeline (simplified W1 → Asset → W2 → Net) ───── */
+function SingleAssetTimeline({ weighings, asset, inbound, user, onConfirmWeighing }) {
+  const { t } = useTranslation(['weighing']);
+  const [openJsonId, setOpenJsonId] = useState(null);
+
+  const w1 = weighings.find((w) => w.sequence === 1);
+  const w2 = weighings.find((w) => w.sequence === 2 || w.is_tare);
+
+  function renderWeighingCard(w, label) {
+    if (!w) return null;
+    const ticket = w.pfister_ticket;
+    const rawJson = ticket?.raw_payload
+      ? (() => { try { return JSON.stringify(JSON.parse(ticket.raw_payload), null, 2); } catch { return ticket.raw_payload; } })()
+      : null;
+
+    return (
+      <div className="bg-green-25 border border-green-200 rounded-lg px-4 py-2.5">
+        <div className="flex items-center gap-2">
+          <Scale size={16} className="text-green-600 shrink-0" />
+          <span className="text-base font-semibold text-green-800">{label}</span>
+          <span className="text-base font-bold text-green-900 tabular-nums">{Number(w.weight_kg).toLocaleString()} kg</span>
+          {ticket?.is_manual_override && <span className="text-[10px] text-orange-600 font-medium">{t('weighingFlow.manual')}</span>}
+          {ticket?.is_confirmed && (
+            <span className="text-xs text-green-600" title={t('weighingFlow.confirmed')}>&#x1f512;</span>
+          )}
+          {rawJson && (
+            <button
+              onClick={() => setOpenJsonId(openJsonId === w.id ? null : w.id)}
+              className="ml-1 text-grey-400 hover:text-grey-600 transition-colors"
+              title="Show weighbridge response"
+            >
+              <Info size={14} />
+            </button>
+          )}
+        </div>
+        {ticket && (
+          <p className="text-xs text-green-500 font-mono mt-1 ml-6">{ticket.ticket_number} &middot; {format(new Date(ticket.timestamp), 'dd.MM.yyyy HH:mm')}</p>
+        )}
+        {openJsonId === w.id && rawJson && (
+          <div className="mt-2 ml-6 relative">
+            <button onClick={() => setOpenJsonId(null)} className="absolute top-2 right-2 text-grey-400 hover:text-grey-600"><X size={12} /></button>
+            <pre className="text-[11px] font-mono bg-grey-50 border border-grey-200 rounded p-3 pr-6 text-grey-700 overflow-x-auto whitespace-pre-wrap break-all leading-relaxed">{rawJson}</pre>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-2">
+      {/* W1: First Weighing */}
+      {renderWeighingCard(w1, t('weighingFlow.firstGewicht'))}
+
+      {/* Asset card */}
+      {asset && (
+        <div className="flex items-center gap-2 px-4 py-2 ml-2 bg-grey-50 rounded-lg border border-grey-200">
+          <Package size={14} className="text-grey-500 shrink-0" />
+          <span className="text-sm font-semibold text-grey-900">{asset.asset_label}</span>
+          <span className="text-xs text-grey-400">&middot;</span>
+          <span className="text-xs text-grey-500">
+            {asset.parcel_type === 'CONTAINER'
+              ? (CONTAINER_TYPE_LABELS[asset.container_type] || asset.container_type || 'Container')
+              : 'Bulk'}
+          </span>
+          {inbound.weighing_mode && (
+            <>
+              <span className="text-xs text-grey-400">&middot;</span>
+              <span className="text-[10px] font-medium uppercase tracking-wide text-grey-400">{inbound.weighing_mode}</span>
+            </>
+          )}
+          {asset.waste_stream?.name && (
+            <>
+              <span className="text-xs text-grey-400">&middot;</span>
+              <span className="text-xs text-grey-500">{asset.waste_stream.name}</span>
+            </>
+          )}
+        </div>
+      )}
+
+      {/* W2: Second Weighing */}
+      {renderWeighingCard(w2, t('weighingFlow.secondGewicht'))}
+
+      {/* Net weight summary */}
+      {inbound.net_weight_kg != null && (
+        <div className="bg-green-50 border-2 border-green-300 rounded-lg px-4 py-3 mt-1">
+          <div className="flex items-center gap-3">
+            <span className="text-sm font-semibold text-green-800">{t('weighingFlow.nettoGewicht')}</span>
+            <span className="text-xl font-bold text-green-900 tabular-nums">{Number(inbound.net_weight_kg).toLocaleString()} kg</span>
+          </div>
+          {/* Breakdown for DIRECT mode */}
+          {inbound.weighing_mode === 'DIRECT' && asset && asset.estimated_tare_weight_kg != null && (
+            <div className="mt-2 flex gap-4 text-xs text-green-700">
+              <span>{t('weighingFlow.brutoContainer')}: <strong>{asset.gross_weight_kg != null ? Number(asset.gross_weight_kg).toLocaleString() : '—'} kg</strong></span>
+              <span>{t('weighingFlow.containerTarra')}: <strong>{Number(asset.estimated_tare_weight_kg).toLocaleString()} kg</strong></span>
+              <span>{t('weighingFlow.nettoLading')}: <strong>{asset.net_weight_kg != null ? Number(asset.net_weight_kg).toLocaleString() : '—'} kg</strong></span>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ───── Asset Registration Form (3-mode: SWAP / DIRECT / BULK) ───── */
+function AssetRegistrationForm({ inboundId, weighingMode, orderWasteStreams, onSuccess }) {
+  const { t } = useTranslation(['weighing', 'common']);
+
+  // Determine initial mode from weighing_mode hint, or default to SWAP
+  const initialMode = weighingMode === 'BULK' ? 'bulk' : weighingMode === 'DIRECT' ? 'known' : 'new';
+  const [mode, setMode] = useState(initialMode);
+
+  const [form, setForm] = useState({
+    container_type: '',
+    waste_stream_id: orderWasteStreams.length === 1 ? orderWasteStreams[0].id : '',
+    material_category_id: '',
+    notes: '',
+    container_registry_id: '',
+  });
+  const [activeContainers, setActiveContainers] = useState([]);
+  const [selectedContainer, setSelectedContainer] = useState(null);
+  const [categories, setCategories] = useState([]);
+  const [submitting, setSubmitting] = useState(false);
+
+  // Fetch active containers for "Known Container" mode
+  useEffect(() => {
+    if (mode === 'known') {
+      getContainers({ active: true })
+        .then(({ data }) => setActiveContainers(data.data || []))
+        .catch(() => setActiveContainers([]));
+    }
+  }, [mode]);
+
+  // Fetch material categories
+  useEffect(() => {
+    getProductCategories()
+      .then(({ data }) => setCategories(data.data || []))
+      .catch(() => setCategories([]));
+  }, []);
+
+  function handleContainerSelect(id) {
+    const container = activeContainers.find((c) => c.id === id);
+    setSelectedContainer(container || null);
+    setForm((p) => ({ ...p, container_registry_id: id }));
+  }
+
+  function handleModeChange(newMode) {
+    setMode(newMode);
+    setSelectedContainer(null);
+    setForm((p) => ({
+      ...p,
+      container_type: '',
+      container_registry_id: '',
+    }));
+  }
+
+  function buildPayload() {
+    const payload = {
+      waste_stream_id: form.waste_stream_id || null,
+      material_category_id: form.material_category_id || null,
+      notes: form.notes || null,
+    };
+
+    if (mode === 'new') {
+      // SWAP: new container
+      payload.parcel_type = 'CONTAINER';
+      payload.container_type = form.container_type;
+    } else if (mode === 'known') {
+      // DIRECT: known container from registry
+      payload.parcel_type = 'CONTAINER';
+      payload.container_registry_id = form.container_registry_id || null;
+    } else {
+      // BULK: material only
+      payload.parcel_type = 'MATERIAL';
+    }
+    return payload;
+  }
+
+  async function handleSubmit() {
+    if (mode === 'new' && !form.container_type) return;
+    if (mode === 'known' && !form.container_registry_id) return;
+    setSubmitting(true);
+    try {
+      const payload = buildPayload();
+      const { data } = await registerParcelApi(inboundId, payload);
+      toast.success(t('toast.parcelRegistered'));
+      onSuccess(data.data);
+    } catch (err) {
+      toast.error(err.response?.data?.error || t('toast.failedToRegisterParcel'));
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  const submitDisabled = submitting
+    || (mode === 'new' && !form.container_type)
+    || (mode === 'known' && !form.container_registry_id);
+
+  return (
+    <div className="bg-grey-50 rounded-lg border border-grey-200 p-4">
+      <h3 className="text-sm font-semibold text-grey-900 mb-3">{t('weighingFlow.registerAsset')}</h3>
+
+      {/* 3-mode tabs */}
+      <div className="flex gap-1 mb-4 bg-grey-100 rounded-lg p-1">
+        {[
+          { value: 'new', icon: <Box size={14} />, label: t('weighingFlow.modeNew') },
+          { value: 'known', icon: <Box size={14} />, label: t('weighingFlow.modeKnown') },
+          { value: 'bulk', icon: <Package size={14} />, label: t('weighingFlow.modeBulk') },
+        ].map((opt) => (
+          <button
+            key={opt.value}
+            onClick={() => handleModeChange(opt.value)}
+            className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+              mode === opt.value
+                ? 'bg-white text-grey-900 shadow-sm'
+                : 'text-grey-500 hover:text-grey-700'
+            }`}
+          >
+            {opt.icon} {opt.label}
+          </button>
+        ))}
+      </div>
+
+      {/* SWAP (New Container) fields */}
+      {mode === 'new' && (
+        <div className="mb-3">
+          <label className="block text-xs font-medium text-grey-700 mb-1">{t('parcelRegistration.containerType')} <span className="text-red-500">*</span></label>
+          <select
+            value={form.container_type}
+            onChange={(e) => setForm((p) => ({ ...p, container_type: e.target.value }))}
+            className={selectClass}
+          >
+            <option value="">{t('parcelRegistration.select')}</option>
+            {CONTAINER_TYPES.map((ct) => <option key={ct} value={ct}>{CONTAINER_TYPE_LABELS[ct]}</option>)}
+          </select>
+        </div>
+      )}
+
+      {/* DIRECT (Known Container) fields */}
+      {mode === 'known' && (
+        <div className="mb-3">
+          <label className="block text-xs font-medium text-grey-700 mb-1">{t('weighingFlow.selectContainer')} <span className="text-red-500">*</span></label>
+          <select
+            value={form.container_registry_id}
+            onChange={(e) => handleContainerSelect(e.target.value)}
+            className={selectClass}
+          >
+            <option value="">{t('weighingFlow.selectContainer')}</option>
+            {activeContainers.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.label || c.container_label} — {CONTAINER_TYPE_LABELS[c.container_type] || c.container_type}
+                {c.estimated_tare_weight_kg ? ` (${c.estimated_tare_weight_kg} kg)` : ''}
+              </option>
+            ))}
+          </select>
+          {selectedContainer && (
+            <div className="mt-2 flex gap-4 text-xs text-grey-600 bg-white border border-grey-200 rounded-md px-3 py-2">
+              <span>{t('parcelRegistration.containerType')}: <strong>{CONTAINER_TYPE_LABELS[selectedContainer.container_type] || selectedContainer.container_type}</strong></span>
+              {selectedContainer.estimated_tare_weight_kg != null && (
+                <span>{t('parcelRegistration.tareWeight')}: <strong>{Number(selectedContainer.estimated_tare_weight_kg).toLocaleString()} kg</strong></span>
+              )}
+              {selectedContainer.estimated_volume_m3 != null && (
+                <span>{t('parcelRegistration.volume')}: <strong>{Number(selectedContainer.estimated_volume_m3)} m³</strong></span>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Waste Stream + Material Category + Notes — all modes */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-3">
+        <div>
+          <label className="block text-xs font-medium text-grey-700 mb-1">{t('parcelRegistration.wasteStream')}</label>
+          {orderWasteStreams.length <= 1 ? (
+            <div className="h-10 bg-grey-50 border border-grey-200 rounded-md px-3.5 text-sm text-grey-700 flex items-center">
+              {orderWasteStreams[0]?.name || '—'}
+            </div>
+          ) : (
+            <select value={form.waste_stream_id} onChange={(e) => setForm((p) => ({ ...p, waste_stream_id: e.target.value }))} className={selectClass}>
+              <option value="">{t('parcelRegistration.select')}</option>
+              {orderWasteStreams.map((ws) => <option key={ws.id} value={ws.id}>{ws.name} ({ws.code})</option>)}
+            </select>
+          )}
+        </div>
+        <div>
+          <label className="block text-xs font-medium text-grey-700 mb-1">{t('printLabel.category')}</label>
+          <select
+            value={form.material_category_id}
+            onChange={(e) => setForm((p) => ({ ...p, material_category_id: e.target.value }))}
+            className={selectClass}
+          >
+            <option value="">{t('parcelRegistration.select')}</option>
+            {categories.map((cat) => (
+              <option key={cat.id} value={cat.id}>{cat.description_en || cat.code_cbs}</option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label className="block text-xs font-medium text-grey-700 mb-1">{t('parcelRegistration.notes')}</label>
+          <input type="text" placeholder={t('parcelRegistration.optional')}
+            value={form.notes}
+            onChange={(e) => setForm((p) => ({ ...p, notes: e.target.value }))}
+            className={inputClass} />
+        </div>
+      </div>
+
+      {/* Submit */}
+      <div className="flex justify-end">
+        <button
+          type="button"
+          onClick={handleSubmit}
+          disabled={submitDisabled}
+          className="h-9 px-5 bg-green-500 text-white rounded-md font-semibold text-sm hover:bg-green-700 disabled:opacity-50 transition-colors flex items-center gap-2"
+        >
+          {submitting ? <Loader2 className="animate-spin" size={14} /> : <Plus size={14} />}
+          {t('weighingFlow.registerAsset')}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/* ───── Order Context Bar ───── */
+function OrderContextBar({ inbound, siblingInbounds }) {
+  const { t } = useTranslation(['weighing']);
+
+  return (
+    <div className="border-t border-grey-200 bg-grey-50 rounded-b-lg px-6 py-3 mt-4">
+      <p className="text-sm font-medium text-grey-600 mb-2">
+        {t('info.orderName')} {inbound.order?.order_number || '—'} — {siblingInbounds.length} inbound(s)
+      </p>
+      <div className="space-y-1">
+        {siblingInbounds.map((sib) => (
+          <div key={sib.id} className="flex items-center gap-3 text-sm">
+            <StatusBadge status={sib.status} />
+            <a
+              href={`/inbounds/${sib.id}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={sib.id === inbound.id ? 'font-bold text-grey-900' : 'text-green-700 hover:underline'}
+            >
+              {sib.inbound_number}
+            </a>
+            <span className="text-grey-500 tabular-nums">
+              {sib.net_weight_kg ? `${Number(sib.net_weight_kg).toLocaleString()} kg` : '—'}
+            </span>
+          </div>
+        ))}
       </div>
     </div>
   );
