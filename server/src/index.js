@@ -68,6 +68,7 @@ app.use('/api/fees', feesRoutes);
 app.use('/api/contracts', contractsRoutes);
 app.use('/api/invoices', invoicesRoutes);
 app.use('/api/contamination', contaminationRoutes);
+app.use('/api/containers', require('./routes/containerRegistry'));
 
 // Global error handler
 const errorHandler = require('./middleware/errorHandler');

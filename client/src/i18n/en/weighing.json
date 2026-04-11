@@ -35,7 +35,22 @@
     "confirmed": "Confirmed",
     "selectDevice": "Weighbridge",
     "selectDevicePlaceholder": "Select weighbridge...",
-    "device": "Device"
+    "device": "Device",
+    "triggerGross": "Trigger Gross Weighing",
+    "triggerTare": "Trigger Tare Weighing",
+    "registerAsset": "Register Asset",
+    "modeNew": "New Container",
+    "modeKnown": "Known Container",
+    "modeBulk": "Bulk Material",
+    "selectContainer": "Select container...",
+    "firstGewicht": "1. Gewicht",
+    "secondGewicht": "2. Gewicht",
+    "nettoGewicht": "Netto Gewicht",
+    "brutoContainer": "Bruto Container",
+    "containerTarra": "Container Tarra",
+    "nettoLading": "Netto Lading",
+    "downloadWeightBill": "Download Weight Bill",
+    "confirm": "Confirm"
   },
   "manualWeighing": {
     "title": "Manual Weight Entry",

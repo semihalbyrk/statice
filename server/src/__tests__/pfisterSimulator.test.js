@@ -61,7 +61,7 @@ function pfisterResponse(overrides = {}) {
       error: '0',
       errortext: '',
       result: '06040 kg',
-      timestamp: '12 April 2023 11:14:03',
+      timestamp: '12-04-2023 11:14:03',
       sequencenumber: uniqueSeq(),
       ...overrides,
     }),
@@ -77,13 +77,13 @@ async function callAndTrack(...args) {
 
 describe('parsePfisterTimestamp (via requestWeighing)', () => {
   it('parses a valid Pfister timestamp correctly', async () => {
-    fetch.mockResolvedValue(pfisterResponse({ timestamp: '1 January 2024 00:00:00' }));
+    fetch.mockResolvedValue(pfisterResponse({ timestamp: '01-01-2024 00:00:00' }));
     const ticket = await callAndTrack('GROSS');
     expect(ticket.timestamp).toEqual(new Date(2024, 0, 1, 0, 0, 0));
   });
 
-  it('parses single-digit day', async () => {
-    fetch.mockResolvedValue(pfisterResponse({ timestamp: '5 March 2025 09:30:15' }));
+  it('parses single-digit day (zero-padded)', async () => {
+    fetch.mockResolvedValue(pfisterResponse({ timestamp: '05-03-2025 09:30:15' }));
     const ticket = await callAndTrack('GROSS');
     expect(ticket.timestamp).toEqual(new Date(2025, 2, 5, 9, 30, 15));
   });
@@ -93,9 +93,9 @@ describe('parsePfisterTimestamp (via requestWeighing)', () => {
     await expect(requestWeighing('GROSS')).rejects.toThrow('Cannot parse Pfister timestamp');
   });
 
-  it('throws on unknown month name', async () => {
-    fetch.mockResolvedValue(pfisterResponse({ timestamp: '12 Janvier 2024 10:00:00' }));
-    await expect(requestWeighing('GROSS')).rejects.toThrow('Unknown month in Pfister timestamp');
+  it('throws on non-numeric timestamp', async () => {
+    fetch.mockResolvedValue(pfisterResponse({ timestamp: 'not-a-date at all' }));
+    await expect(requestWeighing('GROSS')).rejects.toThrow('Cannot parse Pfister timestamp');
   });
 });
 

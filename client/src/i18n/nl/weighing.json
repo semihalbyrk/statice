@@ -35,7 +35,22 @@
     "confirmed": "Bevestigd",
     "selectDevice": "Weegbrug",
     "selectDevicePlaceholder": "Selecteer weegbrug...",
-    "device": "Apparaat"
+    "device": "Apparaat",
+    "triggerGross": "Bruto Weging Starten",
+    "triggerTare": "Tarra Weging Starten",
+    "registerAsset": "Asset Registreren",
+    "modeNew": "Nieuwe Container",
+    "modeKnown": "Bekende Container",
+    "modeBulk": "Bulkmateriaal",
+    "selectContainer": "Container selecteren...",
+    "firstGewicht": "1. Gewicht",
+    "secondGewicht": "2. Gewicht",
+    "nettoGewicht": "Netto Gewicht",
+    "brutoContainer": "Bruto Container",
+    "containerTarra": "Container Tarra",
+    "nettoLading": "Netto Lading",
+    "downloadWeightBill": "Weegbon Downloaden",
+    "confirm": "Bevestigen"
   },
   "manualWeighing": {
     "title": "Handmatige Gewichtsinvoer",

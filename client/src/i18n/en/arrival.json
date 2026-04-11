@@ -29,6 +29,7 @@
   },
   "actions": {
     "registerArrival": "Register Arrival",
+    "addInbound": "+ Add Inbound",
     "useManualOverride": "Use Manual Override",
     "createAdHocOrder": "Create Ad-hoc Order",
     "createAdHocOrderInstead": "Create Ad-hoc Order Instead"
@@ -38,7 +39,8 @@
     "supplier": "Supplier",
     "wasteStream": "Waste Stream",
     "parcelProgress": "Parcel Progress",
-    "partialDelivery": "Partial delivery in progress"
+    "partialDelivery": "Partial delivery in progress",
+    "inbounds": "Inbounds"
   },
   "toast": {
     "inboundCreated": "Inbound created",

@@ -20,6 +20,10 @@ const ORDER_INCLUDE = {
     },
   },
   created_by_user: { select: { id: true, full_name: true } },
+  inbounds: {
+    select: { id: true, inbound_number: true, status: true, net_weight_kg: true },
+    orderBy: { arrived_at: 'desc' },
+  },
 };
 
 function enrichOrder(order) {
@@ -128,6 +132,13 @@ async function getOrder(id) {
         include: {
           vehicle: true,
           sorting_session: { select: { id: true, status: true } },
+          assets: {
+            include: {
+              waste_stream: true,
+              material_category: true,
+            },
+            orderBy: { created_at: 'asc' },
+          },
         },
         orderBy: { arrived_at: 'desc' },
       },

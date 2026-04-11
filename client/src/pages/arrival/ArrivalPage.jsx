@@ -1,5 +1,4 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Truck, Plus, Clock, Package } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -12,7 +11,6 @@ import { format } from 'date-fns';
 
 export default function ArrivalPage() {
   const { t } = useTranslation('arrival');
-  const navigate = useNavigate();
   const [plate, setPlate] = useState('');
   const [matchResult, setMatchResult] = useState({
     exact_same_day: [],
@@ -59,7 +57,9 @@ export default function ArrivalPage() {
         is_manual_match: Boolean(options.isManualMatch),
       });
       toast.success(t('toast.inboundCreated'));
-      navigate(`/inbounds/${data.data.id}`);
+      window.open(`/inbounds/${data.data.id}`, '_blank');
+      // Refresh match results so the new inbound appears in the order card
+      await searchPlate(plate);
     } catch (err) {
       toast.error(err.response?.data?.error || t('toast.inboundFailed'));
     } finally {
@@ -261,6 +261,24 @@ function MatchSection({ title, description, orders, submitting, onSelect, varian
                 </p>
               </div>
             </div>
+            {order.inbounds && order.inbounds.length > 0 && (
+              <div className="mt-3 border-t border-grey-100 pt-3">
+                <p className="text-xs font-medium text-grey-500 mb-1">{t('fields.inbounds')}:</p>
+                <div className="space-y-1">
+                  {order.inbounds.map((ib) => (
+                    <div key={ib.id} className="flex items-center justify-between text-xs">
+                      <div className="flex items-center gap-2">
+                        <StatusBadge status={ib.status} size="xs" />
+                        <span className="font-medium text-grey-700">{ib.inbound_number}</span>
+                      </div>
+                      <span className="text-grey-500 tabular-nums">
+                        {ib.net_weight_kg ? `${Number(ib.net_weight_kg).toLocaleString()} kg` : '—'}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
             <div className="bg-grey-50 border border-grey-100 rounded-lg mt-4 px-4 py-3 flex items-center justify-between gap-3 flex-wrap">
               <div className="space-y-0.5">
                 <span className="text-xs font-mono text-grey-500 tracking-wide">{order.vehicle_plate || 'PLATE NOT SET'}</span>
@@ -274,7 +292,7 @@ function MatchSection({ title, description, orders, submitting, onSelect, varian
                 className={`h-9 px-5 rounded-md text-sm font-semibold disabled:opacity-50 transition-colors flex items-center gap-2 ${variant === 'manual' ? 'bg-orange-500 hover:bg-orange-600 text-white' : 'bg-green-500 hover:bg-green-700 text-white'}`}
               >
                 <Truck size={15} />
-                {variant === 'manual' ? t('actions.useManualOverride') : t('actions.registerArrival')}
+                {variant === 'manual' ? t('actions.useManualOverride') : t('actions.addInbound')}
               </button>
             </div>
           </div>
