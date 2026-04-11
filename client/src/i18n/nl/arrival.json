@@ -29,6 +29,7 @@
   },
   "actions": {
     "registerArrival": "Aankomst Registreren",
+    "addInbound": "+ Inbound Toevoegen",
     "useManualOverride": "Handmatige Override Gebruiken",
     "createAdHocOrder": "Ad-hoc Order Aanmaken",
     "createAdHocOrderInstead": "Ad-hoc Order Aanmaken"
@@ -38,7 +39,8 @@
     "supplier": "Leverancier",
     "wasteStream": "Afvalstroom",
     "parcelProgress": "Pakketvoortgang",
-    "partialDelivery": "Gedeeltelijke levering in uitvoering"
+    "partialDelivery": "Gedeeltelijke levering in uitvoering",
+    "inbounds": "Inbounds"
   },
   "toast": {
     "inboundCreated": "Inkomend transport aangemaakt",
