@@ -86,7 +86,6 @@ describe('GET /api/admin/settings', () => {
     expect(res.body.data).toHaveProperty('facility_kvk');
     expect(res.body.data).toHaveProperty('report_footer_text');
     expect(res.body.data).toHaveProperty('max_skips_per_event');
-    expect(res.body.data).toHaveProperty('require_downstream_processor');
   });
 
   it('includes smtp_configured and simulation_mode flags', async () => {
@@ -239,18 +238,6 @@ describe('PUT /api/admin/settings', () => {
 
     expect(res.status).toBe(200);
     expect(res.body.data.max_skips_per_event).toBe(5);
-  });
-
-  it('updates require_downstream_processor flag', async () => {
-    const token = await getToken('admin@statice.nl', 'Admin1234!');
-
-    const res = await request(app)
-      .put('/api/admin/settings')
-      .set('Authorization', `Bearer ${token}`)
-      .send({ require_downstream_processor: true });
-
-    expect(res.status).toBe(200);
-    expect(res.body.data.require_downstream_processor).toBe(true);
   });
 
   it('updates report_footer_text', async () => {

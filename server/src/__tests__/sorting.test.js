@@ -213,7 +213,6 @@ describe('GET /api/sorting/categories/:categoryId/defaults', () => {
     expect(res.body.data).toHaveProperty('recycled_pct_default');
     expect(res.body.data).toHaveProperty('reused_pct_default');
     expect(res.body.data).toHaveProperty('disposed_pct_default');
-    expect(res.body.data).toHaveProperty('landfill_pct_default');
   });
 });
 

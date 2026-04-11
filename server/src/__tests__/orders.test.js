@@ -14,9 +14,12 @@ async function getToken(email, password) {
 const createdOrderIds = [];
 
 afterAll(async () => {
-  // Clean up test orders (cascade via Prisma)
+  // Clean up test orders (delete dependents first to avoid FK violations)
   if (createdOrderIds.length > 0) {
     await prisma.orderWasteStream.deleteMany({
+      where: { order_id: { in: createdOrderIds } },
+    });
+    await prisma.inbound.deleteMany({
       where: { order_id: { in: createdOrderIds } },
     });
     await prisma.inboundOrder.deleteMany({
