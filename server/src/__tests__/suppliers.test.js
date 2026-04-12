@@ -12,9 +12,9 @@ async function getToken(email, password) {
 const createdIds = [];
 
 afterAll(async () => {
-  // Clean up test-created suppliers
+  // Clean up test-created entities (controller now creates Entity records)
   for (const id of createdIds) {
-    await prisma.supplier.delete({ where: { id } }).catch(() => {});
+    await prisma.entity.delete({ where: { id } }).catch(() => {});
   }
   await prisma.$disconnect();
 });
@@ -86,7 +86,7 @@ describe('POST /api/suppliers', () => {
   it('returns 401 without auth token', async () => {
     const res = await request(app)
       .post('/api/suppliers')
-      .send({ name: 'Test', supplier_type: 'THIRD_PARTY' });
+      .send({ name: 'Test', supplier_type: 'COMMERCIAL' });
 
     expect(res.status).toBe(401);
   });
@@ -97,7 +97,7 @@ describe('POST /api/suppliers', () => {
     const res = await request(app)
       .post('/api/suppliers')
       .set('Authorization', `Bearer ${token}`)
-      .send({ name: 'Test', supplier_type: 'THIRD_PARTY' });
+      .send({ name: 'Test', supplier_type: 'COMMERCIAL' });
 
     expect(res.status).toBe(403);
   });
@@ -108,7 +108,7 @@ describe('POST /api/suppliers', () => {
     const res = await request(app)
       .post('/api/suppliers')
       .set('Authorization', `Bearer ${token}`)
-      .send({ supplier_type: 'THIRD_PARTY' });
+      .send({ supplier_type: 'COMMERCIAL' });
 
     expect(res.status).toBe(400);
     expect(res.body).toHaveProperty('error');
@@ -134,7 +134,7 @@ describe('POST /api/suppliers', () => {
       .set('Authorization', `Bearer ${token}`)
       .send({
         name: 'Test Supplier Admin',
-        supplier_type: 'THIRD_PARTY',
+        supplier_type: 'COMMERCIAL',
         contact_name: 'Jan de Vries',
         contact_email: 'jan@test.nl',
       });
@@ -142,7 +142,7 @@ describe('POST /api/suppliers', () => {
     expect(res.status).toBe(201);
     expect(res.body).toHaveProperty('id');
     expect(res.body.name).toBe('Test Supplier Admin');
-    expect(res.body.supplier_type).toBe('THIRD_PARTY');
+    expect(res.body.supplier_type).toBe('COMMERCIAL');
     createdIds.push(res.body.id);
   });
 
@@ -154,7 +154,7 @@ describe('POST /api/suppliers', () => {
       .set('Authorization', `Bearer ${token}`)
       .send({
         name: 'Test Supplier Planner',
-        supplier_type: 'THIRD_PARTY',
+        supplier_type: 'COMMERCIAL',
       });
 
     expect(res.status).toBe(201);
@@ -222,10 +222,10 @@ describe('GET /api/suppliers?hasActiveContract=true', () => {
 
     expect(res.status).toBe(200);
     expect(Array.isArray(res.body.data)).toBe(true);
-    // Every returned supplier should have at least one active contract
+    // Every returned supplier should have at least one active contract (via entity_supplier_id)
     for (const supplier of res.body.data) {
       const contracts = await prisma.supplierContract.findMany({
-        where: { supplier_id: supplier.id, status: 'ACTIVE', is_active: true },
+        where: { entity_supplier_id: supplier.id, status: 'ACTIVE', is_active: true },
       });
       expect(contracts.length).toBeGreaterThan(0);
     }
@@ -254,7 +254,7 @@ describe('PATCH /api/suppliers/:id/status', () => {
     const res = await request(app)
       .post('/api/suppliers')
       .set('Authorization', `Bearer ${token}`)
-      .send({ name: 'Toggle Test Supplier', supplier_type: 'THIRD_PARTY' });
+      .send({ name: 'Toggle Test Supplier', supplier_type: 'COMMERCIAL' });
     toggleSupplierId = res.body.id;
     createdIds.push(toggleSupplierId);
   });
@@ -354,11 +354,13 @@ describe('PATCH /api/suppliers/:id/status', () => {
   it('terminates active contracts on deactivation', async () => {
     const token = await getToken('admin@statice.nl', 'Admin1234!');
 
-    // Create a contract for this supplier so we can verify termination
+    // Create a contract linked to this entity via entity_supplier_id
+    // supplier_id FK still required by schema, use a seeded supplier
     const contract = await prisma.supplierContract.create({
       data: {
         contract_number: `SC-TOGGLE-TEST-${Date.now()}`,
-        supplier_id: toggleSupplierId,
+        supplier_id: 'supplier-stichting-open',
+        entity_supplier_id: toggleSupplierId,
         name: 'Toggle Test Contract',
         effective_date: new Date(),
         expiry_date: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000),
