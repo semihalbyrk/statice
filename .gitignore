@@ -29,6 +29,9 @@ npm-debug.log*
 # Generated reports storage
 server/storage/
 
+# Uploaded files
+server/uploads/
+
 # Claude Code
 .claude/
 .claude-memory

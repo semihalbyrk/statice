@@ -20,6 +20,9 @@ const ORDER_INCLUDE = {
     },
   },
   created_by_user: { select: { id: true, full_name: true } },
+  transporter: { select: { id: true, company_name: true, vihb_number: true } },
+  entity_supplier: { select: { id: true, company_name: true } },
+  documents: true,
   inbounds: {
     select: { id: true, inbound_number: true, status: true, net_weight_kg: true },
     orderBy: { arrived_at: 'desc' },
@@ -208,6 +211,18 @@ async function createOrder(data, userId) {
       }
     }
 
+    // Auto-fill transporter from contract if not explicitly provided
+    let transporterId = data.transporter_id || null;
+    if (!transporterId && data.contract_id) {
+      const contract = await tx.supplierContract.findUnique({
+        where: { id: data.contract_id },
+        select: { agreement_transporter_id: true },
+      });
+      if (contract && contract.agreement_transporter_id) {
+        transporterId = contract.agreement_transporter_id;
+      }
+    }
+
     const order = await tx.inboundOrder.create({
       data: {
         order_number: orderNumber,
@@ -223,6 +238,8 @@ async function createOrder(data, userId) {
         notes: data.notes || null,
         is_lzv: data.is_lzv || false,
         client_reference: data.client_reference || null,
+        transporter_id: transporterId,
+        entity_supplier_id: data.entity_supplier_id || null,
         status: 'PLANNED',
         is_adhoc: false,
         created_by: userId,
@@ -277,6 +294,8 @@ async function updateOrder(id, data, userId) {
     if (data.afvalstroomnummer !== undefined) updateData.afvalstroomnummer = data.afvalstroomnummer;
     if (data.notes !== undefined) updateData.notes = data.notes;
     if (data.status !== undefined) updateData.status = data.status;
+    if (data.transporter_id !== undefined) updateData.transporter_id = data.transporter_id || null;
+    if (data.entity_supplier_id !== undefined) updateData.entity_supplier_id = data.entity_supplier_id || null;
 
     // If waste_stream_ids provided, update primary + junction table
     // Re-derive ASN map from contract if contract_id is available
