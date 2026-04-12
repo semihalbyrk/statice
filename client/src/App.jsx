@@ -7,8 +7,6 @@ import AppLayout from './components/layout/AppLayout';
 import OrdersPage from './pages/orders/OrdersPage';
 import OrderDetailPage from './pages/orders/OrderDetailPage';
 import ArrivalPage from './pages/arrival/ArrivalPage';
-import CarriersPage from './pages/admin/CarriersPage';
-import SuppliersPage from './pages/admin/SuppliersPage';
 import MaterialsManagementPage from './pages/admin/MaterialsManagementPage';
 import WeighingEventPage from './pages/weighing/WeighingEventPage';
 import OrderCreatePage from './pages/orders/OrderCreatePage';
@@ -75,8 +73,8 @@ export default function App() {
           <Route path="/reports" element={<ProtectedRoute allowedRoles={['REPORTING_MANAGER', 'ADMIN']}><ReportsPage /></ProtectedRoute>} />
           <Route path="/reports/schedules" element={<ProtectedRoute allowedRoles={['REPORTING_MANAGER', 'ADMIN']}><SchedulesPage /></ProtectedRoute>} />
           <Route path="/admin/users" element={<ProtectedRoute allowedRoles={['ADMIN']}><UsersPage /></ProtectedRoute>} />
-          <Route path="/admin/carriers" element={<ProtectedRoute allowedRoles={['ADMIN']}><CarriersPage /></ProtectedRoute>} />
-          <Route path="/admin/suppliers" element={<ProtectedRoute allowedRoles={['ADMIN']}><SuppliersPage /></ProtectedRoute>} />
+          <Route path="/admin/carriers" element={<Navigate to="/admin/entities?tab=transporters" replace />} />
+          <Route path="/admin/suppliers" element={<Navigate to="/admin/entities?tab=suppliers" replace />} />
           <Route path="/admin/materials" element={<ProtectedRoute allowedRoles={['ADMIN']}><MaterialsManagementPage /></ProtectedRoute>} />
           <Route path="/admin/containers" element={<ProtectedRoute allowedRoles={['ADMIN']}><ContainerRegistryPage /></ProtectedRoute>} />
           <Route path="/contracts" element={<ProtectedRoute allowedRoles={['ADMIN', 'FINANCE_MANAGER', 'FINANCE_USER']}><ContractsDashboardPage /></ProtectedRoute>} />
