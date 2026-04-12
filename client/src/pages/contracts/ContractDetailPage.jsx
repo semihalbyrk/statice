@@ -112,6 +112,11 @@ export default function ContractDetailPage() {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <h1 className="text-xl font-semibold text-grey-900">{contract.contract_number}</h1>
+            {contract.contract_type && (
+              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-grey-100 text-grey-700 border border-grey-300">
+                {t(`contracts:contractTypes.${contract.contract_type}`, contract.contract_type)}
+              </span>
+            )}
             <ClickableStatusBadge
               status={contract.status}
               allowedTransitions={canWrite ? (CONTRACT_TRANSITIONS[contract.status] || []) : []}
@@ -143,8 +148,12 @@ export default function ContractDetailPage() {
             <p className="text-grey-900 font-medium">{contract.supplier?.name}</p>
           </div>
           <div>
-            <p className="text-grey-500 mb-0.5">{t('contracts:detail.fields.carrier')}</p>
-            <p className="text-grey-900 font-medium">{contract.carrier?.name || '\u2014'}</p>
+            <p className="text-grey-500 mb-0.5">{t('contracts:agreementTransporter')}</p>
+            <p className="text-grey-900 font-medium">{contract.agreement_transporter?.company_name || contract.carrier?.name || '\u2014'}</p>
+          </div>
+          <div>
+            <p className="text-grey-500 mb-0.5">{t('contracts:invoiceEntity')}</p>
+            <p className="text-grey-900 font-medium">{contract.invoice_entity?.company_name || t('contracts:detail.fields.sameAsSupplier', 'Same as supplier')}</p>
           </div>
           <div>
             <p className="text-grey-500 mb-0.5">{t('contracts:detail.fields.receiver')}</p>

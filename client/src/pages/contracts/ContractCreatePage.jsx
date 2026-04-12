@@ -69,7 +69,7 @@ export default function ContractCreatePage() {
   const isEdit = !!editId;
   const navigate = useNavigate();
   const { t } = useTranslation(['contracts', 'common']);
-  const { suppliers, carriers, wasteStreams, materials, loadAll } = useMasterDataStore();
+  const { suppliers, carriers, wasteStreams, materials, loadAll, getSupplierEntities, getTransporterEntities, getAllActiveEntities } = useMasterDataStore();
   const [facilityName, setFacilityName] = useState('Statice B.V.');
   const [loadingContract, setLoadingContract] = useState(false);
 
@@ -79,19 +79,36 @@ export default function ContractCreatePage() {
     }
   }, [suppliers.length, carriers.length, wasteStreams.length, materials.length, loadAll]);
 
+  // Helper: get supplier options (entities first, fallback to legacy suppliers)
+  const supplierOptions = (() => {
+    const entitySuppliers = getSupplierEntities();
+    if (entitySuppliers.length > 0) return entitySuppliers.map(e => ({ id: e.id, name: e.company_name || e.name }));
+    return suppliers.map(s => ({ id: s.id, name: s.name }));
+  })();
+
+  // Helper: get transporter options (entities first, fallback to legacy carriers)
+  const transporterOptions = (() => {
+    const entityTransporters = getTransporterEntities();
+    if (entityTransporters.length > 0) return entityTransporters.map(e => ({ id: e.id, name: e.company_name || e.name }));
+    return carriers.map(c => ({ id: c.id, name: c.name }));
+  })();
+
+  // Helper: get all active entities for invoice entity dropdown
+  const allEntityOptions = getAllActiveEntities().map(e => ({ id: e.id, name: e.company_name || e.name }));
+
   // Auto-select single supplier (create mode only)
   useEffect(() => {
-    if (!isEdit && suppliers.length === 1 && !form.supplier_id) {
-      setForm((f) => ({ ...f, supplier_id: suppliers[0].id }));
+    if (!isEdit && supplierOptions.length === 1 && !form.supplier_id) {
+      setForm((f) => ({ ...f, supplier_id: supplierOptions[0].id }));
     }
-  }, [suppliers, isEdit]);
+  }, [supplierOptions.length, isEdit]);
 
-  // Auto-select single carrier (create mode only)
+  // Auto-select single transporter (create mode only)
   useEffect(() => {
-    if (!isEdit && carriers.length === 1 && !form.carrier_id) {
-      setForm((f) => ({ ...f, carrier_id: carriers[0].id }));
+    if (!isEdit && transporterOptions.length === 1 && !form.agreement_transporter_id) {
+      setForm((f) => ({ ...f, agreement_transporter_id: transporterOptions[0].id }));
     }
-  }, [carriers, isEdit]);
+  }, [transporterOptions.length, isEdit]);
 
   // Fetch facility name for Receiver field
   useEffect(() => {
@@ -104,8 +121,10 @@ export default function ContractCreatePage() {
 
   // --- Form state ---
   const [form, setForm] = useState({
+    contract_type: 'INCOMING',
     supplier_id: '',
-    carrier_id: '',
+    agreement_transporter_id: '',
+    invoice_entity_id: '',
     name: '',
     effective_date: '',
     expiry_date: '',
@@ -138,8 +157,10 @@ export default function ContractCreatePage() {
       .then(({ data }) => {
         const c = data.data;
         setForm({
-          supplier_id: c.supplier_id || c.supplier?.id || '',
-          carrier_id: c.carrier_id || c.carrier?.id || '',
+          contract_type: c.contract_type || 'INCOMING',
+          supplier_id: c.supplier_id || c.entity_supplier_id || c.supplier?.id || '',
+          agreement_transporter_id: c.agreement_transporter_id || c.carrier_id || c.carrier?.id || '',
+          invoice_entity_id: c.invoice_entity_id || '',
           name: c.name || '',
           effective_date: c.effective_date ? c.effective_date.slice(0, 10) : '',
           expiry_date: c.expiry_date ? c.expiry_date.slice(0, 10) : '',
@@ -298,9 +319,13 @@ export default function ContractCreatePage() {
     try {
       const payload = {
         ...form,
+        // Transition: send both old and new field names
+        carrier_id: form.agreement_transporter_id,
+        entity_supplier_id: form.supplier_id,
         payment_term_days: parseInt(form.payment_term_days, 10),
         contamination_tolerance_pct: parseFloat(form.contamination_tolerance_pct),
         invoice_delivery_method: form.invoice_delivery_method || null,
+        invoice_entity_id: form.invoice_entity_id || null,
         expiry_date: form.expiry_date || null,
         contract_waste_streams: validCards.map((c) => ({
           waste_stream_id: c.waste_stream_id,
@@ -350,6 +375,13 @@ export default function ContractCreatePage() {
             <h2 className="text-sm font-semibold text-grey-900 mb-4">{t('contracts:create.contractDetails')}</h2>
             <div className="space-y-4">
               <div>
+                <label className="block text-sm font-medium text-grey-700 mb-1.5">{t('contracts:contractType')} <span className="text-red-500">*</span></label>
+                <select name="contract_type" value={form.contract_type} onChange={handleChange} className={selectClass}>
+                  <option value="INCOMING">{t('contracts:contractTypes.INCOMING')}</option>
+                  <option value="OUTGOING" disabled title={t('contracts:outgoingDisabled')}>{t('contracts:contractTypes.OUTGOING')}</option>
+                </select>
+              </div>
+              <div>
                 <label className="block text-sm font-medium text-grey-700 mb-1.5">{t('contracts:create.fields.contractName')} <span className="text-red-500">*</span></label>
                 <input name="name" value={form.name} onChange={handleChange} required placeholder={t('contracts:create.fields.namePlaceholder')} className={inputClass} />
               </div>
@@ -357,14 +389,21 @@ export default function ContractCreatePage() {
                 <label className="block text-sm font-medium text-grey-700 mb-1.5">{t('contracts:create.fields.supplier')} <span className="text-red-500">*</span></label>
                 <select name="supplier_id" value={form.supplier_id} onChange={handleChange} required disabled={isEdit} className={`${selectClass} ${isEdit ? 'opacity-60 cursor-not-allowed' : ''}`}>
                   <option value="">{t('contracts:create.fields.selectSupplier')}</option>
-                  {suppliers.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+                  {supplierOptions.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-grey-700 mb-1.5">{t('contracts:create.fields.carrier')} <span className="text-red-500">*</span></label>
-                <select name="carrier_id" value={form.carrier_id} onChange={handleChange} required className={selectClass}>
+                <label className="block text-sm font-medium text-grey-700 mb-1.5">{t('contracts:agreementTransporter')} <span className="text-red-500">*</span></label>
+                <select name="agreement_transporter_id" value={form.agreement_transporter_id} onChange={handleChange} required className={selectClass}>
                   <option value="">{t('contracts:create.fields.selectCarrier')}</option>
-                  {carriers.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                  {transporterOptions.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-grey-700 mb-1.5">{t('contracts:invoiceEntity')}</label>
+                <select name="invoice_entity_id" value={form.invoice_entity_id} onChange={handleChange} className={selectClass}>
+                  <option value="">{t('contracts:create.fields.invoiceEntityPlaceholder', 'Defaults to supplier')}</option>
+                  {allEntityOptions.map((e) => <option key={e.id} value={e.id}>{e.name}</option>)}
                 </select>
               </div>
               <div className="grid grid-cols-2 gap-3">

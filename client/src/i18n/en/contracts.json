@@ -2,6 +2,14 @@
   "title": "Contracts",
   "newContract": "New Contract",
   "editContract": "Edit Contract",
+  "contractType": "Contract Type",
+  "agreementTransporter": "Agreement Transporter",
+  "invoiceEntity": "Invoice Entity",
+  "contractTypes": {
+    "INCOMING": "Incoming",
+    "OUTGOING": "Outgoing"
+  },
+  "outgoingDisabled": "Outgoing contracts will be available in a future release.",
   "searchPlaceholder": "Search contracts...",
   "rag": {
     "onTrack": "On Track",
@@ -74,7 +82,8 @@
       "paymentTermsDays": "{{days}} days",
       "invoicingFrequency": "Invoicing Frequency",
       "currency": "Currency",
-      "contaminationTolerance": "Contamination Tolerance"
+      "contaminationTolerance": "Contamination Tolerance",
+      "sameAsSupplier": "Same as supplier"
     },
     "wasteStream": {
       "material": "Material",
@@ -132,7 +141,8 @@
       "btwPct": "BTW %",
       "selectMaterial": "Material...",
       "selectProcessingMethod": "Select...",
-      "rate": "Rate"
+      "rate": "Rate",
+      "invoiceEntityPlaceholder": "Defaults to supplier"
     },
     "buttons": {
       "cancel": "Cancel",

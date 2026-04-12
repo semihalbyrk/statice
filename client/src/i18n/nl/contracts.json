@@ -2,6 +2,14 @@
   "title": "Contracten",
   "newContract": "Nieuw Contract",
   "editContract": "Contract Bewerken",
+  "contractType": "Contracttype",
+  "agreementTransporter": "Overeenkomst Transporteur",
+  "invoiceEntity": "Factuurpartij",
+  "contractTypes": {
+    "INCOMING": "Inkomend",
+    "OUTGOING": "Uitgaand"
+  },
+  "outgoingDisabled": "Uitgaande contracten worden beschikbaar in een toekomstige versie.",
   "searchPlaceholder": "Contracten zoeken...",
   "rag": {
     "onTrack": "Op Schema",
@@ -74,7 +82,8 @@
       "paymentTermsDays": "{{days}} dagen",
       "invoicingFrequency": "Factureringsfrequentie",
       "currency": "Valuta",
-      "contaminationTolerance": "Verontreinigingstolerantie"
+      "contaminationTolerance": "Verontreinigingstolerantie",
+      "sameAsSupplier": "Gelijk aan leverancier"
     },
     "wasteStream": {
       "material": "Materiaal",
@@ -132,7 +141,8 @@
       "btwPct": "BTW %",
       "selectMaterial": "Materiaal...",
       "selectProcessingMethod": "Selecteer...",
-      "rate": "Tarief"
+      "rate": "Tarief",
+      "invoiceEntityPlaceholder": "Standaard leverancier"
     },
     "buttons": {
       "cancel": "Annuleren",
