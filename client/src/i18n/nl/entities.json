@@ -1,0 +1,69 @@
+{
+  "title": "Entiteiten",
+  "createEntity": "Entiteit aanmaken",
+  "editEntity": "Entiteit bewerken",
+  "entityDetail": "Entiteit detail",
+  "tabs": {
+    "all": "Alle",
+    "suppliers": "Leveranciers",
+    "transporters": "Transporteurs",
+    "disposers": "Verwerkers",
+    "receivers": "Ontvangers"
+  },
+  "fields": {
+    "companyName": "Bedrijfsnaam",
+    "streetAndNumber": "Straat en nummer",
+    "postalCode": "Postcode",
+    "city": "Plaats",
+    "country": "Land",
+    "kvkNumber": "KvK-nummer",
+    "btwNumber": "BTW-nummer",
+    "iban": "IBAN",
+    "vihbNumber": "VIHB-nummer",
+    "environmentalPermitNumber": "Omgevingsvergunningnummer",
+    "contactName": "Contactpersoon",
+    "contactEmail": "Contact e-mail",
+    "contactPhone": "Contact telefoon",
+    "supplierType": "Leveranciertype",
+    "supplierRole": "Leverancierrol",
+    "proRegistrationNumber": "PRO-registratienummer",
+    "isAlsoSite": "Deze entiteit is ook een verwerkingslocatie"
+  },
+  "roles": {
+    "supplier": "Leverancier",
+    "transporter": "Transporteur",
+    "disposer": "Verwerker",
+    "receiver": "Ontvanger"
+  },
+  "supplierTypes": {
+    "PRO": "PRO",
+    "COMMERCIAL": "Commercieel",
+    "AD_HOC": "Ad-hoc"
+  },
+  "supplierRoles": {
+    "ONTDOENER": "Ontdoener",
+    "ONTVANGER": "Ontvanger",
+    "HANDELAAR": "Handelaar",
+    "BEMIDDELAAR": "Bemiddelaar"
+  },
+  "disposerSites": {
+    "title": "Verwerkingslocaties",
+    "addSite": "Locatie toevoegen",
+    "siteName": "Locatienaam",
+    "noSites": "Nog geen verwerkingslocaties toegevoegd.",
+    "isAlsoSiteNote": "Het adres van deze entiteit is beschikbaar als verwerkingslocatie."
+  },
+  "validation": {
+    "atLeastOneRole": "Er moet minstens één rol worden geselecteerd.",
+    "supplierTypeRequired": "Leveranciertype is verplicht wanneer de rol Leverancier is geselecteerd.",
+    "supplierRoleRequired": "Er moet minstens één leverancierrol worden geselecteerd.",
+    "proRegRequired": "PRO-registratienummer is verplicht voor PRO-leveranciers.",
+    "vihbRequired": "VIHB-nummer is verplicht voor transporteurs.",
+    "permitRequired": "Omgevingsvergunningnummer is verplicht voor verwerkers en ontvangers.",
+    "kvkRequired": "KvK-nummer is verplicht voor leveranciers en verwerkers."
+  },
+  "status": {
+    "ACTIVE": "Actief",
+    "INACTIVE": "Inactief"
+  }
+}

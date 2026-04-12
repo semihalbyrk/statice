@@ -16,6 +16,7 @@ import adminEN from './en/admin.json';
 import reportsEN from './en/reports.json';
 import arrivalEN from './en/arrival.json';
 import errorsEN from './en/errors.json';
+import entitiesEN from './en/entities.json';
 
 import commonNL from './nl/common.json';
 import navNL from './nl/nav.json';
@@ -31,6 +32,7 @@ import adminNL from './nl/admin.json';
 import reportsNL from './nl/reports.json';
 import arrivalNL from './nl/arrival.json';
 import errorsNL from './nl/errors.json';
+import entitiesNL from './nl/entities.json';
 
 i18n
   .use(LanguageDetector)
@@ -41,13 +43,13 @@ i18n
         common: commonEN, nav: navEN, auth: authEN, dashboard: dashboardEN,
         orders: ordersEN, inbounds: inboundsEN, weighing: weighingEN,
         sorting: sortingEN, contracts: contractsEN, invoices: invoicesEN,
-        admin: adminEN, reports: reportsEN, arrival: arrivalEN, errors: errorsEN,
+        admin: adminEN, reports: reportsEN, arrival: arrivalEN, errors: errorsEN, entities: entitiesEN,
       },
       nl: {
         common: commonNL, nav: navNL, auth: authNL, dashboard: dashboardNL,
         orders: ordersNL, inbounds: inboundsNL, weighing: weighingNL,
         sorting: sortingNL, contracts: contractsNL, invoices: invoicesNL,
-        admin: adminNL, reports: reportsNL, arrival: arrivalNL, errors: errorsNL,
+        admin: adminNL, reports: reportsNL, arrival: arrivalNL, errors: errorsNL, entities: entitiesNL,
       },
     },
     fallbackLng: 'en',

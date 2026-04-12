@@ -1,0 +1,69 @@
+{
+  "title": "Entities",
+  "createEntity": "Create Entity",
+  "editEntity": "Edit Entity",
+  "entityDetail": "Entity Detail",
+  "tabs": {
+    "all": "All",
+    "suppliers": "Suppliers",
+    "transporters": "Transporters",
+    "disposers": "Disposers",
+    "receivers": "Receivers"
+  },
+  "fields": {
+    "companyName": "Company Name",
+    "streetAndNumber": "Street and Number",
+    "postalCode": "Postal Code",
+    "city": "City",
+    "country": "Country",
+    "kvkNumber": "KvK Number",
+    "btwNumber": "BTW Number",
+    "iban": "IBAN",
+    "vihbNumber": "VIHB Number",
+    "environmentalPermitNumber": "Environmental Permit Number",
+    "contactName": "Contact Name",
+    "contactEmail": "Contact Email",
+    "contactPhone": "Contact Phone",
+    "supplierType": "Supplier Type",
+    "supplierRole": "Supplier Role",
+    "proRegistrationNumber": "PRO Registration Number",
+    "isAlsoSite": "This entity is also a disposal site"
+  },
+  "roles": {
+    "supplier": "Supplier",
+    "transporter": "Transporter",
+    "disposer": "Disposer",
+    "receiver": "Receiver"
+  },
+  "supplierTypes": {
+    "PRO": "PRO",
+    "COMMERCIAL": "Commercial",
+    "AD_HOC": "Ad-hoc"
+  },
+  "supplierRoles": {
+    "ONTDOENER": "Ontdoener",
+    "ONTVANGER": "Ontvanger",
+    "HANDELAAR": "Handelaar",
+    "BEMIDDELAAR": "Bemiddelaar"
+  },
+  "disposerSites": {
+    "title": "Disposal Sites",
+    "addSite": "Add Site",
+    "siteName": "Site Name",
+    "noSites": "No disposal sites added yet.",
+    "isAlsoSiteNote": "This entity's own address is available as a disposal site."
+  },
+  "validation": {
+    "atLeastOneRole": "At least one role must be selected.",
+    "supplierTypeRequired": "Supplier type is required when Supplier role is selected.",
+    "supplierRoleRequired": "At least one supplier role must be selected.",
+    "proRegRequired": "PRO Registration Number is required for PRO suppliers.",
+    "vihbRequired": "VIHB Number is required for transporters.",
+    "permitRequired": "Environmental Permit Number is required for disposers and receivers.",
+    "kvkRequired": "KvK Number is required for suppliers and disposers."
+  },
+  "status": {
+    "ACTIVE": "Active",
+    "INACTIVE": "Inactive"
+  }
+}

@@ -1,14 +1,16 @@
 import { create } from 'zustand';
 import { getCarriers } from '../api/carriers';
 import { getSuppliers } from '../api/suppliers';
+import { getEntities } from '../api/entities';
 import { getWasteStreams, getProductCategories } from '../api/wasteStreams';
 import { listFractions, listMaterials } from '../api/catalogue';
 import { listFees } from '../api/fees';
 
-const useMasterDataStore = create((set) => ({
+const useMasterDataStore = create((set, get) => ({
   carriers: [],
   suppliers: [],
   suppliersWithContract: [],
+  entities: [],
   wasteStreams: [],
   productCategories: [],
   materials: [],
@@ -67,7 +69,7 @@ const useMasterDataStore = create((set) => ({
   loadAll: async () => {
     set({ loading: true });
     try {
-      const [carriersRes, suppliersRes, suppliersWithContractRes, streamsRes, categoriesRes, materialsRes, fractionsRes, feesRes] = await Promise.all([
+      const [carriersRes, suppliersRes, suppliersWithContractRes, streamsRes, categoriesRes, materialsRes, fractionsRes, feesRes, entitiesRes] = await Promise.all([
         getCarriers({ limit: 100, active: 'true' }),
         getSuppliers({ limit: 100, active: 'true' }),
         getSuppliers({ limit: 100, active: 'true', hasActiveContract: 'true' }),
@@ -76,6 +78,7 @@ const useMasterDataStore = create((set) => ({
         listMaterials({ active: 'true' }),
         listFractions({ active: 'true' }),
         listFees({ active: 'true' }).catch(() => ({ data: { data: [] } })),
+        getEntities({ limit: 200, status: 'ACTIVE' }).catch(() => ({ data: { data: [] } })),
       ]);
       set({
         carriers: carriersRes.data.data,
@@ -87,12 +90,18 @@ const useMasterDataStore = create((set) => ({
         fractions: fractionsRes.data.data,
         productTypes: materialsRes.data.data,
         fees: feesRes.data.data,
+        entities: entitiesRes.data.data,
         loading: false,
       });
     } catch {
       set({ loading: false });
     }
   },
+
+  getSupplierEntities: () => get().entities.filter(e => e.is_supplier && e.status === 'ACTIVE'),
+  getTransporterEntities: () => get().entities.filter(e => e.is_transporter && e.status === 'ACTIVE'),
+  getDisposerEntities: () => get().entities.filter(e => e.is_disposer && e.status === 'ACTIVE'),
+  getAllActiveEntities: () => get().entities.filter(e => e.status === 'ACTIVE'),
 }));
 
 export default useMasterDataStore;
