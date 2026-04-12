@@ -43,12 +43,16 @@ vi.mock('../../../store/masterDataStore', () => ({
     const state = {
       suppliers: [],
       carriers: [],
+      entities: [],
       wasteStreams: [],
       productCategories: [],
       materials: [],
       fractions: [],
       loading: false,
       loadAll: vi.fn(),
+      getTransporterEntities: () => [],
+      getSupplierEntities: () => [],
+      getAllActiveEntities: () => [],
     };
     if (selector) return selector(state);
     return state;
