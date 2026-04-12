@@ -8,6 +8,7 @@
   "searchPlaceholder": "Search by order name...",
   "allStatuses": "All statuses",
   "allCarriers": "All carriers",
+  "allTransporters": "All transporters",
   "allSuppliers": "All suppliers",
   "allSupplierTypes": "All supplier types",
   "allWasteStreams": "All waste streams",
@@ -16,6 +17,7 @@
     "status": "Status",
     "vehiclePlate": "Vehicle Plate",
     "carrier": "Carrier",
+    "transporter": "Transporter",
     "supplier": "Supplier",
     "wasteStream": "Waste Stream",
     "plannedDate": "Planned Date",
@@ -85,6 +87,7 @@
       "supplierPlaceholder": "Select supplier...",
       "carrier": "Carrier",
       "carrierPlaceholder": "Select carrier...",
+      "transporterPlaceholder": "Select transporter...",
       "wasteStreams": "Waste Streams",
       "noWasteStreams": "No waste streams available",
       "selectWasteStreams": "Select waste streams...",
@@ -120,6 +123,7 @@
     "noTimeWindow": "No time window",
     "card": {
       "carrier": "Carrier",
+      "transporter": "Transporter",
       "supplier": "Supplier",
       "wasteStream": "Waste Stream",
       "vehiclePlate": "Vehicle",
@@ -134,5 +138,25 @@
     },
     "summary": "{{count}} delivery for {{date}}",
     "summaryPlural": "{{count}} deliveries for {{date}}"
+  },
+  "transporter": "Transporter",
+  "fromContract": "From contract",
+  "documents": {
+    "title": "Documents",
+    "attachDocument": "Attach Document",
+    "documentType": "Document Type",
+    "fileName": "File Name",
+    "fileSize": "Size",
+    "uploadedBy": "Uploaded By",
+    "uploadedAt": "Uploaded At",
+    "noDocuments": "No documents attached.",
+    "noDocumentsHelp": "Use the button above to attach a begeleidingsbrief or other transport document.",
+    "upload": "Upload",
+    "confirmDelete": "Are you sure you want to delete this document?",
+    "types": {
+      "BEGELEIDINGSBRIEF": "Begeleidingsbrief",
+      "WEIGHT_TICKET": "Weight Ticket",
+      "OTHER": "Other"
+    }
   }
 }

@@ -176,7 +176,7 @@ function RPT03Config({ params, onChange }) {
   );
 }
 
-function RPT04Config({ params, onChange, carriers, wasteStreams }) {
+function RPT04Config({ params, onChange, transporters, wasteStreams }) {
   const { t } = useTranslation('reports');
   return (
     <div className="space-y-4">
@@ -192,10 +192,10 @@ function RPT04Config({ params, onChange, carriers, wasteStreams }) {
       </div>
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <label className={labelClass}>{t('fields.carrier')}</label>
+          <label className={labelClass}>{t('fields.transporter')}</label>
           <select className={selectClass} value={params.carrierId || ''} onChange={(e) => onChange({ ...params, carrierId: e.target.value })}>
-            <option value="">{t('fields.allCarriers')}</option>
-            {carriers.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+            <option value="">{t('fields.allTransporters')}</option>
+            {transporters.map((c) => <option key={c.id} value={c.id}>{c.company_name || c.name}</option>)}
           </select>
         </div>
         <div>
@@ -433,6 +433,8 @@ export default function ReportsPage() {
   const { selectedType, setSelectedType, reports, totalCount, loading, generating, generatedReport, clearGenerated, fetchReports, deleteReport: deleteReportAction } = useReportsStore();
   const generateReport = useReportsStore((s) => s.generateReport);
   const { suppliers, carriers, wasteStreams, productCategories, materials, loadAll } = useMasterDataStore();
+  const transporterEntities = useMasterDataStore((s) => s.getTransporterEntities());
+  const transporterOptions = transporterEntities.length > 0 ? transporterEntities : carriers.map(c => ({ id: c.id, company_name: c.name }));
 
   const [params, setParams] = useState({ dateFrom: monthAgo(), dateTo: today() });
 
@@ -489,7 +491,7 @@ export default function ReportsPage() {
       case 'RPT-01': return <RPT01Config params={params} onChange={setParams} suppliers={suppliers} categories={productCategories} />;
       case 'RPT-02': return <RPT02Config params={params} onChange={setParams} wasteStreams={wasteStreams} />;
       case 'RPT-03': return <RPT03Config params={params} onChange={setParams} />;
-      case 'RPT-04': return <RPT04Config params={params} onChange={setParams} carriers={carriers} wasteStreams={wasteStreams} />;
+      case 'RPT-04': return <RPT04Config params={params} onChange={setParams} transporters={transporterOptions} wasteStreams={wasteStreams} />;
       case 'RPT-05': return <RPT05Config params={params} onChange={setParams} wasteStreams={wasteStreams} />;
       case 'RPT-06': return <RPT06Config params={params} onChange={setParams} />;
       case 'RPT-07': return <RPT07Config params={params} onChange={setParams} suppliers={suppliers} materials={materials} />;

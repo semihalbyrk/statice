@@ -8,6 +8,7 @@
   "searchPlaceholder": "Zoek op bestelnaam...",
   "allStatuses": "Alle statussen",
   "allCarriers": "Alle transporteurs",
+  "allTransporters": "Alle transporteurs",
   "allSuppliers": "Alle leveranciers",
   "allSupplierTypes": "Alle leverancierstypes",
   "allWasteStreams": "Alle afvalstromen",
@@ -16,6 +17,7 @@
     "status": "Status",
     "vehiclePlate": "Kenteken",
     "carrier": "Transporteur",
+    "transporter": "Transporteur",
     "supplier": "Leverancier",
     "wasteStream": "Afvalstroom",
     "plannedDate": "Geplande Datum",
@@ -85,6 +87,7 @@
       "supplierPlaceholder": "Selecteer leverancier...",
       "carrier": "Transporteur",
       "carrierPlaceholder": "Selecteer transporteur...",
+      "transporterPlaceholder": "Selecteer transporteur...",
       "wasteStreams": "Afvalstromen",
       "noWasteStreams": "Geen afvalstromen beschikbaar",
       "selectWasteStreams": "Selecteer afvalstromen...",
@@ -120,6 +123,7 @@
     "noTimeWindow": "Geen tijdvenster",
     "card": {
       "carrier": "Transporteur",
+      "transporter": "Transporteur",
       "supplier": "Leverancier",
       "wasteStream": "Afvalstroom",
       "vehiclePlate": "Voertuig",
@@ -134,5 +138,25 @@
     },
     "summary": "{{count}} levering voor {{date}}",
     "summaryPlural": "{{count}} leveringen voor {{date}}"
+  },
+  "transporter": "Transporteur",
+  "fromContract": "Uit contract",
+  "documents": {
+    "title": "Documenten",
+    "attachDocument": "Document Toevoegen",
+    "documentType": "Documenttype",
+    "fileName": "Bestandsnaam",
+    "fileSize": "Grootte",
+    "uploadedBy": "Geüpload Door",
+    "uploadedAt": "Geüpload Op",
+    "noDocuments": "Geen documenten bijgevoegd.",
+    "noDocumentsHelp": "Gebruik de knop hierboven om een begeleidingsbrief of ander transportdocument toe te voegen.",
+    "upload": "Uploaden",
+    "confirmDelete": "Weet u zeker dat u dit document wilt verwijderen?",
+    "types": {
+      "BEGELEIDINGSBRIEF": "Begeleidingsbrief",
+      "WEIGHT_TICKET": "Weegbon",
+      "OTHER": "Overig"
+    }
   }
 }

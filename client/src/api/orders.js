@@ -15,3 +15,12 @@ export function getPlanningBoard(params) {
 export function setOrderIncident(orderId, data) {
   return api.post(`/orders/${orderId}/incident`, data);
 }
+
+export const getOrderDocuments = (orderId) => api.get(`/orders/${orderId}/documents`);
+export const uploadOrderDocument = (orderId, formData) => api.post(`/orders/${orderId}/documents`, formData, {
+  headers: { 'Content-Type': 'multipart/form-data' },
+});
+export const downloadOrderDocument = (orderId, docId) => api.get(`/orders/${orderId}/documents/${docId}/download`, {
+  responseType: 'blob',
+});
+export const deleteOrderDocument = (orderId, docId) => api.delete(`/orders/${orderId}/documents/${docId}`);

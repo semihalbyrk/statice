@@ -29,6 +29,7 @@ export default function InvoiceCreatePage() {
   const { t } = useTranslation(['invoices', 'common']);
   const navigate = useNavigate();
   const { suppliers, fetchSuppliers } = useMasterDataStore();
+  const supplierEntities = useMasterDataStore((s) => s.getSupplierEntities());
 
   const [supplierId, setSupplierId] = useState('');
   const [orders, setOrders] = useState([]);
@@ -40,7 +41,9 @@ export default function InvoiceCreatePage() {
     fetchSuppliers();
   }, [fetchSuppliers]);
 
-  const activeSuppliers = suppliers.filter((s) => s.is_active);
+  const activeSuppliers = supplierEntities.length > 0
+    ? supplierEntities
+    : suppliers.filter((s) => s.is_active).map(s => ({ id: s.id, company_name: s.name }));
 
   // Fetch completed orders when supplier changes
   useEffect(() => {
@@ -107,7 +110,7 @@ export default function InvoiceCreatePage() {
             >
               <option value="">{t('invoices:create.stepSupplier.placeholder')}</option>
               {activeSuppliers.map((s) => (
-                <option key={s.id} value={s.id}>{s.name}</option>
+                <option key={s.id} value={s.id}>{s.company_name}</option>
               ))}
             </select>
           )}

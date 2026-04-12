@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { ExternalLink, Loader2, MoreVertical, Pencil } from 'lucide-react';
+import { ExternalLink, Loader2, MoreVertical, Pencil, Upload, Download, Trash2, FileText } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useTranslation } from 'react-i18next';
 import useOrdersStore from '../../store/ordersStore';
@@ -8,7 +8,7 @@ import useAuthStore from '../../store/authStore';
 import ClickableStatusBadge from '../../components/ui/ClickableStatusBadge';
 import SupplierTypeBadge from '../../components/ui/SupplierTypeBadge';
 import OrderFormModal from '../../components/orders/OrderFormModal';
-import { updateOrder, setOrderIncident } from '../../api/orders';
+import { updateOrder, setOrderIncident, getOrderDocuments, uploadOrderDocument, downloadOrderDocument, deleteOrderDocument } from '../../api/orders';
 import { format } from 'date-fns';
 import Breadcrumb from '../../components/ui/Breadcrumb';
 
@@ -34,6 +34,18 @@ const ACTION_LABELS = {
   CANCELLED: 'Cancel',
 };
 
+const DOC_TYPE_COLORS = {
+  BEGELEIDINGSBRIEF: 'bg-blue-100 text-blue-800',
+  WEIGHT_TICKET: 'bg-teal-100 text-teal-800',
+  OTHER: 'bg-grey-100 text-grey-800',
+};
+
+function formatFileSize(bytes) {
+  if (bytes < 1024) return bytes + ' B';
+  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+  return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+}
+
 function formatInboundTimestamp(timestamp) {
   return timestamp ? format(new Date(timestamp), 'dd MMM yyyy HH:mm') : '—';
 }
@@ -50,12 +62,82 @@ export default function OrderDetailPage() {
   const [incidentCategory, setIncidentCategory] = useState('');
   const [incidentNotes, setIncidentNotes] = useState('');
 
+  // Document state
+  const [documents, setDocuments] = useState([]);
+  const [showUpload, setShowUpload] = useState(false);
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [docType, setDocType] = useState('BEGELEIDINGSBRIEF');
+  const [uploading, setUploading] = useState(false);
+
   const canEdit = ['ADMIN', 'LOGISTICS_PLANNER'].includes(user?.role);
   const allowedTransitions = ORDER_TRANSITIONS[order?.status] || [];
 
   useEffect(() => {
     fetchOrder(id);
   }, [id, fetchOrder]);
+
+  const fetchDocuments = useCallback(async () => {
+    try {
+      const { data } = await getOrderDocuments(id);
+      setDocuments(data.data || []);
+    } catch {
+      // silently fail - documents are non-critical
+    }
+  }, [id]);
+
+  useEffect(() => {
+    fetchDocuments();
+  }, [fetchDocuments]);
+
+  function handleFileSelect(e) {
+    setSelectedFile(e.target.files[0] || null);
+  }
+
+  async function handleUpload() {
+    if (!selectedFile) return;
+    setUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', selectedFile);
+      formData.append('document_type', docType);
+      await uploadOrderDocument(id, formData);
+      toast.success(t('common:buttons.save'));
+      setShowUpload(false);
+      setSelectedFile(null);
+      setDocType('BEGELEIDINGSBRIEF');
+      fetchDocuments();
+    } catch (err) {
+      toast.error(err.response?.data?.error || 'Upload failed');
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  async function handleDownloadDoc(docId, fileName) {
+    try {
+      const { data } = await downloadOrderDocument(id, docId);
+      const url = window.URL.createObjectURL(data);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = fileName;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+    } catch {
+      toast.error('Download failed');
+    }
+  }
+
+  async function handleDeleteDoc(docId) {
+    if (!window.confirm(t('orders:documents.confirmDelete'))) return;
+    try {
+      await deleteOrderDocument(id, docId);
+      fetchDocuments();
+    } catch {
+      toast.error('Delete failed');
+    }
+  }
 
   async function handleTransition(newStatus) {
     setTransitioning(true);
@@ -134,8 +216,8 @@ export default function OrderDetailPage() {
       <div className="bg-white rounded-lg border border-grey-200 shadow-sm p-4 mb-6">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-3 gap-x-8">
           <div className="min-w-0">
-            <span className="text-xs font-medium text-grey-500 uppercase tracking-wide">{t('orders:detail.fields.carrier')}</span>
-            <p className="mt-0.5 break-words text-sm font-medium text-grey-900">{order.carrier?.name}</p>
+            <span className="text-xs font-medium text-grey-500 uppercase tracking-wide">{t('orders:transporter')}</span>
+            <p className="mt-0.5 break-words text-sm font-medium text-grey-900">{order.transporter?.company_name || order.carrier?.name}</p>
           </div>
           <div className="min-w-0">
             <span className="text-xs font-medium text-grey-500 uppercase tracking-wide">{t('orders:detail.fields.supplier')}</span>
@@ -273,6 +355,85 @@ export default function OrderDetailPage() {
                 {t('orders:detail.incident.reportBtn')}
               </button>
             </div>
+          </div>
+        )}
+      </div>
+
+      {/* Documents Section */}
+      <div className="bg-white rounded-xl border border-grey-200 p-6 mb-6">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-semibold text-grey-900">{t('orders:documents.title')}</h2>
+          <button onClick={() => setShowUpload(true)} className="flex items-center gap-1.5 px-3 h-8 rounded-md bg-green-500 text-sm text-white hover:bg-green-700">
+            <Upload className="w-4 h-4" /> {t('orders:documents.attachDocument')}
+          </button>
+        </div>
+
+        {showUpload && (
+          <div className="mb-4 p-4 bg-grey-50 rounded-lg flex items-end gap-3">
+            <div className="flex-1">
+              <label className="block text-sm font-medium text-grey-700 mb-1">File</label>
+              <input type="file" accept=".pdf,.jpg,.jpeg,.png" onChange={handleFileSelect} />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-grey-700 mb-1">{t('orders:documents.documentType')}</label>
+              <select value={docType} onChange={e => setDocType(e.target.value)} className="h-10 px-3.5 rounded-md border border-grey-300 text-sm text-grey-900 bg-white focus:border-green-500 focus:ring-[3px] focus:ring-green-500/15 outline-none transition-colors">
+                <option value="BEGELEIDINGSBRIEF">{t('orders:documents.types.BEGELEIDINGSBRIEF')}</option>
+                <option value="WEIGHT_TICKET">{t('orders:documents.types.WEIGHT_TICKET')}</option>
+                <option value="OTHER">{t('orders:documents.types.OTHER')}</option>
+              </select>
+            </div>
+            <button onClick={handleUpload} disabled={!selectedFile || uploading} className="px-3 h-10 rounded-md bg-green-500 text-sm text-white hover:bg-green-700 disabled:opacity-50">
+              {t('orders:documents.upload')}
+            </button>
+            <button onClick={() => { setShowUpload(false); setSelectedFile(null); }} className="px-3 h-10 rounded-md border border-grey-300 text-sm text-grey-700">
+              {t('common:buttons.cancel')}
+            </button>
+          </div>
+        )}
+
+        {documents.length > 0 ? (
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="bg-grey-50 border-b border-grey-200">
+                <th className="text-left px-4 py-3 text-xs font-medium text-grey-500 uppercase">{t('orders:documents.fileName')}</th>
+                <th className="text-left px-4 py-3 text-xs font-medium text-grey-500 uppercase">{t('orders:documents.documentType')}</th>
+                <th className="text-left px-4 py-3 text-xs font-medium text-grey-500 uppercase">{t('orders:documents.fileSize')}</th>
+                <th className="text-left px-4 py-3 text-xs font-medium text-grey-500 uppercase">{t('orders:documents.uploadedAt')}</th>
+                <th className="px-4 py-3"></th>
+              </tr>
+            </thead>
+            <tbody>
+              {documents.map(doc => (
+                <tr key={doc.id} className="border-b border-grey-100 hover:bg-grey-50">
+                  <td className="px-4 py-3 font-medium text-grey-900 flex items-center gap-2">
+                    <FileText size={14} className="text-grey-400" />
+                    {doc.original_filename}
+                  </td>
+                  <td className="px-4 py-3">
+                    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${DOC_TYPE_COLORS[doc.document_type] || DOC_TYPE_COLORS.OTHER}`}>
+                      {t(`orders:documents.types.${doc.document_type}`) || doc.document_type}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 text-grey-600">{formatFileSize(doc.file_size_bytes)}</td>
+                  <td className="px-4 py-3 text-grey-600">{format(new Date(doc.created_at), 'dd MMM yyyy HH:mm')}</td>
+                  <td className="px-4 py-3 text-right">
+                    <div className="flex items-center justify-end gap-2">
+                      <button onClick={() => handleDownloadDoc(doc.id, doc.original_filename)} className="text-grey-400 hover:text-green-600 transition-colors">
+                        <Download size={15} />
+                      </button>
+                      <button onClick={() => handleDeleteDoc(doc.id)} className="text-grey-400 hover:text-red-500 transition-colors">
+                        <Trash2 size={15} />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        ) : (
+          <div>
+            <p className="text-sm text-grey-500">{t('orders:documents.noDocuments')}</p>
+            <p className="text-xs text-grey-400 mt-1">{t('orders:documents.noDocumentsHelp')}</p>
           </div>
         )}
       </div>

@@ -36,6 +36,7 @@
   },
   "fields": {
     "carrier": "Carrier",
+    "transporter": "Transporter",
     "supplier": "Supplier",
     "wasteStream": "Waste Stream",
     "parcelProgress": "Parcel Progress",

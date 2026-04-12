@@ -39,6 +39,8 @@ export default function PlanningBoardPage() {
   const navigate = useNavigate();
   const { t } = useTranslation(['orders', 'common']);
   const { carriers, suppliers, wasteStreams, loadAll } = useMasterDataStore();
+  const transporterEntities = useMasterDataStore((s) => s.getTransporterEntities());
+  const transporterOptions = transporterEntities.length > 0 ? transporterEntities : carriers.map(c => ({ id: c.id, company_name: c.name }));
 
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [carrierId, setCarrierId] = useState('');
@@ -121,9 +123,9 @@ export default function PlanningBoardPage() {
           onChange={(e) => setCarrierId(e.target.value)}
           className="app-list-filter-select"
         >
-          <option value="">{t('orders:allCarriers')}</option>
-          {carriers.map((c) => (
-            <option key={c.id} value={c.id}>{c.name}</option>
+          <option value="">{t('orders:allTransporters')}</option>
+          {transporterOptions.map((c) => (
+            <option key={c.id} value={c.id}>{c.company_name}</option>
           ))}
         </select>
         <select
@@ -225,8 +227,8 @@ export default function PlanningBoardPage() {
                       </div>
                     )}
                     <div className="flex items-center justify-between gap-3 min-w-0">
-                      <span className="text-grey-500 flex-shrink-0">{t('orders:planningBoard.card.carrier')}</span>
-                      <span className="text-grey-900 font-medium text-right truncate" title={order.carrier?.name || '—'}>{order.carrier?.name || '—'}</span>
+                      <span className="text-grey-500 flex-shrink-0">{t('orders:planningBoard.card.transporter')}</span>
+                      <span className="text-grey-900 font-medium text-right truncate" title={order.transporter?.company_name || order.carrier?.name || '—'}>{order.transporter?.company_name || order.carrier?.name || '—'}</span>
                     </div>
                     <div className="flex items-center justify-between gap-3 min-w-0">
                       <span className="text-grey-500 flex-shrink-0">{t('orders:planningBoard.card.supplier')}</span>

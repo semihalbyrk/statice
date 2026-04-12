@@ -240,8 +240,8 @@ function MatchSection({ title, description, orders, submitting, onSelect, varian
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-4 gap-y-3">
               <div>
-                <span className="text-[11px] text-grey-400 uppercase tracking-wide font-medium">{t('fields.carrier')}</span>
-                <p className="text-sm font-medium text-grey-900 mt-0.5">{order.carrier?.name || '—'}</p>
+                <span className="text-[11px] text-grey-400 uppercase tracking-wide font-medium">{t('fields.transporter')}</span>
+                <p className="text-sm font-medium text-grey-900 mt-0.5">{order.transporter?.company_name || order.carrier?.name || '—'}</p>
               </div>
               <div className="min-w-0">
                 <span className="text-[11px] text-grey-400 uppercase tracking-wide font-medium">{t('fields.supplier')}</span>

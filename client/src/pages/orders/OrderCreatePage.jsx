@@ -15,7 +15,13 @@ export default function OrderCreatePage() {
   const navigate = useNavigate();
   const { t } = useTranslation(['orders', 'common']);
   const { carriers, suppliers, loadAll } = useMasterDataStore();
+  const transporterEntities = useMasterDataStore((s) => s.getTransporterEntities());
+  const supplierEntities = useMasterDataStore((s) => s.getSupplierEntities());
   const allSuppliers = useMasterDataStore((s) => s.suppliers);
+
+  // Use entity-based data with fallback to legacy carriers/suppliers
+  const transporterOptions = transporterEntities.length > 0 ? transporterEntities : carriers.map(c => ({ id: c.id, company_name: c.name }));
+  const supplierOptions = supplierEntities.length > 0 ? supplierEntities : allSuppliers.map(s => ({ id: s.id, company_name: s.name }));
 
   useEffect(() => {
     if (carriers.length === 0 || allSuppliers.length === 0) {
@@ -25,7 +31,7 @@ export default function OrderCreatePage() {
 
   const [form, setForm] = useState({
     supplier_id: '',
-    carrier_id: '',
+    transporter_id: '',
     waste_stream_ids: [],
     planned_date: '',
     planned_time_window_start: '',
@@ -40,6 +46,7 @@ export default function OrderCreatePage() {
   const [matchedContract, setMatchedContract] = useState(null);
   const [contractLoading, setContractLoading] = useState(false);
   const [contractWasteStreams, setContractWasteStreams] = useState([]);
+  const [transporterFromContract, setTransporterFromContract] = useState(false);
   const [wsDropdownOpen, setWsDropdownOpen] = useState(false);
   const wsDropdownRef = useRef(null);
   const [submitting, setSubmitting] = useState(false);
@@ -65,18 +72,19 @@ export default function OrderCreatePage() {
     }
   }, [allSuppliers]);
 
-  // Auto-select single carrier
+  // Auto-select single transporter
   useEffect(() => {
-    if (carriers.length === 1 && !form.carrier_id) {
-      setForm((f) => ({ ...f, carrier_id: carriers[0].id }));
+    if (transporterOptions.length === 1 && !form.transporter_id) {
+      setForm((f) => ({ ...f, transporter_id: transporterOptions[0].id }));
     }
-  }, [carriers]);
+  }, [transporterOptions]);
 
-  // Auto-match contract when supplier + carrier change
+  // Auto-match contract when supplier + transporter change
   useEffect(() => {
-    if (!form.supplier_id || !form.carrier_id) {
+    if (!form.supplier_id || !form.transporter_id) {
       setMatchedContract(null);
       setContractWasteStreams([]);
+      setTransporterFromContract(false);
       setForm((prev) => ({ ...prev, waste_stream_ids: [] }));
       return;
     }
@@ -85,7 +93,7 @@ export default function OrderCreatePage() {
     setContractLoading(true);
     matchContractForOrder({
       supplier_id: form.supplier_id,
-      carrier_id: form.carrier_id,
+      carrier_id: form.transporter_id,
       date: form.planned_date || new Date().toISOString().split('T')[0],
     })
       .then(({ data }) => {
@@ -93,6 +101,11 @@ export default function OrderCreatePage() {
         setMatchedContract(data.data);
         const cws = data.data?.contract_waste_streams || [];
         setContractWasteStreams(cws);
+        // Auto-fill transporter from contract if available
+        if (data.data?.agreement_transporter_id && data.data.agreement_transporter_id !== form.transporter_id) {
+          setForm((prev) => ({ ...prev, transporter_id: data.data.agreement_transporter_id }));
+          setTransporterFromContract(true);
+        }
         // Reset waste stream selection, then auto-select if only one available
         if (cws.length === 1) {
           const wsId = cws[0].waste_stream?.id || cws[0].waste_stream_id;
@@ -105,6 +118,7 @@ export default function OrderCreatePage() {
         if (cancelled) return;
         setMatchedContract(null);
         setContractWasteStreams([]);
+        setTransporterFromContract(false);
         setForm((prev) => ({ ...prev, waste_stream_ids: [] }));
       })
       .finally(() => {
@@ -112,7 +126,7 @@ export default function OrderCreatePage() {
       });
 
     return () => { cancelled = true; };
-  }, [form.supplier_id, form.carrier_id, form.planned_date]);
+  }, [form.supplier_id, form.transporter_id, form.planned_date]);
 
   function handleChange(e) {
     const { name, value } = e.target;
@@ -154,6 +168,7 @@ export default function OrderCreatePage() {
         ...form,
         contract_id: matchedContract?.id || null,
         vehicle_plate: form.vehicle_plate,
+        entity_supplier_id: form.supplier_id,
       });
       toast.success(t('orders:toast.created'));
       navigate('/orders');
@@ -177,20 +192,25 @@ export default function OrderCreatePage() {
               <label className="block text-sm font-medium text-grey-700 mb-1.5">{t('orders:create.fields.supplier')} <span className="text-red-500">*</span></label>
               <select name="supplier_id" value={form.supplier_id} onChange={handleChange} required className={selectClass}>
                 <option value="">{t('orders:create.fields.supplierPlaceholder')}</option>
-                {allSuppliers.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+                {supplierOptions.map((s) => <option key={s.id} value={s.id}>{s.company_name}</option>)}
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-grey-700 mb-1.5">{t('orders:create.fields.carrier')} <span className="text-red-500">*</span></label>
-              <select name="carrier_id" value={form.carrier_id} onChange={handleChange} required className={selectClass}>
-                <option value="">{t('orders:create.fields.carrierPlaceholder')}</option>
-                {carriers.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+              <label className="block text-sm font-medium text-grey-700 mb-1.5">
+                {t('orders:transporter')} <span className="text-red-500">*</span>
+                {transporterFromContract && (
+                  <span className="ml-2 text-xs text-green-600 bg-green-50 px-2 py-0.5 rounded">{t('orders:fromContract')}</span>
+                )}
+              </label>
+              <select name="transporter_id" value={form.transporter_id} onChange={(e) => { handleChange(e); setTransporterFromContract(false); }} required className={selectClass}>
+                <option value="">{t('orders:create.fields.transporterPlaceholder')}</option>
+                {transporterOptions.map((c) => <option key={c.id} value={c.id}>{c.company_name}</option>)}
               </select>
             </div>
           </div>
 
           {/* Contract Match Banner */}
-          {form.supplier_id && form.carrier_id && (
+          {form.supplier_id && form.transporter_id && (
             <div className={`mt-4 flex items-center gap-2 p-3 rounded-md text-sm ${
               contractLoading
                 ? 'bg-grey-50 text-grey-500'

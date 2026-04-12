@@ -36,6 +36,7 @@
   },
   "fields": {
     "carrier": "Vervoerder",
+    "transporter": "Transporteur",
     "supplier": "Leverancier",
     "wasteStream": "Afvalstroom",
     "parcelProgress": "Pakketvoortgang",
