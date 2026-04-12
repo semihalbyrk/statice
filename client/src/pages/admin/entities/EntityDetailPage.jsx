@@ -146,7 +146,7 @@ export default function EntityDetailPage() {
                 {(entity.supplier_roles || []).length > 0
                   ? entity.supplier_roles.map((role) => (
                       <span key={role} className="px-2 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
-                        {role}
+                        {t(`entities:supplierRoles.${role}`, role)}
                       </span>
                     ))
                   : <span className="text-grey-900">{'\u2014'}</span>

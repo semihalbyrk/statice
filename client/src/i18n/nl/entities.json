@@ -3,6 +3,16 @@
   "createEntity": "Entiteit aanmaken",
   "editEntity": "Entiteit bewerken",
   "entityDetail": "Entiteit detail",
+  "sections": {
+    "companyInfo": "Bedrijfsinformatie",
+    "contactInfo": "Contactinformatie",
+    "roles": "Rollen"
+  },
+  "detail": {
+    "supplierType": "Leveranciertype",
+    "proRegistration": "PRO Registratienummer",
+    "supplierRoles": "Leveranciersrollen"
+  },
   "tabs": {
     "all": "Alle",
     "suppliers": "Leveranciers",

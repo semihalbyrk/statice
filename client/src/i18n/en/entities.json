@@ -3,6 +3,16 @@
   "createEntity": "Create Entity",
   "editEntity": "Edit Entity",
   "entityDetail": "Entity Detail",
+  "sections": {
+    "companyInfo": "Company Information",
+    "contactInfo": "Contact Information",
+    "roles": "Roles"
+  },
+  "detail": {
+    "supplierType": "Supplier Type",
+    "proRegistration": "PRO Registration Number",
+    "supplierRoles": "Supplier Roles"
+  },
   "tabs": {
     "all": "All",
     "suppliers": "Suppliers",

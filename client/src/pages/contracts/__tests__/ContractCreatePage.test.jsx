@@ -166,14 +166,14 @@ describe('ContractCreatePage', () => {
     expect(screen.getByPlaceholderText('e.g. 2026 WEEE Processing Agreement')).toBeInTheDocument();
   });
 
-  it('renders contract type selector with OUTGOING option', () => {
+  it('renders contract type selector with OUTGOING disabled', () => {
     renderContractCreatePage();
     const select = screen.getByDisplayValue('Incoming');
     expect(select).toBeInTheDocument();
-    // OUTGOING option should be enabled (not disabled)
+    // OUTGOING option should be disabled per spec
     const outgoingOption = select.querySelector('option[value="OUTGOING"]');
     expect(outgoingOption).toBeTruthy();
-    expect(outgoingOption.disabled).toBe(false);
+    expect(outgoingOption.disabled).toBe(true);
   });
 
   it('renders Manage Penalties button', () => {

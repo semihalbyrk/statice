@@ -69,7 +69,7 @@ export default function EntityForm({ form, setForm, onSubmit, isEdit = false, lo
     <form onSubmit={handleSubmit}>
       {/* Section 1: Company Information */}
       <div className="bg-white rounded-lg border border-grey-200 shadow-sm p-5 mb-6">
-        <h2 className="text-sm font-semibold text-grey-900 mb-4">{t('entities:fields.companyName').replace(' Name', '')} Information</h2>
+        <h2 className="text-sm font-semibold text-grey-900 mb-4">{t('entities:sections.companyInfo', 'Company Information')}</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           <div className="lg:col-span-2">
             <label className={labelClass}>
@@ -149,7 +149,7 @@ export default function EntityForm({ form, setForm, onSubmit, isEdit = false, lo
 
       {/* Section 2: Contact Information */}
       <div className="bg-white rounded-lg border border-grey-200 shadow-sm p-5 mb-6">
-        <h2 className="text-sm font-semibold text-grey-900 mb-4">Contact Information</h2>
+        <h2 className="text-sm font-semibold text-grey-900 mb-4">{t('entities:sections.contactInfo', 'Contact Information')}</h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
             <label className={labelClass}>{t('entities:fields.contactName')}</label>
@@ -168,7 +168,7 @@ export default function EntityForm({ form, setForm, onSubmit, isEdit = false, lo
 
       {/* Section 3: Roles */}
       <div className="bg-white rounded-lg border border-grey-200 shadow-sm p-5 mb-6">
-        <h2 className="text-sm font-semibold text-grey-900 mb-4">Roles</h2>
+        <h2 className="text-sm font-semibold text-grey-900 mb-4">{t('entities:sections.roles', 'Roles')}</h2>
         <div className="flex flex-wrap gap-6 mb-4">
           {['is_supplier', 'is_transporter', 'is_disposer', 'is_receiver'].map((role) => {
             const roleKey = role.replace('is_', '');
