@@ -21,6 +21,9 @@ const MATERIAL_SELECT = {
 const CONTRACT_INCLUDE = {
   supplier: { select: { id: true, name: true, supplier_type: true } },
   carrier: { select: { id: true, name: true } },
+  entity_supplier: { select: { id: true, company_name: true, kvk_number: true, vihb_number: true, status: true } },
+  agreement_transporter: { select: { id: true, company_name: true, vihb_number: true, status: true } },
+  invoice_entity: { select: { id: true, company_name: true, status: true } },
   contract_waste_streams: {
     include: {
       waste_stream: { select: { id: true, name: true, code: true } },
@@ -46,6 +49,8 @@ const CONTRACT_INCLUDE = {
 const CONTRACT_LIST_INCLUDE = {
   supplier: { select: { id: true, name: true, supplier_type: true } },
   carrier: { select: { id: true, name: true } },
+  entity_supplier: { select: { id: true, company_name: true } },
+  agreement_transporter: { select: { id: true, company_name: true } },
   _count: { select: { rate_lines: { where: { superseded_at: null } } } },
 };
 
@@ -68,6 +73,10 @@ function enrichContract(contract) {
   if (!contract) return contract;
   return {
     ...contract,
+    contract_type: contract.contract_type || 'INCOMING',
+    entity_supplier: contract.entity_supplier || null,
+    agreement_transporter: contract.agreement_transporter || null,
+    invoice_entity: contract.invoice_entity || null,
     days_until_expiry: contract.expiry_date ? daysUntilExpiry(contract.expiry_date) : null,
     rag_status: contract.expiry_date ? computeRagStatus(contract.expiry_date) : null,
   };
@@ -75,7 +84,7 @@ function enrichContract(contract) {
 
 // --- CRUD ---
 
-async function listContracts({ status, supplier_id, search, page = 1, limit = 20 }) {
+async function listContracts({ status, supplier_id, entity_supplier_id, search, page = 1, limit = 20 }) {
   const pageNum = Math.max(1, parseInt(page, 10));
   const limitNum = Math.min(100, Math.max(1, parseInt(limit, 10)));
   const skip = (pageNum - 1) * limitNum;
@@ -83,11 +92,13 @@ async function listContracts({ status, supplier_id, search, page = 1, limit = 20
   const where = { is_active: true };
   if (status) where.status = status;
   if (supplier_id) where.supplier_id = supplier_id;
+  if (entity_supplier_id) where.entity_supplier_id = entity_supplier_id;
   if (search) {
     where.OR = [
       { contract_number: { contains: search, mode: 'insensitive' } },
       { name: { contains: search, mode: 'insensitive' } },
       { supplier: { name: { contains: search, mode: 'insensitive' } } },
+      { entity_supplier: { company_name: { contains: search, mode: 'insensitive' } } },
     ];
   }
 
@@ -182,6 +193,35 @@ async function createContract(data, userId) {
       if (!carrier || !carrier.is_active) throw createError('Active carrier not found', 404);
     }
 
+    // Validate entity_supplier_id if provided
+    if (data.entity_supplier_id) {
+      const entitySupplier = await tx.entity.findUnique({
+        where: { id: data.entity_supplier_id },
+        select: { id: true, is_supplier: true, status: true },
+      });
+      if (!entitySupplier || entitySupplier.status !== 'ACTIVE') throw createError('Active entity supplier not found', 404);
+      if (!entitySupplier.is_supplier) throw createError('Entity is not flagged as a supplier', 400);
+    }
+
+    // Validate agreement_transporter_id if provided
+    if (data.agreement_transporter_id) {
+      const entityTransporter = await tx.entity.findUnique({
+        where: { id: data.agreement_transporter_id },
+        select: { id: true, is_transporter: true, status: true },
+      });
+      if (!entityTransporter || entityTransporter.status !== 'ACTIVE') throw createError('Active agreement transporter not found', 404);
+      if (!entityTransporter.is_transporter) throw createError('Entity is not flagged as a transporter', 400);
+    }
+
+    // Validate invoice_entity_id if provided
+    if (data.invoice_entity_id) {
+      const invoiceEntity = await tx.entity.findUnique({
+        where: { id: data.invoice_entity_id },
+        select: { id: true, status: true },
+      });
+      if (!invoiceEntity || invoiceEntity.status !== 'ACTIVE') throw createError('Active invoice entity not found', 404);
+    }
+
     const contractNumber = await generateContractNumber(tx);
 
     // Auto-fill receiver_name from SystemSetting
@@ -220,6 +260,10 @@ async function createContract(data, userId) {
         contract_number: contractNumber,
         supplier_id: data.supplier_id,
         carrier_id: data.carrier_id || null,
+        contract_type: data.contract_type || 'INCOMING',
+        entity_supplier_id: data.entity_supplier_id || null,
+        agreement_transporter_id: data.agreement_transporter_id || null,
+        invoice_entity_id: data.invoice_entity_id || null,
         name: data.name,
         status: 'ACTIVE',
         effective_date: effectiveDate,
@@ -378,6 +422,45 @@ async function updateContract(id, data, userId) {
     if (data.currency !== undefined) updateData.currency = data.currency;
     if (data.invoice_delivery_method !== undefined) updateData.invoice_delivery_method = data.invoice_delivery_method || null;
     if (data.contamination_tolerance_pct !== undefined) updateData.contamination_tolerance_pct = data.contamination_tolerance_pct;
+    if (data.contract_type !== undefined) updateData.contract_type = data.contract_type;
+
+    // Validate and set entity_supplier_id
+    if (data.entity_supplier_id !== undefined) {
+      if (data.entity_supplier_id) {
+        const entitySupplier = await tx.entity.findUnique({
+          where: { id: data.entity_supplier_id },
+          select: { id: true, is_supplier: true, status: true },
+        });
+        if (!entitySupplier || entitySupplier.status !== 'ACTIVE') throw createError('Active entity supplier not found', 404);
+        if (!entitySupplier.is_supplier) throw createError('Entity is not flagged as a supplier', 400);
+      }
+      updateData.entity_supplier_id = data.entity_supplier_id || null;
+    }
+
+    // Validate and set agreement_transporter_id
+    if (data.agreement_transporter_id !== undefined) {
+      if (data.agreement_transporter_id) {
+        const entityTransporter = await tx.entity.findUnique({
+          where: { id: data.agreement_transporter_id },
+          select: { id: true, is_transporter: true, status: true },
+        });
+        if (!entityTransporter || entityTransporter.status !== 'ACTIVE') throw createError('Active agreement transporter not found', 404);
+        if (!entityTransporter.is_transporter) throw createError('Entity is not flagged as a transporter', 400);
+      }
+      updateData.agreement_transporter_id = data.agreement_transporter_id || null;
+    }
+
+    // Validate and set invoice_entity_id
+    if (data.invoice_entity_id !== undefined) {
+      if (data.invoice_entity_id) {
+        const invoiceEntity = await tx.entity.findUnique({
+          where: { id: data.invoice_entity_id },
+          select: { id: true, status: true },
+        });
+        if (!invoiceEntity || invoiceEntity.status !== 'ACTIVE') throw createError('Active invoice entity not found', 404);
+      }
+      updateData.invoice_entity_id = data.invoice_entity_id || null;
+    }
 
     await tx.supplierContract.update({
       where: { id },
@@ -878,13 +961,20 @@ async function matchContractForOrder(supplierId, materialId, date, tx) {
 
   const contract = await client.supplierContract.findFirst({
     where: {
-      supplier_id: supplierId,
+      OR: [
+        { supplier_id: supplierId },
+        { entity_supplier_id: supplierId },
+      ],
       status: 'ACTIVE',
       is_active: true,
       effective_date: { lte: targetDate },
-      OR: [
-        { expiry_date: { gte: targetDate } },
-        { expiry_date: null },
+      AND: [
+        {
+          OR: [
+            { expiry_date: { gte: targetDate } },
+            { expiry_date: null },
+          ],
+        },
       ],
       rate_lines: {
         some: {
@@ -934,14 +1024,22 @@ async function findContractForSupplierCarrier(supplierId, carrierId, date) {
 
   const contract = await prisma.supplierContract.findFirst({
     where: {
-      supplier_id: supplierId,
-      carrier_id: carrierId,
+      OR: [
+        { supplier_id: supplierId, carrier_id: carrierId },
+        { entity_supplier_id: supplierId, agreement_transporter_id: carrierId },
+        { entity_supplier_id: supplierId, carrier_id: carrierId },
+        { supplier_id: supplierId, agreement_transporter_id: carrierId },
+      ],
       status: 'ACTIVE',
       is_active: true,
       effective_date: { lte: targetDate },
-      OR: [
-        { expiry_date: { gte: targetDate } },
-        { expiry_date: null },
+      AND: [
+        {
+          OR: [
+            { expiry_date: { gte: targetDate } },
+            { expiry_date: null },
+          ],
+        },
       ],
     },
     include: {
@@ -986,13 +1084,20 @@ async function findActiveContractForSupplier(supplierId, date, tx) {
 
   const contract = await client.supplierContract.findFirst({
     where: {
-      supplier_id: supplierId,
+      OR: [
+        { supplier_id: supplierId },
+        { entity_supplier_id: supplierId },
+      ],
       status: 'ACTIVE',
       is_active: true,
       effective_date: { lte: targetDate },
-      OR: [
-        { expiry_date: { gte: targetDate } },
-        { expiry_date: null },
+      AND: [
+        {
+          OR: [
+            { expiry_date: { gte: targetDate } },
+            { expiry_date: null },
+          ],
+        },
       ],
     },
     select: { id: true, contract_number: true },
