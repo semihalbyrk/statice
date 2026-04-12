@@ -29,6 +29,10 @@ import ContainerRegistryPage from './pages/admin/ContainerRegistryPage';
 import InvoicesPage from './pages/invoices/InvoicesPage';
 import InvoiceCreatePage from './pages/invoices/InvoiceCreatePage';
 import InvoiceDetailPage from './pages/invoices/InvoiceDetailPage';
+import EntitiesPage from './pages/admin/entities/EntitiesPage';
+import EntityDetailPage from './pages/admin/entities/EntityDetailPage';
+import EntityCreatePage from './pages/admin/entities/EntityCreatePage';
+import EntityEditPage from './pages/admin/entities/EntityEditPage';
 import NotFoundPage from './pages/errors/NotFoundPage';
 import UnauthorisedPage from './pages/errors/UnauthorisedPage';
 
@@ -83,6 +87,10 @@ export default function App() {
           <Route path="/invoices/new" element={<ProtectedRoute allowedRoles={['ADMIN', 'FINANCE_MANAGER', 'FINANCE_USER']}><InvoiceCreatePage /></ProtectedRoute>} />
           <Route path="/invoices/:id" element={<ProtectedRoute allowedRoles={['ADMIN', 'FINANCE_MANAGER', 'FINANCE_USER']}><InvoiceDetailPage /></ProtectedRoute>} />
           <Route path="/admin/fees" element={<ProtectedRoute allowedRoles={['ADMIN', 'FINANCE_MANAGER']}><FeeMasterPage /></ProtectedRoute>} />
+          <Route path="/admin/entities" element={<ProtectedRoute allowedRoles={['ADMIN']}><EntitiesPage /></ProtectedRoute>} />
+          <Route path="/admin/entities/new" element={<ProtectedRoute allowedRoles={['ADMIN']}><EntityCreatePage /></ProtectedRoute>} />
+          <Route path="/admin/entities/:id/edit" element={<ProtectedRoute allowedRoles={['ADMIN']}><EntityEditPage /></ProtectedRoute>} />
+          <Route path="/admin/entities/:id" element={<ProtectedRoute allowedRoles={['ADMIN']}><EntityDetailPage /></ProtectedRoute>} />
           <Route path="/admin/audit-log" element={<ProtectedRoute allowedRoles={['ADMIN']}><AuditLogPage /></ProtectedRoute>} />
           <Route path="/admin/settings" element={<ProtectedRoute allowedRoles={['ADMIN']}><SystemSettingsPage /></ProtectedRoute>} />
         </Route>
