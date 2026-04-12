@@ -25,6 +25,12 @@ vi.mock('../../../api/fees', () => ({
   listFees: vi.fn().mockResolvedValue({ data: { data: [] } }),
 }));
 
+// Mock entities API
+vi.mock('../../../api/entities', () => ({
+  getProtectedEntity: vi.fn().mockResolvedValue({ data: { data: { id: 'statice-entity', company_name: 'Statice B.V.' } } }),
+  getDisposerSites: vi.fn().mockResolvedValue({ data: { data: [] } }),
+}));
+
 // Mock Breadcrumb
 vi.mock('../../../components/ui/Breadcrumb', () => ({
   default: ({ items }) => (
@@ -160,9 +166,14 @@ describe('ContractCreatePage', () => {
     expect(screen.getByPlaceholderText('e.g. 2026 WEEE Processing Agreement')).toBeInTheDocument();
   });
 
-  it('renders Statice B.V. as receiver', () => {
+  it('renders contract type selector with OUTGOING option', () => {
     renderContractCreatePage();
-    expect(screen.getByText('Statice B.V.')).toBeInTheDocument();
+    const select = screen.getByDisplayValue('Incoming');
+    expect(select).toBeInTheDocument();
+    // OUTGOING option should be enabled (not disabled)
+    const outgoingOption = select.querySelector('option[value="OUTGOING"]');
+    expect(outgoingOption).toBeTruthy();
+    expect(outgoingOption.disabled).toBe(false);
   });
 
   it('renders Manage Penalties button', () => {
