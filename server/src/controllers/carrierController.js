@@ -1,6 +1,23 @@
 const prisma = require('../utils/prismaClient');
 const { writeAuditLog } = require('../utils/auditLog');
 
+/**
+ * Maps an Entity record to the legacy Carrier response shape.
+ */
+function mapEntityToCarrier(entity) {
+  return {
+    id: entity.id,
+    name: entity.company_name,
+    kvk_number: entity.kvk_number,
+    contact_name: entity.contact_name,
+    contact_email: entity.contact_email,
+    contact_phone: entity.contact_phone,
+    licence_number: entity.vihb_number,
+    is_active: entity.status === 'ACTIVE',
+    created_at: entity.created_at,
+  };
+}
+
 async function list(req, res, next) {
   try {
     const { search, page = 1, limit = 20, active } = req.query;
@@ -8,20 +25,20 @@ async function list(req, res, next) {
     const limitNum = Math.min(100, Math.max(1, parseInt(limit, 10)));
     const skip = (pageNum - 1) * limitNum;
 
-    const where = {};
+    const where = { is_transporter: true };
     if (search) {
-      where.name = { contains: search, mode: 'insensitive' };
+      where.company_name = { contains: search, mode: 'insensitive' };
     }
     if (active !== undefined) {
-      where.is_active = active === 'true';
+      where.status = active === 'true' ? 'ACTIVE' : 'INACTIVE';
     }
 
-    const [carriers, total] = await Promise.all([
-      prisma.carrier.findMany({ where, skip, take: limitNum, orderBy: { name: 'asc' } }),
-      prisma.carrier.count({ where }),
+    const [entities, total] = await Promise.all([
+      prisma.entity.findMany({ where, skip, take: limitNum, orderBy: { company_name: 'asc' } }),
+      prisma.entity.count({ where }),
     ]);
 
-    return res.json({ data: carriers, total, page: pageNum, limit: limitNum });
+    return res.json({ data: entities.map(mapEntityToCarrier), total, page: pageNum, limit: limitNum });
   } catch (err) {
     next(err);
   }
@@ -29,14 +46,13 @@ async function list(req, res, next) {
 
 async function getById(req, res, next) {
   try {
-    const carrier = await prisma.carrier.findUnique({
-      where: { id: req.params.id },
-      include: { vehicles: true },
+    const entity = await prisma.entity.findFirst({
+      where: { id: req.params.id, is_transporter: true },
     });
-    if (!carrier) {
+    if (!entity) {
       return res.status(404).json({ error: 'Carrier not found' });
     }
-    return res.json(carrier);
+    return res.json(mapEntityToCarrier(entity));
   } catch (err) {
     next(err);
   }
@@ -49,9 +65,20 @@ async function create(req, res, next) {
       return res.status(400).json({ error: 'Name is required' });
     }
 
-    const carrier = await prisma.$transaction(async (tx) => {
-      const created = await tx.carrier.create({
-        data: { name, kvk_number, contact_name, contact_email, contact_phone, licence_number },
+    const entity = await prisma.$transaction(async (tx) => {
+      const created = await tx.entity.create({
+        data: {
+          company_name: name,
+          kvk_number,
+          contact_name,
+          contact_email,
+          contact_phone,
+          vihb_number: licence_number,
+          street_and_number: '',
+          postal_code: '',
+          city: '',
+          is_transporter: true,
+        },
       });
       await writeAuditLog({
         userId: req.user.userId,
@@ -63,7 +90,7 @@ async function create(req, res, next) {
       return created;
     });
 
-    return res.status(201).json(carrier);
+    return res.status(201).json(mapEntityToCarrier(entity));
   } catch (err) {
     next(err);
   }
@@ -72,17 +99,25 @@ async function create(req, res, next) {
 async function update(req, res, next) {
   try {
     const { id } = req.params;
-    const existing = await prisma.carrier.findUnique({ where: { id } });
+    const existing = await prisma.entity.findFirst({ where: { id, is_transporter: true } });
     if (!existing) {
       return res.status(404).json({ error: 'Carrier not found' });
     }
 
     const { name, kvk_number, contact_name, contact_email, contact_phone, licence_number } = req.body;
 
-    const carrier = await prisma.$transaction(async (tx) => {
-      const updated = await tx.carrier.update({
+    const data = {};
+    if (name !== undefined) data.company_name = name;
+    if (kvk_number !== undefined) data.kvk_number = kvk_number;
+    if (contact_name !== undefined) data.contact_name = contact_name;
+    if (contact_email !== undefined) data.contact_email = contact_email;
+    if (contact_phone !== undefined) data.contact_phone = contact_phone;
+    if (licence_number !== undefined) data.vihb_number = licence_number;
+
+    const entity = await prisma.$transaction(async (tx) => {
+      const updated = await tx.entity.update({
         where: { id },
-        data: { name, kvk_number, contact_name, contact_email, contact_phone, licence_number },
+        data,
       });
       await writeAuditLog({
         userId: req.user.userId,
@@ -95,7 +130,7 @@ async function update(req, res, next) {
       return updated;
     });
 
-    return res.json(carrier);
+    return res.json(mapEntityToCarrier(entity));
   } catch (err) {
     next(err);
   }
@@ -104,20 +139,20 @@ async function update(req, res, next) {
 async function remove(req, res, next) {
   try {
     const { id } = req.params;
-    const existing = await prisma.carrier.findUnique({ where: { id } });
+    const existing = await prisma.entity.findFirst({ where: { id, is_transporter: true } });
     if (!existing) {
       return res.status(404).json({ error: 'Carrier not found' });
     }
 
     await prisma.$transaction(async (tx) => {
-      await tx.carrier.update({ where: { id }, data: { is_active: false } });
+      await tx.entity.update({ where: { id }, data: { status: 'INACTIVE' } });
       await writeAuditLog({
         userId: req.user.userId,
         action: 'DELETE',
         entityType: 'Carrier',
         entityId: id,
         before: existing,
-        after: { ...existing, is_active: false },
+        after: { ...existing, status: 'INACTIVE' },
       }, tx);
     });
 
@@ -135,18 +170,22 @@ async function toggleStatus(req, res, next) {
       return res.status(400).json({ error: 'is_active (boolean) is required' });
     }
 
-    const existing = await prisma.carrier.findUnique({ where: { id } });
+    const existing = await prisma.entity.findFirst({ where: { id, is_transporter: true } });
     if (!existing) {
       return res.status(404).json({ error: 'Carrier not found' });
     }
-    if (existing.is_active === is_active) {
-      return res.json(existing);
+
+    const currentlyActive = existing.status === 'ACTIVE';
+    if (currentlyActive === is_active) {
+      return res.json(mapEntityToCarrier(existing));
     }
 
+    const newStatus = is_active ? 'ACTIVE' : 'INACTIVE';
+
     const result = await prisma.$transaction(async (tx) => {
-      const updated = await tx.carrier.update({
+      const updated = await tx.entity.update({
         where: { id },
-        data: { is_active },
+        data: { status: newStatus },
       });
       await writeAuditLog({
         userId: req.user.userId,
@@ -159,7 +198,7 @@ async function toggleStatus(req, res, next) {
       return updated;
     });
 
-    return res.json(result);
+    return res.json(mapEntityToCarrier(result));
   } catch (err) {
     next(err);
   }
