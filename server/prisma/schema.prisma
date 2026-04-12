@@ -154,6 +154,35 @@ enum ContaminationType {
   SORTING_REQUIRED
 }
 
+enum EntityStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum SupplierRole {
+  ONTDOENER
+  ONTVANGER
+  HANDELAAR
+  BEMIDDELAAR
+}
+
+enum EntitySupplierType {
+  PRO
+  COMMERCIAL
+  AD_HOC
+}
+
+enum ContractType {
+  INCOMING
+  OUTGOING
+}
+
+enum OrderDocumentType {
+  BEGELEIDINGSBRIEF
+  WEIGHT_TICKET
+  OTHER
+}
+
 model User {
   id            String    @id @default(uuid())
   email         String    @unique
@@ -173,24 +202,25 @@ model User {
   notifications      Notification[]
   weight_amendments  WeightAmendment[] @relation("WeightAmendments")
 
-  invoices_created          Invoice[]
-  contamination_incidents   ContaminationIncident[]
+  invoices_created        Invoice[]
+  contamination_incidents ContaminationIncident[]
 }
 
 model Carrier {
-  id              String   @id @default(uuid())
-  name            String
-  kvk_number      String?
-  contact_name    String?
-  contact_email   String?
-  contact_phone   String?
-  licence_number  String?
-  is_active       Boolean  @default(true)
-  created_at      DateTime @default(now())
+  id             String   @id @default(uuid())
+  name           String
+  kvk_number     String?
+  contact_name   String?
+  contact_email  String?
+  contact_phone  String?
+  licence_number String?
+  is_active      Boolean  @default(true)
+  created_at     DateTime @default(now())
 
-  orders    InboundOrder[]
-  vehicles  Vehicle[]
-  contracts SupplierContract[]
+  orders                InboundOrder[]
+  vehicles              Vehicle[]
+  contracts             SupplierContract[]
+  migrated_to_entity_id String?
 }
 
 model Supplier {
@@ -209,10 +239,67 @@ model Supplier {
   is_active               Boolean      @default(true)
   created_at              DateTime     @default(now())
 
-  orders             InboundOrder[]
-  afvalstroomnummers SupplierAfvalstroomnummer[]
-  contracts          SupplierContract[]
-  invoices           Invoice[]
+  orders                InboundOrder[]
+  afvalstroomnummers    SupplierAfvalstroomnummer[]
+  contracts             SupplierContract[]
+  invoices              Invoice[]
+  migrated_to_entity_id String?
+}
+
+model Entity {
+  id                          String       @id @default(uuid())
+  company_name                String
+  street_and_number           String
+  postal_code                 String
+  city                        String
+  country                     String       @default("NL")
+  kvk_number                  String?
+  btw_number                  String?
+  iban                        String?
+  vihb_number                 String?
+  environmental_permit_number String?
+  contact_name                String?
+  contact_email               String?
+  contact_phone               String?
+  status                      EntityStatus @default(ACTIVE)
+
+  is_supplier    Boolean @default(false)
+  is_transporter Boolean @default(false)
+  is_disposer    Boolean @default(false)
+  is_receiver    Boolean @default(false)
+
+  supplier_type           EntitySupplierType?
+  supplier_roles          SupplierRole[]
+  pro_registration_number String?
+
+  is_also_site Boolean @default(false)
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  disposer_sites DisposerSite[]
+
+  contracts_as_supplier       SupplierContract[] @relation("ContractSupplier")
+  contracts_as_transporter    SupplierContract[] @relation("ContractTransporter")
+  contracts_as_invoice_entity SupplierContract[] @relation("ContractInvoiceEntity")
+  orders_as_supplier          InboundOrder[]     @relation("OrderSupplier")
+  orders_as_transporter       InboundOrder[]     @relation("OrderTransporter")
+}
+
+model DisposerSite {
+  id                          String       @id @default(uuid())
+  entity_id                   String
+  site_name                   String
+  street_and_number           String
+  postal_code                 String
+  city                        String
+  country                     String       @default("NL")
+  environmental_permit_number String?
+  status                      EntityStatus @default(ACTIVE)
+  created_at                  DateTime     @default(now())
+  updated_at                  DateTime     @updatedAt
+
+  entity Entity @relation(fields: [entity_id], references: [id])
 }
 
 model Vehicle {
@@ -247,20 +334,20 @@ model WasteStream {
 }
 
 model ProductCategory {
-  id                    String   @id @default(uuid())
-  code_cbs              String   @unique
-  description_en        String
-  description_nl        String
-  waste_stream_id       String
-  recycled_pct_default  Decimal  @default(0)
-  reused_pct_default    Decimal  @default(0)
-  disposed_pct_default  Decimal  @default(0)
-  is_active             Boolean  @default(true)
-  created_at            DateTime @default(now())
+  id                   String   @id @default(uuid())
+  code_cbs             String   @unique
+  description_en       String
+  description_nl       String
+  waste_stream_id      String
+  recycled_pct_default Decimal  @default(0)
+  reused_pct_default   Decimal  @default(0)
+  disposed_pct_default Decimal  @default(0)
+  is_active            Boolean  @default(true)
+  created_at           DateTime @default(now())
 
-  waste_stream    WasteStream    @relation(fields: [waste_stream_id], references: [id])
+  waste_stream    WasteStream      @relation(fields: [waste_stream_id], references: [id])
   sorting_lines   SortingLine[]
-  material_assets Asset[]        @relation("MaterialCategory")
+  material_assets Asset[]          @relation("MaterialCategory")
   materials       MaterialMaster[] @relation("LegacyMaterialCategory")
 }
 
@@ -290,12 +377,18 @@ model InboundOrder {
   created_at                DateTime          @default(now())
   updated_at                DateTime          @updatedAt
 
-  carrier         Carrier            @relation(fields: [carrier_id], references: [id])
-  supplier        Supplier           @relation(fields: [supplier_id], references: [id])
-  waste_stream    WasteStream        @relation(fields: [waste_stream_id], references: [id])
-  created_by_user User               @relation(fields: [created_by], references: [id])
-  inbounds        Inbound[]
-  waste_streams   OrderWasteStream[]
+  entity_supplier_id String?
+  transporter_id     String?
+
+  carrier                 Carrier                 @relation(fields: [carrier_id], references: [id])
+  supplier                Supplier                @relation(fields: [supplier_id], references: [id])
+  waste_stream            WasteStream             @relation(fields: [waste_stream_id], references: [id])
+  created_by_user         User                    @relation(fields: [created_by], references: [id])
+  entity_supplier         Entity?                 @relation("OrderSupplier", fields: [entity_supplier_id], references: [id])
+  transporter             Entity?                 @relation("OrderTransporter", fields: [transporter_id], references: [id])
+  inbounds                Inbound[]
+  waste_streams           OrderWasteStream[]
+  documents               OrderDocument[]
   invoice_lines           InvoiceLine[]
   contamination_incidents ContaminationIncident[]
 }
@@ -312,18 +405,32 @@ model OrderWasteStream {
   @@unique([order_id, waste_stream_id])
 }
 
+model OrderDocument {
+  id            String            @id @default(uuid())
+  order_id      String
+  document_type OrderDocumentType
+  file_name     String
+  file_size     Int
+  mime_type     String
+  storage_path  String
+  uploaded_by   String
+  uploaded_at   DateTime          @default(now())
+
+  order InboundOrder @relation(fields: [order_id], references: [id])
+}
+
 model Inbound {
-  id              String        @id @default(uuid())
-  inbound_number  String        @unique
-  order_id        String
-  vehicle_id      String
-  waste_stream_id String?
-  arrived_at      DateTime      @default(now())
-  gross_ticket_id String?       @unique
-  tare_ticket_id  String?       @unique
-  gross_weight_kg Decimal?
-  tare_weight_kg  Decimal?
-  net_weight_kg   Decimal?
+  id                String            @id @default(uuid())
+  inbound_number    String            @unique
+  order_id          String
+  vehicle_id        String
+  waste_stream_id   String?
+  arrived_at        DateTime          @default(now())
+  gross_ticket_id   String?           @unique
+  tare_ticket_id    String?           @unique
+  gross_weight_kg   Decimal?
+  tare_weight_kg    Decimal?
+  net_weight_kg     Decimal?
   status            InboundStatus     @default(ARRIVED)
   confirmed_by      String?
   confirmed_at      DateTime?
@@ -332,16 +439,16 @@ model Inbound {
   match_strategy    MatchStrategy?
   matched_by        String?
   matched_at        DateTime?
-  is_manual_match   Boolean            @default(false)
+  is_manual_match   Boolean           @default(false)
   device_id         String?
   weighing_mode     WeighingMode?
 
-  order             InboundOrder     @relation(fields: [order_id], references: [id])
-  vehicle           Vehicle          @relation(fields: [vehicle_id], references: [id])
-  waste_stream      WasteStream?     @relation(fields: [waste_stream_id], references: [id])
-  gross_ticket      PfisterTicket?   @relation("GrossTicket", fields: [gross_ticket_id], references: [id])
-  tare_ticket       PfisterTicket?   @relation("TareTicket", fields: [tare_ticket_id], references: [id])
-  confirmed_by_user User?            @relation(fields: [confirmed_by], references: [id])
+  order             InboundOrder      @relation(fields: [order_id], references: [id])
+  vehicle           Vehicle           @relation(fields: [vehicle_id], references: [id])
+  waste_stream      WasteStream?      @relation(fields: [waste_stream_id], references: [id])
+  gross_ticket      PfisterTicket?    @relation("GrossTicket", fields: [gross_ticket_id], references: [id])
+  tare_ticket       PfisterTicket?    @relation("TareTicket", fields: [tare_ticket_id], references: [id])
+  confirmed_by_user User?             @relation(fields: [confirmed_by], references: [id])
   assets            Asset[]
   sorting_session   SortingSession?
   weighings         InboundWeighing[]
@@ -358,30 +465,30 @@ model InboundWeighing {
   is_tare           Boolean  @default(false)
   created_at        DateTime @default(now())
 
-  inbound        Inbound       @relation(fields: [inbound_id], references: [id])
-  pfister_ticket PfisterTicket @relation(fields: [pfister_ticket_id], references: [id])
-  gross_for_assets Asset[]     @relation("AssetGrossWeighing")
-  tare_for_assets  Asset[]     @relation("AssetTareWeighing")
+  inbound          Inbound       @relation(fields: [inbound_id], references: [id])
+  pfister_ticket   PfisterTicket @relation(fields: [pfister_ticket_id], references: [id])
+  gross_for_assets Asset[]       @relation("AssetGrossWeighing")
+  tare_for_assets  Asset[]       @relation("AssetTareWeighing")
 
   @@unique([inbound_id, sequence])
 }
 
 model PfisterTicket {
-  id                 String   @id @default(uuid())
-  ticket_number      String   @unique
+  id                 String    @id @default(uuid())
+  ticket_number      String    @unique
   weighing_type      String
   weight_kg          Decimal
-  unit               String   @default("kg")
+  unit               String    @default("kg")
   timestamp          DateTime
   raw_payload        String
-  is_manual_override Boolean  @default(false)
+  is_manual_override Boolean   @default(false)
   override_reason    String?
   override_by        String?
-  is_confirmed       Boolean  @default(false)
+  is_confirmed       Boolean   @default(false)
   confirmed_by       String?
   confirmed_at       DateTime?
   device_id          String?
-  created_at         DateTime @default(now())
+  created_at         DateTime  @default(now())
 
   gross_inbound    Inbound?          @relation("GrossTicket")
   tare_inbound     Inbound?          @relation("TareTicket")
@@ -390,78 +497,78 @@ model PfisterTicket {
 }
 
 model Asset {
-  id                   String      @id @default(uuid())
-  asset_label          String      @unique
-  inbound_id           String      @map("weighing_event_id")
-  parcel_type          ParcelType  @default(CONTAINER)
-  container_type           SkipType?   @map("skip_type")
+  id                       String     @id @default(uuid())
+  asset_label              String     @unique
+  inbound_id               String     @map("weighing_event_id")
+  parcel_type              ParcelType @default(CONTAINER)
+  container_type           SkipType?  @map("skip_type")
   container_label          String?
   estimated_tare_weight_kg Decimal?
   material_category_id     String?
   waste_stream_id          String?
   sequence                 Int?
   estimated_volume_m3      Decimal?
-  gross_weighing_id    String?
-  tare_weighing_id     String?
-  gross_weight_kg      Decimal?
-  tare_weight_kg       Decimal?
-  net_weight_kg        Decimal?
-  notes                String?
-  created_at           DateTime    @default(now())
+  gross_weighing_id        String?
+  tare_weighing_id         String?
+  gross_weight_kg          Decimal?
+  tare_weight_kg           Decimal?
+  net_weight_kg            Decimal?
+  notes                    String?
+  created_at               DateTime   @default(now())
 
-  inbound           Inbound          @relation(fields: [inbound_id], references: [id])
-  waste_stream      WasteStream?     @relation(fields: [waste_stream_id], references: [id])
-  material_category ProductCategory? @relation("MaterialCategory", fields: [material_category_id], references: [id])
-  gross_weighing    InboundWeighing? @relation("AssetGrossWeighing", fields: [gross_weighing_id], references: [id])
-  tare_weighing     InboundWeighing? @relation("AssetTareWeighing", fields: [tare_weighing_id], references: [id])
-  sorting_lines     SortingLine[]
-  catalogue_entries AssetCatalogueEntry[]
+  inbound            Inbound               @relation(fields: [inbound_id], references: [id])
+  waste_stream       WasteStream?          @relation(fields: [waste_stream_id], references: [id])
+  material_category  ProductCategory?      @relation("MaterialCategory", fields: [material_category_id], references: [id])
+  gross_weighing     InboundWeighing?      @relation("AssetGrossWeighing", fields: [gross_weighing_id], references: [id])
+  tare_weighing      InboundWeighing?      @relation("AssetTareWeighing", fields: [tare_weighing_id], references: [id])
+  sorting_lines      SortingLine[]
+  catalogue_entries  AssetCatalogueEntry[]
   processing_records ProcessingRecord[]
 
   @@index([container_label])
 }
 
 model ContainerRegistry {
-  id              String    @id @default(uuid())
-  container_label String    @unique
+  id              String   @id @default(uuid())
+  container_label String   @unique
   container_type  SkipType
   tare_weight_kg  Decimal
   volume_m3       Decimal?
   notes           String?
-  is_active       Boolean   @default(true)
-  created_at      DateTime  @default(now())
-  updated_at      DateTime  @updatedAt
+  is_active       Boolean  @default(true)
+  created_at      DateTime @default(now())
+  updated_at      DateTime @updatedAt
 }
 
 model SortingSession {
-  id          String        @id @default(uuid())
-  inbound_id  String        @unique @map("weighing_event_id")
-  order_id    String
-  recorded_by String
-  recorded_at DateTime      @default(now())
-  status      SortingStatus @default(PLANNED)
+  id                String              @id @default(uuid())
+  inbound_id        String              @unique @map("weighing_event_id")
+  order_id          String
+  recorded_by       String
+  recorded_at       DateTime            @default(now())
+  status            SortingStatus       @default(PLANNED)
   catalogue_status  WorkflowStageStatus @default(NOT_STARTED)
   processing_status WorkflowStageStatus @default(NOT_STARTED)
-  notes       String?
+  notes             String?
 
-  inbound          Inbound     @relation(fields: [inbound_id], references: [id])
-  recorded_by_user User        @relation(fields: [recorded_by], references: [id])
-  sorting_lines    SortingLine[]
-  catalogue_entries AssetCatalogueEntry[]
-  processing_records ProcessingRecord[]
+  inbound                 Inbound                 @relation(fields: [inbound_id], references: [id])
+  recorded_by_user        User                    @relation(fields: [recorded_by], references: [id])
+  sorting_lines           SortingLine[]
+  catalogue_entries       AssetCatalogueEntry[]
+  processing_records      ProcessingRecord[]
   contamination_incidents ContaminationIncident[]
 }
 
 model SortingLine {
-  id                   String  @id @default(uuid())
-  session_id           String
-  asset_id             String
-  category_id          String
-  net_weight_kg        Decimal
-  recycled_pct         Decimal
-  reused_pct           Decimal
-  disposed_pct         Decimal
-  notes                        String?
+  id            String  @id @default(uuid())
+  session_id    String
+  asset_id      String
+  category_id   String
+  net_weight_kg Decimal
+  recycled_pct  Decimal
+  reused_pct    Decimal
+  disposed_pct  Decimal
+  notes         String?
 
   session  SortingSession  @relation(fields: [session_id], references: [id])
   asset    Asset           @relation(fields: [asset_id], references: [id])
@@ -469,13 +576,13 @@ model SortingLine {
 }
 
 model Report {
-  id                String   @id @default(uuid())
-  type              String
-  generated_by      String
-  generated_at      DateTime @default(now())
-  parameters_json   Json
-  file_path_pdf     String?
-  file_path_xlsx    String?
+  id              String   @id @default(uuid())
+  type            String
+  generated_by    String
+  generated_at    DateTime @default(now())
+  parameters_json Json
+  file_path_pdf   String?
+  file_path_xlsx  String?
 
   generated_by_user User @relation(fields: [generated_by], references: [id])
 }
@@ -509,15 +616,15 @@ model AuditLog {
 }
 
 model SystemSetting {
-  id                           String   @id @default("singleton")
-  facility_name                String   @default("Statice B.V.")
-  facility_address             String   @default("Recyclingweg 1, 1234 AB Amsterdam")
-  facility_permit_number       String   @default("ST-2026-001")
-  facility_kvk                 String   @default("12345678")
-  report_footer_text           String   @default("Statice B.V. — Confidential")
-  max_skips_per_event          Int      @default(10)
-  config_json                  Json     @default("{}")
-  updated_at                   DateTime @updatedAt
+  id                     String   @id @default("singleton")
+  facility_name          String   @default("Statice B.V.")
+  facility_address       String   @default("Recyclingweg 1, 1234 AB Amsterdam")
+  facility_permit_number String   @default("ST-2026-001")
+  facility_kvk           String   @default("12345678")
+  report_footer_text     String   @default("Statice B.V. — Confidential")
+  max_skips_per_event    Int      @default(10)
+  config_json            Json     @default("{}")
+  updated_at             DateTime @updatedAt
 }
 
 model Notification {
@@ -535,13 +642,13 @@ model Notification {
 }
 
 model PfisterIngressLog {
-  id            String   @id @default(uuid())
+  id            String    @id @default(uuid())
   source        String
   protocol      String?
   payload       String
-  status        String   @default("RECEIVED")
+  status        String    @default("RECEIVED")
   error_message String?
-  received_at   DateTime @default(now())
+  received_at   DateTime  @default(now())
   processed_at  DateTime?
 }
 
@@ -574,50 +681,50 @@ model WeightAmendment {
 }
 
 model MaterialMaster {
-  id                        String   @id @default(uuid())
-  code                      String   @unique
-  name                      String
-  waste_stream_id           String
-  cbs_code                  String
-  weeelabex_group           String
-  eural_code                String
-  weee_category             String   @map("annex_iii_category")
-  legacy_category_id        String?
+  id                          String   @id @default(uuid())
+  code                        String   @unique
+  name                        String
+  waste_stream_id             String
+  cbs_code                    String
+  weeelabex_group             String
+  eural_code                  String
+  weee_category               String   @map("annex_iii_category")
+  legacy_category_id          String?
   default_process_description String?
-  is_active                 Boolean  @default(true)
-  created_at                DateTime @default(now())
-  updated_at                DateTime @updatedAt
+  is_active                   Boolean  @default(true)
+  created_at                  DateTime @default(now())
+  updated_at                  DateTime @updatedAt
 
-  waste_stream       WasteStream                 @relation(fields: [waste_stream_id], references: [id])
-  legacy_category    ProductCategory?           @relation("LegacyMaterialCategory", fields: [legacy_category_id], references: [id])
-  catalogue_entries  AssetCatalogueEntry[]
-  processing_records ProcessingRecord[]
-  certificate_scopes ProcessorCertificateMaterialScope[]
-  fractions          MaterialFraction[]
-  reusable_items     ReusableItem[]
+  waste_stream        WasteStream                         @relation(fields: [waste_stream_id], references: [id])
+  legacy_category     ProductCategory?                    @relation("LegacyMaterialCategory", fields: [legacy_category_id], references: [id])
+  catalogue_entries   AssetCatalogueEntry[]
+  processing_records  ProcessingRecord[]
+  certificate_scopes  ProcessorCertificateMaterialScope[]
+  fractions           MaterialFraction[]
+  reusable_items      ReusableItem[]
   contract_rate_lines ContractRateLine[]
-  invoice_lines      InvoiceLine[]
+  invoice_lines       InvoiceLine[]
 
   @@map("ProductTypeMaster")
 }
 
 model FractionMaster {
-  id                                  String   @id @default(uuid())
-  code                                String   @unique
+  id                                  String         @id @default(uuid())
+  code                                String         @unique
   name                                String
   eural_code                          String
   default_acceptant_stage             AcceptantStage @default(FIRST_ACCEPTANT)
   default_process_description         String?
-  prepared_for_reuse_pct_default      Decimal  @default(0)
-  recycling_pct_default               Decimal  @default(0)
-  other_material_recovery_pct_default Decimal  @default(0)
-  energy_recovery_pct_default         Decimal  @default(0)
-  thermal_disposal_pct_default        Decimal  @default(0)
-  is_active                           Boolean  @default(true)
-  created_at                          DateTime @default(now())
-  updated_at                          DateTime @updatedAt
+  prepared_for_reuse_pct_default      Decimal        @default(0)
+  recycling_pct_default               Decimal        @default(0)
+  other_material_recovery_pct_default Decimal        @default(0)
+  energy_recovery_pct_default         Decimal        @default(0)
+  thermal_disposal_pct_default        Decimal        @default(0)
+  is_active                           Boolean        @default(true)
+  created_at                          DateTime       @default(now())
+  updated_at                          DateTime       @updatedAt
 
-  materials         MaterialFraction[]
+  materials           MaterialFraction[]
   processing_outcomes ProcessingOutcomeLine[]
 }
 
@@ -636,20 +743,20 @@ model MaterialFraction {
 }
 
 model AssetCatalogueEntry {
-  id                     String   @id @default(uuid())
-  session_id             String
-  asset_id               String
-  material_id            String   @map("product_type_id")
-  weight_kg              Decimal
-  reuse_eligible_quantity Int     @default(0)
-  notes                  String?
-  entry_order            Int      @default(0)
-  created_at             DateTime @default(now())
-  updated_at             DateTime @updatedAt
+  id                      String   @id @default(uuid())
+  session_id              String
+  asset_id                String
+  material_id             String   @map("product_type_id")
+  weight_kg               Decimal
+  reuse_eligible_quantity Int      @default(0)
+  notes                   String?
+  entry_order             Int      @default(0)
+  created_at              DateTime @default(now())
+  updated_at              DateTime @updatedAt
 
-  session            SortingSession    @relation(fields: [session_id], references: [id])
-  asset              Asset             @relation(fields: [asset_id], references: [id])
-  material           MaterialMaster    @relation(fields: [material_id], references: [id])
+  session            SortingSession     @relation(fields: [session_id], references: [id])
+  asset              Asset              @relation(fields: [asset_id], references: [id])
+  material           MaterialMaster     @relation(fields: [material_id], references: [id])
   processing_records ProcessingRecord[]
   reusable_items     ReusableItem[]
 
@@ -657,57 +764,57 @@ model AssetCatalogueEntry {
 }
 
 model ProcessingRecord {
-  id                         String                 @id @default(uuid())
-  session_id                 String
-  asset_id                   String
-  catalogue_entry_id         String?
-  material_id                String                 @map("product_type_id")
-  material_code_snapshot     String                 @map("product_code_snapshot")
-  material_name_snapshot     String                 @map("product_label_snapshot")
-  weee_category_snapshot     String                 @map("annex_iii_category_snapshot")
-  status                     ProcessingRecordStatus @default(DRAFT)
-  version_no                 Int                    @default(1)
-  is_current                 Boolean                @default(true)
-  supersedes_id              String?
-  finalized_by               String?
-  finalized_at               DateTime?
-  confirmed_by               String?
-  confirmed_at               DateTime?
-  reason_code                String?
-  reason_notes               String?
-  balance_delta_kg           Decimal                @default(0)
-  created_at                 DateTime               @default(now())
-  updated_at                 DateTime               @updatedAt
+  id                     String                 @id @default(uuid())
+  session_id             String
+  asset_id               String
+  catalogue_entry_id     String?
+  material_id            String                 @map("product_type_id")
+  material_code_snapshot String                 @map("product_code_snapshot")
+  material_name_snapshot String                 @map("product_label_snapshot")
+  weee_category_snapshot String                 @map("annex_iii_category_snapshot")
+  status                 ProcessingRecordStatus @default(DRAFT)
+  version_no             Int                    @default(1)
+  is_current             Boolean                @default(true)
+  supersedes_id          String?
+  finalized_by           String?
+  finalized_at           DateTime?
+  confirmed_by           String?
+  confirmed_at           DateTime?
+  reason_code            String?
+  reason_notes           String?
+  balance_delta_kg       Decimal                @default(0)
+  created_at             DateTime               @default(now())
+  updated_at             DateTime               @updatedAt
 
-  session         SortingSession     @relation(fields: [session_id], references: [id])
-  asset           Asset              @relation(fields: [asset_id], references: [id])
-  catalogue_entry AssetCatalogueEntry? @relation(fields: [catalogue_entry_id], references: [id])
-  material        MaterialMaster     @relation(fields: [material_id], references: [id])
+  session         SortingSession          @relation(fields: [session_id], references: [id])
+  asset           Asset                   @relation(fields: [asset_id], references: [id])
+  catalogue_entry AssetCatalogueEntry?    @relation(fields: [catalogue_entry_id], references: [id])
+  material        MaterialMaster          @relation(fields: [material_id], references: [id])
   outcomes        ProcessingOutcomeLine[]
 
   @@index([session_id, asset_id])
 }
 
 model ProcessingOutcomeLine {
-  id                    String         @id @default(uuid())
-  processing_record_id  String
-  material_fraction     String
-  fraction_id           String?
-  weight_kg             Decimal
-  treatment_route       TreatmentRoute
-  acceptant_stage       AcceptantStage @default(FIRST_ACCEPTANT)
-  process_description   String?
-  share_pct             Decimal        @default(0)
-  prepared_for_reuse_pct      Decimal  @default(0)
-  recycling_pct               Decimal  @default(0)
-  other_material_recovery_pct Decimal  @default(0)
-  energy_recovery_pct         Decimal  @default(0)
-  thermal_disposal_pct        Decimal  @default(0)
-  notes                 String?
-  created_at            DateTime       @default(now())
+  id                          String         @id @default(uuid())
+  processing_record_id        String
+  material_fraction           String
+  fraction_id                 String?
+  weight_kg                   Decimal
+  treatment_route             TreatmentRoute
+  acceptant_stage             AcceptantStage @default(FIRST_ACCEPTANT)
+  process_description         String?
+  share_pct                   Decimal        @default(0)
+  prepared_for_reuse_pct      Decimal        @default(0)
+  recycling_pct               Decimal        @default(0)
+  other_material_recovery_pct Decimal        @default(0)
+  energy_recovery_pct         Decimal        @default(0)
+  thermal_disposal_pct        Decimal        @default(0)
+  notes                       String?
+  created_at                  DateTime       @default(now())
 
-  processing_record  ProcessingRecord @relation(fields: [processing_record_id], references: [id])
-  fraction           FractionMaster?  @relation(fields: [fraction_id], references: [id])
+  processing_record ProcessingRecord @relation(fields: [processing_record_id], references: [id])
+  fraction          FractionMaster?  @relation(fields: [fraction_id], references: [id])
 }
 
 model Processor {
@@ -736,17 +843,17 @@ model ProcessorCertificate {
   created_at         DateTime @default(now())
   updated_at         DateTime @updatedAt
 
-  processor     Processor                         @relation(fields: [processor_id], references: [id])
-  materials     ProcessorCertificateMaterialScope[]
+  processor Processor                           @relation(fields: [processor_id], references: [id])
+  materials ProcessorCertificateMaterialScope[]
 }
 
 model ProcessorCertificateMaterialScope {
-  id              String @id @default(uuid())
-  certificate_id  String
-  material_id     String @map("product_type_id")
+  id             String @id @default(uuid())
+  certificate_id String
+  material_id    String @map("product_type_id")
 
-  certificate  ProcessorCertificate @relation(fields: [certificate_id], references: [id])
-  material     MaterialMaster       @relation(fields: [material_id], references: [id])
+  certificate ProcessorCertificate @relation(fields: [certificate_id], references: [id])
+  material    MaterialMaster       @relation(fields: [material_id], references: [id])
 
   @@unique([certificate_id, material_id])
   @@map("ProcessorCertificateProductType")
@@ -789,36 +896,46 @@ model FeeMaster {
 }
 
 model SupplierContract {
-  id                          String             @id @default(uuid())
-  contract_number             String             @unique
-  supplier_id                 String
-  carrier_id                  String?
-  name                        String
-  effective_date              DateTime
-  expiry_date                 DateTime?
-  status                      ContractStatus     @default(ACTIVE)
-  receiver_name               String             @default("Statice B.V.")
+  id              String         @id @default(uuid())
+  contract_number String         @unique
+  supplier_id     String
+  carrier_id      String?
+  name            String
+  effective_date  DateTime
+  expiry_date     DateTime?
+  status          ContractStatus @default(ACTIVE)
+  receiver_name   String         @default("Statice B.V.")
 
-  payment_term_days           Int                @default(30)
-  invoicing_frequency         InvoicingFrequency @default(MONTHLY)
-  currency                    String             @default("EUR")
-  invoice_delivery_method     String?
+  payment_term_days       Int                @default(30)
+  invoicing_frequency     InvoicingFrequency @default(MONTHLY)
+  currency                String             @default("EUR")
+  invoice_delivery_method String?
 
-  contamination_tolerance_pct Decimal            @default(0)
+  contamination_tolerance_pct Decimal @default(0)
 
-  is_active                   Boolean            @default(true)
-  created_at                  DateTime           @default(now())
-  updated_at                  DateTime           @updatedAt
+  is_active  Boolean  @default(true)
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
 
-  supplier                    Supplier           @relation(fields: [supplier_id], references: [id])
-  carrier                     Carrier?           @relation(fields: [carrier_id], references: [id])
-  rate_lines                  ContractRateLine[]
-  contamination_penalties     ContractContaminationPenalty[]
-  contract_waste_streams      ContractWasteStream[]
-  invoices                    Invoice[]
+  contract_type            ContractType @default(INCOMING)
+  agreement_transporter_id String?
+  invoice_entity_id        String?
+  entity_supplier_id       String?
+
+  supplier                Supplier                       @relation(fields: [supplier_id], references: [id])
+  carrier                 Carrier?                       @relation(fields: [carrier_id], references: [id])
+  entity_supplier         Entity?                        @relation("ContractSupplier", fields: [entity_supplier_id], references: [id])
+  agreement_transporter   Entity?                        @relation("ContractTransporter", fields: [agreement_transporter_id], references: [id])
+  invoice_entity          Entity?                        @relation("ContractInvoiceEntity", fields: [invoice_entity_id], references: [id])
+  rate_lines              ContractRateLine[]
+  contamination_penalties ContractContaminationPenalty[]
+  contract_waste_streams  ContractWasteStream[]
+  invoices                Invoice[]
 
   @@index([supplier_id])
   @@index([carrier_id])
+  @@index([entity_supplier_id])
+  @@index([agreement_transporter_id])
   @@index([status])
   @@index([expiry_date])
 }
@@ -837,9 +954,9 @@ model ContractRateLine {
   superseded_at            DateTime?
   created_at               DateTime     @default(now())
 
-  contract             SupplierContract     @relation(fields: [contract_id], references: [id])
+  contract              SupplierContract     @relation(fields: [contract_id], references: [id])
   contract_waste_stream ContractWasteStream? @relation(fields: [contract_waste_stream_id], references: [id])
-  material             MaterialMaster       @relation(fields: [material_id], references: [id])
+  material              MaterialMaster       @relation(fields: [material_id], references: [id])
 
   @@index([contract_id, material_id])
   @@index([contract_waste_stream_id])
@@ -853,8 +970,8 @@ model ContractWasteStream {
   afvalstroomnummer String
   created_at        DateTime @default(now())
 
-  contract     SupplierContract @relation(fields: [contract_id], references: [id])
-  waste_stream WasteStream      @relation(fields: [waste_stream_id], references: [id])
+  contract     SupplierContract   @relation(fields: [contract_id], references: [id])
+  waste_stream WasteStream        @relation(fields: [waste_stream_id], references: [id])
   rate_lines   ContractRateLine[]
 
   @@unique([contract_id, waste_stream_id])
@@ -866,8 +983,8 @@ model ContractContaminationPenalty {
   contract_id String
   fee_id      String
 
-  contract    SupplierContract @relation(fields: [contract_id], references: [id])
-  fee         FeeMaster        @relation(fields: [fee_id], references: [id])
+  contract SupplierContract @relation(fields: [contract_id], references: [id])
+  fee      FeeMaster        @relation(fields: [fee_id], references: [id])
 
   @@unique([contract_id, fee_id])
 }
@@ -903,23 +1020,23 @@ model Invoice {
 }
 
 model InvoiceLine {
-  id                         String   @id @default(uuid())
-  invoice_id                 String
-  order_id                   String?
-  material_id                String?
-  description                String
-  line_type                  String   @default("material")
-  quantity                   Decimal
-  unit                       String   @default("kg")
-  unit_rate                  Decimal
-  btw_rate                   Decimal  @default(0)
-  line_subtotal              Decimal
-  btw_amount                 Decimal  @default(0)
-  line_total                 Decimal
-  contamination_incident_id  String?
-  rate_line_id               String?
-  sort_order                 Int      @default(0)
-  created_at                 DateTime @default(now())
+  id                        String   @id @default(uuid())
+  invoice_id                String
+  order_id                  String?
+  material_id               String?
+  description               String
+  line_type                 String   @default("material")
+  quantity                  Decimal
+  unit                      String   @default("kg")
+  unit_rate                 Decimal
+  btw_rate                  Decimal  @default(0)
+  line_subtotal             Decimal
+  btw_amount                Decimal  @default(0)
+  line_total                Decimal
+  contamination_incident_id String?
+  rate_line_id              String?
+  sort_order                Int      @default(0)
+  created_at                DateTime @default(now())
 
   invoice                Invoice                @relation(fields: [invoice_id], references: [id])
   order                  InboundOrder?          @relation(fields: [order_id], references: [id])
@@ -947,11 +1064,11 @@ model ContaminationIncident {
   recorded_at             DateTime          @default(now())
   notes                   String?
 
-  order           InboundOrder    @relation(fields: [order_id], references: [id])
-  sorting_session SortingSession? @relation(fields: [sorting_session_id], references: [id])
-  fee_master      FeeMaster?      @relation(fields: [fee_master_id], references: [id])
-  recorded_by_user User           @relation(fields: [recorded_by], references: [id])
-  invoice_lines   InvoiceLine[]
+  order            InboundOrder    @relation(fields: [order_id], references: [id])
+  sorting_session  SortingSession? @relation(fields: [sorting_session_id], references: [id])
+  fee_master       FeeMaster?      @relation(fields: [fee_master_id], references: [id])
+  recorded_by_user User            @relation(fields: [recorded_by], references: [id])
+  invoice_lines    InvoiceLine[]
 
   @@index([order_id])
   @@index([sorting_session_id])
