@@ -28,9 +28,15 @@ async function main() {
   await prisma.orderWasteStream.deleteMany();
   await prisma.inboundOrder.deleteMany();
   await prisma.vehicle.deleteMany();
+  await prisma.orderDocument.deleteMany();
   await prisma.processorCertificateMaterialScope.deleteMany();
   await prisma.processorCertificate.deleteMany();
   await prisma.processor.deleteMany();
+  await prisma.disposerSite.deleteMany();
+  // Nullify entity FKs on suppliers/carriers before deleting entities
+  await prisma.supplier.updateMany({ data: { migrated_to_entity_id: null } });
+  await prisma.carrier.updateMany({ data: { migrated_to_entity_id: null } });
+  await prisma.entity.deleteMany();
   console.log('Operational data cleaned.');
 
   // ─── Users ───────────────────────────────────────────────────────────
@@ -274,6 +280,199 @@ async function main() {
   }
   console.log('Supplier afvalstroomnummers seeded.');
 
+  // ─── Entities (mirror of Suppliers + Carriers) ──────────────────────
+  const entitiesData = [
+    // Supplier-derived entities
+    {
+      id: 'entity-stichting-open',
+      company_name: 'Stichting Open',
+      street_and_number: 'Stationsplein 1',
+      postal_code: '3818 LE',
+      city: 'Amersfoort',
+      kvk_number: '41197598',
+      btw_number: 'NL804682066B01',
+      contact_name: 'Jan van der Berg',
+      contact_email: 'contracten@stichting-open.nl',
+      contact_phone: '+31 33 432 6700',
+      is_supplier: true,
+      supplier_type: 'PRO',
+      supplier_roles: ['ONTDOENER'],
+      pro_registration_number: 'PRO-NL-001',
+      status: 'ACTIVE',
+    },
+    {
+      id: 'entity-private-individual',
+      company_name: 'Ad-hoc / Walk-in',
+      street_and_number: '-',
+      postal_code: '-',
+      city: '-',
+      is_supplier: true,
+      supplier_type: 'AD_HOC',
+      supplier_roles: ['ONTDOENER'],
+      status: 'ACTIVE',
+    },
+    {
+      id: 'entity-techrecycle',
+      company_name: 'TechRecycle B.V.',
+      street_and_number: 'Industrieweg 10',
+      postal_code: '1047 AA',
+      city: 'Amsterdam',
+      kvk_number: '55667788',
+      btw_number: 'NL987654321B01',
+      vihb_number: 'VIHB-TR-2024',
+      contact_name: 'Marieke Visser',
+      contact_email: 'info@techrecycle.nl',
+      contact_phone: '+31 20 567 8901',
+      is_supplier: true,
+      supplier_type: 'COMMERCIAL',
+      supplier_roles: ['ONTDOENER'],
+      status: 'ACTIVE',
+    },
+    {
+      id: 'entity-wecycle',
+      company_name: 'Wecycle (Stichting NVMP)',
+      street_and_number: 'Ptolemaeuslaan 80',
+      postal_code: '3528 BP',
+      city: 'Utrecht',
+      kvk_number: '34124567',
+      btw_number: 'NL812345678B01',
+      contact_name: 'Annemiek de Groot',
+      contact_email: 'inkoop@wecycle.nl',
+      contact_phone: '+31 79 363 4100',
+      is_supplier: true,
+      supplier_type: 'PRO',
+      supplier_roles: ['ONTDOENER'],
+      pro_registration_number: 'PRO-NL-002',
+      status: 'ACTIVE',
+    },
+    {
+      id: 'entity-coolrec',
+      company_name: 'Coolrec B.V.',
+      street_and_number: 'Meerheide 210',
+      postal_code: '5521 DW',
+      city: 'Eersel',
+      kvk_number: '34198765',
+      btw_number: 'NL823456789B01',
+      vihb_number: 'VIHB-CR-2024',
+      contact_name: 'Bart Hendriks',
+      contact_email: 'operations@coolrec.nl',
+      contact_phone: '+31 40 250 7600',
+      is_supplier: true,
+      supplier_type: 'COMMERCIAL',
+      supplier_roles: ['ONTDOENER'],
+      status: 'ACTIVE',
+    },
+    // Carrier-derived entities
+    {
+      id: 'entity-van-happen',
+      company_name: 'Van Happen Recycling',
+      street_and_number: 'Industrieweg 16',
+      postal_code: '5107 SE',
+      city: 'Dongen',
+      kvk_number: '17115538',
+      vihb_number: 'VIHB-VH-2024',
+      contact_name: 'Pieter de Vries',
+      contact_email: 'logistiek@vanhappen.nl',
+      contact_phone: '+31 13 507 7300',
+      is_transporter: true,
+      status: 'ACTIVE',
+    },
+    {
+      id: 'entity-direct-dropoff',
+      company_name: 'Direct Drop-off',
+      street_and_number: '-',
+      postal_code: '-',
+      city: '-',
+      is_transporter: true,
+      status: 'ACTIVE',
+    },
+    {
+      id: 'entity-renewi',
+      company_name: 'Renewi Nederland B.V.',
+      street_and_number: 'Vossenbeemd 60',
+      postal_code: '5026 RB',
+      city: 'Tilburg',
+      kvk_number: '16027822',
+      vihb_number: 'VIHB-RN-2024',
+      contact_name: 'Sandra Kuijpers',
+      contact_email: 'transport@renewi.com',
+      contact_phone: '+31 76 597 6300',
+      is_transporter: true,
+      status: 'ACTIVE',
+    },
+    {
+      id: 'entity-suez',
+      company_name: 'SUEZ Recycling & Recovery NL',
+      street_and_number: 'Blaak 22',
+      postal_code: '3011 TA',
+      city: 'Rotterdam',
+      kvk_number: '24275657',
+      vihb_number: 'VIHB-SZ-2024',
+      contact_name: 'Mark Jansen',
+      contact_email: 'planning@suez.nl',
+      contact_phone: '+31 10 808 4500',
+      is_transporter: true,
+      status: 'ACTIVE',
+    },
+    {
+      id: 'entity-dejong',
+      company_name: 'De Jong Transportservice',
+      street_and_number: 'Kerkweg 14',
+      postal_code: '3362 AB',
+      city: 'Sliedrecht',
+      kvk_number: '30206974',
+      vihb_number: 'VIHB-DJ-2024',
+      contact_name: 'Kees de Jong',
+      contact_email: 'info@dejongtransport.nl',
+      contact_phone: '+31 78 654 3210',
+      is_transporter: true,
+      status: 'ACTIVE',
+    },
+  ];
+
+  for (const e of entitiesData) {
+    await prisma.entity.upsert({
+      where: { id: e.id },
+      update: { company_name: e.company_name },
+      create: e,
+    });
+  }
+  console.log('Entities seeded.');
+
+  // ─── Link Suppliers → migrated_to_entity_id ─────────────────────────
+  const supplierToEntityMap = {
+    'supplier-stichting-open': 'entity-stichting-open',
+    'supplier-private-individual': 'entity-private-individual',
+    'supplier-techrecycle': 'entity-techrecycle',
+    'supplier-wecycle': 'entity-wecycle',
+    'supplier-coolrec': 'entity-coolrec',
+  };
+
+  for (const [supplierId, entityId] of Object.entries(supplierToEntityMap)) {
+    await prisma.supplier.update({
+      where: { id: supplierId },
+      data: { migrated_to_entity_id: entityId },
+    });
+  }
+  console.log('Suppliers linked to entities.');
+
+  // ─── Link Carriers → migrated_to_entity_id ──────────────────────────
+  const carrierToEntityMap = {
+    'carrier-van-happen': 'entity-van-happen',
+    'carrier-direct-dropoff': 'entity-direct-dropoff',
+    'carrier-renewi': 'entity-renewi',
+    'carrier-suez': 'entity-suez',
+    'carrier-dejong': 'entity-dejong',
+  };
+
+  for (const [carrierId, entityId] of Object.entries(carrierToEntityMap)) {
+    await prisma.carrier.update({
+      where: { id: carrierId },
+      data: { migrated_to_entity_id: entityId },
+    });
+  }
+  console.log('Carriers linked to entities.');
+
   // ─── System Settings ────────────────────────────────────────────────
   await prisma.systemSetting.upsert({
     where: { id: 'singleton' },
@@ -325,11 +524,11 @@ async function main() {
   };
 
   const contractsData = [
-    { number: 'CTR-00001', supplier_id: 'supplier-stichting-open', carrier_id: 'carrier-van-happen', name: '2026 Stichting Open WEEE Agreement', effective: '2026-01-01', expiry: '2026-12-31', freq: 'MONTHLY', term: 30, tolerance: 5.0, asn: 'AFS-2026-001', rateFactor: 1.0, penalties: [feeSurcharge, feeFlat] },
-    { number: 'CTR-00002', supplier_id: 'supplier-techrecycle', carrier_id: 'carrier-renewi', name: '2026 TechRecycle WEEE Agreement', effective: '2026-01-01', expiry: '2026-12-31', freq: 'MONTHLY', term: 14, tolerance: 3.0, asn: 'AFS-2026-003', rateFactor: 0.95, penalties: [feeSurcharge] },
-    { number: 'CTR-00003', supplier_id: 'supplier-wecycle', carrier_id: 'carrier-suez', name: '2026 Wecycle WEEE Agreement', effective: '2026-01-01', expiry: '2026-12-31', freq: 'QUARTERLY', term: 30, tolerance: 5.0, asn: 'AFS-2026-004', rateFactor: 1.05, penalties: [feeSurcharge, feeFlat] },
-    { number: 'CTR-00004', supplier_id: 'supplier-coolrec', carrier_id: 'carrier-dejong', name: '2026 Coolrec WEEE Agreement', effective: '2026-03-01', expiry: '2027-02-28', freq: 'MONTHLY', term: 45, tolerance: 4.0, asn: 'AFS-2026-005', rateFactor: 0.90, penalties: [feeFlat] },
-    { number: 'CTR-00005', supplier_id: 'supplier-stichting-open', carrier_id: 'carrier-direct-dropoff', name: '2026 Stichting Open Ad-hoc Drops', effective: '2026-01-01', expiry: '2026-12-31', freq: 'PER_ORDER', term: 30, tolerance: 2.0, asn: 'AFS-2026-001', rateFactor: 1.10, penalties: [feeSurcharge] },
+    { number: 'CTR-00001', supplier_id: 'supplier-stichting-open', carrier_id: 'carrier-van-happen', entity_supplier_id: 'entity-stichting-open', agreement_transporter_id: 'entity-van-happen', name: '2026 Stichting Open WEEE Agreement', effective: '2026-01-01', expiry: '2026-12-31', freq: 'MONTHLY', term: 30, tolerance: 5.0, asn: 'AFS-2026-001', rateFactor: 1.0, penalties: [feeSurcharge, feeFlat] },
+    { number: 'CTR-00002', supplier_id: 'supplier-techrecycle', carrier_id: 'carrier-renewi', entity_supplier_id: 'entity-techrecycle', agreement_transporter_id: 'entity-renewi', name: '2026 TechRecycle WEEE Agreement', effective: '2026-01-01', expiry: '2026-12-31', freq: 'MONTHLY', term: 14, tolerance: 3.0, asn: 'AFS-2026-003', rateFactor: 0.95, penalties: [feeSurcharge] },
+    { number: 'CTR-00003', supplier_id: 'supplier-wecycle', carrier_id: 'carrier-suez', entity_supplier_id: 'entity-wecycle', agreement_transporter_id: 'entity-suez', name: '2026 Wecycle WEEE Agreement', effective: '2026-01-01', expiry: '2026-12-31', freq: 'QUARTERLY', term: 30, tolerance: 5.0, asn: 'AFS-2026-004', rateFactor: 1.05, penalties: [feeSurcharge, feeFlat] },
+    { number: 'CTR-00004', supplier_id: 'supplier-coolrec', carrier_id: 'carrier-dejong', entity_supplier_id: 'entity-coolrec', agreement_transporter_id: 'entity-dejong', name: '2026 Coolrec WEEE Agreement', effective: '2026-03-01', expiry: '2027-02-28', freq: 'MONTHLY', term: 45, tolerance: 4.0, asn: 'AFS-2026-005', rateFactor: 0.90, penalties: [feeFlat] },
+    { number: 'CTR-00005', supplier_id: 'supplier-stichting-open', carrier_id: 'carrier-direct-dropoff', entity_supplier_id: 'entity-stichting-open', agreement_transporter_id: 'entity-direct-dropoff', name: '2026 Stichting Open Ad-hoc Drops', effective: '2026-01-01', expiry: '2026-12-31', freq: 'PER_ORDER', term: 30, tolerance: 2.0, asn: 'AFS-2026-001', rateFactor: 1.10, penalties: [feeSurcharge] },
   ];
 
   const materialIds = materialsData.map((m) => m.id);
@@ -353,6 +552,9 @@ async function main() {
           contract_number: c.number,
           supplier_id: c.supplier_id,
           carrier_id: c.carrier_id,
+          entity_supplier_id: c.entity_supplier_id,
+          agreement_transporter_id: c.agreement_transporter_id,
+          contract_type: 'INCOMING',
           name: c.name,
           effective_date: new Date(c.effective),
           expiry_date: new Date(c.expiry),
@@ -433,13 +635,13 @@ async function main() {
 
   // ─── Inbound Orders (7) ───────────────────────────────────────────
   const ordersData = [
-    { id: 'seed-order-001', order_number: 'ORD-00001', supplier_id: 'supplier-stichting-open', carrier_id: 'carrier-van-happen', planned_date: '2026-03-10', expected_skip_count: 2, status: 'COMPLETED', vehicle_plate: 'NL-VH-142', afvalstroomnummer: 'AFS-2026-001', received_asset_count: 2 },
-    { id: 'seed-order-002', order_number: 'ORD-00002', supplier_id: 'supplier-techrecycle', carrier_id: 'carrier-renewi', planned_date: '2026-03-12', expected_skip_count: 1, status: 'COMPLETED', vehicle_plate: 'NL-RN-308', afvalstroomnummer: 'AFS-2026-003', received_asset_count: 1 },
-    { id: 'seed-order-003', order_number: 'ORD-00003', supplier_id: 'supplier-wecycle', carrier_id: 'carrier-suez', planned_date: '2026-03-14', expected_skip_count: 3, status: 'COMPLETED', vehicle_plate: 'NL-SZ-517', afvalstroomnummer: 'AFS-2026-004', received_asset_count: 3 },
-    { id: 'seed-order-004', order_number: 'ORD-00004', supplier_id: 'supplier-coolrec', carrier_id: 'carrier-dejong', planned_date: '2026-03-17', expected_skip_count: 1, status: 'COMPLETED', vehicle_plate: 'NL-DJ-224', afvalstroomnummer: 'AFS-2026-005', received_asset_count: 1 },
-    { id: 'seed-order-005', order_number: 'ORD-00005', supplier_id: 'supplier-stichting-open', carrier_id: 'carrier-direct-dropoff', planned_date: '2026-03-20', expected_skip_count: 1, status: 'IN_PROGRESS', vehicle_plate: 'NL-DD-099', afvalstroomnummer: 'AFS-2026-001', received_asset_count: 1 },
-    { id: 'seed-order-006', order_number: 'ORD-00006', supplier_id: 'supplier-techrecycle', carrier_id: 'carrier-renewi', planned_date: '2026-03-22', expected_skip_count: 1, status: 'ARRIVED', vehicle_plate: 'NL-RN-308', afvalstroomnummer: 'AFS-2026-003', received_asset_count: 1 },
-    { id: 'seed-order-007', order_number: 'ORD-00007', supplier_id: 'supplier-wecycle', carrier_id: 'carrier-suez', planned_date: '2026-03-25', expected_skip_count: 2, status: 'PLANNED', vehicle_plate: 'NL-SZ-517', afvalstroomnummer: 'AFS-2026-004', received_asset_count: 0 },
+    { id: 'seed-order-001', order_number: 'ORD-00001', supplier_id: 'supplier-stichting-open', carrier_id: 'carrier-van-happen', entity_supplier_id: 'entity-stichting-open', transporter_id: 'entity-van-happen', planned_date: '2026-03-10', expected_skip_count: 2, status: 'COMPLETED', vehicle_plate: 'NL-VH-142', afvalstroomnummer: 'AFS-2026-001', received_asset_count: 2 },
+    { id: 'seed-order-002', order_number: 'ORD-00002', supplier_id: 'supplier-techrecycle', carrier_id: 'carrier-renewi', entity_supplier_id: 'entity-techrecycle', transporter_id: 'entity-renewi', planned_date: '2026-03-12', expected_skip_count: 1, status: 'COMPLETED', vehicle_plate: 'NL-RN-308', afvalstroomnummer: 'AFS-2026-003', received_asset_count: 1 },
+    { id: 'seed-order-003', order_number: 'ORD-00003', supplier_id: 'supplier-wecycle', carrier_id: 'carrier-suez', entity_supplier_id: 'entity-wecycle', transporter_id: 'entity-suez', planned_date: '2026-03-14', expected_skip_count: 3, status: 'COMPLETED', vehicle_plate: 'NL-SZ-517', afvalstroomnummer: 'AFS-2026-004', received_asset_count: 3 },
+    { id: 'seed-order-004', order_number: 'ORD-00004', supplier_id: 'supplier-coolrec', carrier_id: 'carrier-dejong', entity_supplier_id: 'entity-coolrec', transporter_id: 'entity-dejong', planned_date: '2026-03-17', expected_skip_count: 1, status: 'COMPLETED', vehicle_plate: 'NL-DJ-224', afvalstroomnummer: 'AFS-2026-005', received_asset_count: 1 },
+    { id: 'seed-order-005', order_number: 'ORD-00005', supplier_id: 'supplier-stichting-open', carrier_id: 'carrier-direct-dropoff', entity_supplier_id: 'entity-stichting-open', transporter_id: 'entity-direct-dropoff', planned_date: '2026-03-20', expected_skip_count: 1, status: 'IN_PROGRESS', vehicle_plate: 'NL-DD-099', afvalstroomnummer: 'AFS-2026-001', received_asset_count: 1 },
+    { id: 'seed-order-006', order_number: 'ORD-00006', supplier_id: 'supplier-techrecycle', carrier_id: 'carrier-renewi', entity_supplier_id: 'entity-techrecycle', transporter_id: 'entity-renewi', planned_date: '2026-03-22', expected_skip_count: 1, status: 'ARRIVED', vehicle_plate: 'NL-RN-308', afvalstroomnummer: 'AFS-2026-003', received_asset_count: 1 },
+    { id: 'seed-order-007', order_number: 'ORD-00007', supplier_id: 'supplier-wecycle', carrier_id: 'carrier-suez', entity_supplier_id: 'entity-wecycle', transporter_id: 'entity-suez', planned_date: '2026-03-25', expected_skip_count: 2, status: 'PLANNED', vehicle_plate: 'NL-SZ-517', afvalstroomnummer: 'AFS-2026-004', received_asset_count: 0 },
   ];
 
   for (const o of ordersData) {
@@ -449,6 +651,8 @@ async function main() {
         order_number: o.order_number,
         supplier_id: o.supplier_id,
         carrier_id: o.carrier_id,
+        entity_supplier_id: o.entity_supplier_id,
+        transporter_id: o.transporter_id,
         waste_stream_id: weeeStream.id,
         planned_date: new Date(o.planned_date),
         expected_skip_count: o.expected_skip_count,
