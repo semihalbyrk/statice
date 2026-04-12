@@ -25,6 +25,7 @@ const feesRoutes = require('./routes/fees');
 const contractsRoutes = require('./routes/contracts');
 const invoicesRoutes = require('./routes/invoices');
 const contaminationRoutes = require('./routes/contamination');
+const entitiesRoutes = require('./routes/entities');
 
 const app = express();
 
@@ -68,6 +69,7 @@ app.use('/api/fees', feesRoutes);
 app.use('/api/contracts', contractsRoutes);
 app.use('/api/invoices', invoicesRoutes);
 app.use('/api/contamination', contaminationRoutes);
+app.use('/api/entities', entitiesRoutes);
 app.use('/api/containers', require('./routes/containerRegistry'));
 
 // Global error handler
