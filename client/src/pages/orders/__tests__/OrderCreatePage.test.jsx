@@ -65,7 +65,10 @@ describe('OrderCreatePage', () => {
         { id: 's1', name: 'Wecycle B.V.', supplier_type: 'PRO' },
         { id: 's2', name: 'Coolrec B.V.', supplier_type: 'THIRD_PARTY' },
       ],
+      entities: [],
       loadAll: mockLoadAll,
+      getTransporterEntities: () => [],
+      getSupplierEntities: () => [],
     };
   });
 
@@ -87,9 +90,9 @@ describe('OrderCreatePage', () => {
     expect(screen.getByText('Coolrec B.V.')).toBeInTheDocument();
   });
 
-  it('renders carrier select with options', () => {
+  it('renders transporter select with options', () => {
     renderOrderCreatePage();
-    expect(screen.getByText('Select carrier...')).toBeInTheDocument();
+    expect(screen.getByText('Select transporter...')).toBeInTheDocument();
     expect(screen.getByText('Van der Valk Transport')).toBeInTheDocument();
     expect(screen.getByText('DHL Express')).toBeInTheDocument();
   });

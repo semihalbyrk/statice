@@ -39,7 +39,9 @@ vi.mock('../../../store/masterDataStore', () => ({
       carriers: [{ id: 'c1', name: 'Van der Valk Transport' }],
       suppliers: [{ id: 's1', name: 'Wecycle B.V.' }],
       wasteStreams: [{ id: 'ws1', name: 'Grote Huishoudelijke Apparaten' }],
+      entities: [],
       loadAll: mockLoadAll,
+      getTransporterEntities: () => [],
     };
     if (selector) return selector(state);
     return state;
@@ -116,7 +118,7 @@ describe('PlanningBoardPage', () => {
 
   it('renders filter dropdowns', () => {
     renderPlanningBoardPage();
-    expect(screen.getByText('All carriers')).toBeInTheDocument();
+    expect(screen.getByText('All transporters')).toBeInTheDocument();
     expect(screen.getByText('All suppliers')).toBeInTheDocument();
     expect(screen.getByText('All supplier types')).toBeInTheDocument();
     expect(screen.getByText('All waste streams')).toBeInTheDocument();

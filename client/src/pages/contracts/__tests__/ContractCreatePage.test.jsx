@@ -11,6 +11,18 @@ vi.mock('react-hot-toast', () => ({
 // Mock contracts API
 vi.mock('../../../api/contracts', () => ({
   createContract: vi.fn(),
+  getContract: vi.fn(),
+  updateContract: vi.fn(),
+}));
+
+// Mock admin API (for getSettings in ContractCreatePage)
+vi.mock('../../../api/admin', () => ({
+  getSettings: vi.fn().mockResolvedValue({ data: { data: { facility_name: 'Statice B.V.' } } }),
+}));
+
+// Mock fees API
+vi.mock('../../../api/fees', () => ({
+  listFees: vi.fn().mockResolvedValue({ data: { data: [] } }),
 }));
 
 // Mock Breadcrumb
@@ -71,6 +83,7 @@ describe('ContractCreatePage', () => {
         { id: 'c1', name: 'Van der Valk Transport' },
         { id: 'c2', name: 'DHL Express' },
       ],
+      entities: [],
       wasteStreams: [
         { id: 'ws1', name: 'Grote Huishoudelijke Apparaten', code: 'LHA' },
         { id: 'ws2', name: 'Koeling & Klimaat', code: 'CFA' },
@@ -80,6 +93,9 @@ describe('ContractCreatePage', () => {
         { id: 'm2', name: 'Koper', code: 'CU', waste_stream_id: 'ws1' },
       ],
       loadAll: mockLoadAll,
+      getSupplierEntities: () => [],
+      getTransporterEntities: () => [],
+      getAllActiveEntities: () => [],
     };
   });
 
@@ -106,7 +122,7 @@ describe('ContractCreatePage', () => {
     expect(screen.getByText('Coolrec B.V.')).toBeInTheDocument();
   });
 
-  it('renders carrier select with options', () => {
+  it('renders agreement transporter select with options', () => {
     renderContractCreatePage();
     expect(screen.getByText('Select carrier...')).toBeInTheDocument();
     expect(screen.getByText('Van der Valk Transport')).toBeInTheDocument();

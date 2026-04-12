@@ -9,12 +9,16 @@ const mockGetProductCategories = vi.fn();
 const mockListMaterials = vi.fn();
 const mockListFractions = vi.fn();
 const mockListFees = vi.fn();
+const mockGetEntities = vi.fn();
 
 vi.mock('../../api/carriers', () => ({
   getCarriers: (...args) => mockGetCarriers(...args),
 }));
 vi.mock('../../api/suppliers', () => ({
   getSuppliers: (...args) => mockGetSuppliers(...args),
+}));
+vi.mock('../../api/entities', () => ({
+  getEntities: (...args) => mockGetEntities(...args),
 }));
 vi.mock('../../api/wasteStreams', () => ({
   getWasteStreams: (...args) => mockGetWasteStreams(...args),
@@ -35,6 +39,7 @@ describe('masterDataStore', () => {
       carriers: [],
       suppliers: [],
       suppliersWithContract: [],
+      entities: [],
       wasteStreams: [],
       productCategories: [],
       materials: [],
@@ -50,6 +55,7 @@ describe('masterDataStore', () => {
     expect(state.carriers).toEqual([]);
     expect(state.suppliers).toEqual([]);
     expect(state.suppliersWithContract).toEqual([]);
+    expect(state.entities).toEqual([]);
     expect(state.wasteStreams).toEqual([]);
     expect(state.productCategories).toEqual([]);
     expect(state.materials).toEqual([]);
@@ -128,6 +134,7 @@ describe('masterDataStore', () => {
     const categories = [{ id: 'pc1', code_cbs: 'LHA-01' }];
     const materials = [{ id: 'm1', name: 'Copper' }];
     const fractions = [{ id: 'f1', name: 'Ferrous' }];
+    const entities = [{ id: 'e1', company_name: 'Test Entity', status: 'ACTIVE' }];
 
     mockGetCarriers.mockResolvedValue({ data: { data: carriers } });
     mockGetSuppliers.mockResolvedValue({ data: { data: suppliers } });
@@ -136,6 +143,7 @@ describe('masterDataStore', () => {
     mockListMaterials.mockResolvedValue({ data: { data: materials } });
     mockListFractions.mockResolvedValue({ data: { data: fractions } });
     mockListFees.mockResolvedValue({ data: { data: [] } });
+    mockGetEntities.mockResolvedValue({ data: { data: entities } });
 
     await useMasterDataStore.getState().loadAll();
 
@@ -147,6 +155,7 @@ describe('masterDataStore', () => {
     expect(state.productCategories).toEqual(categories);
     expect(state.materials).toEqual(materials);
     expect(state.fractions).toEqual(fractions);
+    expect(state.entities).toEqual(entities);
     expect(state.loading).toBe(false);
   });
 
@@ -158,6 +167,7 @@ describe('masterDataStore', () => {
     mockListMaterials.mockResolvedValue({ data: { data: [] } });
     mockListFractions.mockResolvedValue({ data: { data: [] } });
     mockListFees.mockResolvedValue({ data: { data: [] } });
+    mockGetEntities.mockResolvedValue({ data: { data: [] } });
 
     const loadPromise = useMasterDataStore.getState().loadAll();
     // loading should be true while loading
@@ -175,6 +185,7 @@ describe('masterDataStore', () => {
     mockListMaterials.mockResolvedValue({ data: { data: [] } });
     mockListFractions.mockResolvedValue({ data: { data: [] } });
     mockListFees.mockResolvedValue({ data: { data: [] } });
+    mockGetEntities.mockResolvedValue({ data: { data: [] } });
 
     await useMasterDataStore.getState().loadAll();
 
