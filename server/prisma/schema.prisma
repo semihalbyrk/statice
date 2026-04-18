@@ -177,10 +177,58 @@ enum ContractType {
   OUTGOING
 }
 
+enum ShipmentType {
+  DOMESTIC_NL
+  EU_CROSS_BORDER
+}
+
+enum OutboundOrderStatus {
+  PLANNED
+  IN_PROGRESS
+  COMPLETED
+  INVOICED
+  CANCELLED
+}
+
+enum OutboundStatus {
+  CREATED
+  LOADING
+  WEIGHED
+  DOCUMENTS_READY
+  DEPARTED
+  DELIVERED
+}
+
+enum OutboundWeighingType {
+  GROSS
+  TARE
+}
+
+enum WeighingSource {
+  SCALE
+  MANUAL
+}
+
+enum OutboundDocumentType {
+  BEGELEIDINGSBRIEF
+}
+
+enum DocumentGenerationStatus {
+  PENDING
+  GENERATED
+  FAILED
+}
+
 enum OrderDocumentType {
   BEGELEIDINGSBRIEF
   WEIGHT_TICKET
   OTHER
+}
+
+enum OutboundParcelStatus {
+  AVAILABLE
+  ASSIGNED
+  SHIPPED
 }
 
 model User {
@@ -202,8 +250,9 @@ model User {
   notifications      Notification[]
   weight_amendments  WeightAmendment[] @relation("WeightAmendments")
 
-  invoices_created        Invoice[]
-  contamination_incidents ContaminationIncident[]
+  invoices_created         Invoice[]
+  contamination_incidents  ContaminationIncident[]
+  outbound_orders_created  OutboundOrder[]
 }
 
 model Carrier {
@@ -272,7 +321,8 @@ model Entity {
   supplier_roles          SupplierRole[]
   pro_registration_number String?
 
-  is_also_site Boolean @default(false)
+  is_also_site  Boolean @default(false)
+  is_protected  Boolean @default(false)
 
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
@@ -282,8 +332,21 @@ model Entity {
   contracts_as_supplier       SupplierContract[] @relation("ContractSupplier")
   contracts_as_transporter    SupplierContract[] @relation("ContractTransporter")
   contracts_as_invoice_entity SupplierContract[] @relation("ContractInvoiceEntity")
+  contracts_as_buyer          SupplierContract[] @relation("ContractBuyer")
+  contracts_as_sender         SupplierContract[] @relation("ContractSender")
+  contracts_as_disposer       SupplierContract[] @relation("ContractDisposer")
   orders_as_supplier          InboundOrder[]     @relation("OrderSupplier")
   orders_as_transporter       InboundOrder[]     @relation("OrderTransporter")
+
+  contract_waste_streams_as_receiver ContractWasteStream[] @relation("CWSReceiver")
+
+  outbound_orders_as_buyer                OutboundOrder[] @relation("OutboundOrderBuyer")
+  outbound_orders_as_sender               OutboundOrder[] @relation("OutboundOrderSender")
+  outbound_orders_as_disposer             OutboundOrder[] @relation("OutboundOrderDisposer")
+  outbound_orders_as_transporter          OutboundOrder[] @relation("OutboundOrderTransporter")
+  outbound_orders_as_outsourced_transporter OutboundOrder[] @relation("OutboundOrderOutsourcedTransporter")
+
+  outbound_order_waste_streams_as_receiver OutboundOrderWasteStream[] @relation("OOWSReceiver")
 }
 
 model DisposerSite {
@@ -299,7 +362,9 @@ model DisposerSite {
   created_at                  DateTime     @default(now())
   updated_at                  DateTime     @updatedAt
 
-  entity Entity @relation(fields: [entity_id], references: [id])
+  entity          Entity             @relation(fields: [entity_id], references: [id])
+  contracts       SupplierContract[] @relation("ContractDisposerSite")
+  outbound_orders OutboundOrder[]    @relation("OutboundOrderDisposerSite")
 }
 
 model Vehicle {
@@ -331,6 +396,7 @@ model WasteStream {
   supplier_afvalstroomnummers SupplierAfvalstroomnummer[]
   materials                   MaterialMaster[]
   contract_waste_streams      ContractWasteStream[]
+  outbound_order_waste_streams OutboundOrderWasteStream[]
 }
 
 model ProductCategory {
@@ -394,10 +460,11 @@ model InboundOrder {
 }
 
 model OrderWasteStream {
-  id                String  @id @default(uuid())
+  id                String   @id @default(uuid())
   order_id          String
   waste_stream_id   String
   afvalstroomnummer String?
+  planned_amount_kg Decimal? @db.Decimal(12, 2)
 
   order        InboundOrder @relation(fields: [order_id], references: [id])
   waste_stream WasteStream  @relation(fields: [waste_stream_id], references: [id])
@@ -490,10 +557,11 @@ model PfisterTicket {
   device_id          String?
   created_at         DateTime  @default(now())
 
-  gross_inbound    Inbound?          @relation("GrossTicket")
-  tare_inbound     Inbound?          @relation("TareTicket")
-  inbound_weighing InboundWeighing?
-  amendments       WeightAmendment[]
+  gross_inbound      Inbound?                @relation("GrossTicket")
+  tare_inbound       Inbound?                @relation("TareTicket")
+  inbound_weighing   InboundWeighing?
+  amendments         WeightAmendment[]
+  outbound_weighing  OutboundWeighingRecord?
 }
 
 model Asset {
@@ -704,6 +772,7 @@ model MaterialMaster {
   reusable_items      ReusableItem[]
   contract_rate_lines ContractRateLine[]
   invoice_lines       InvoiceLine[]
+  outbound_parcels    OutboundParcel[]
 
   @@map("ProductTypeMaster")
 }
@@ -898,7 +967,7 @@ model FeeMaster {
 model SupplierContract {
   id              String         @id @default(uuid())
   contract_number String         @unique
-  supplier_id     String
+  supplier_id     String?
   carrier_id      String?
   name            String
   effective_date  DateTime
@@ -922,20 +991,33 @@ model SupplierContract {
   invoice_entity_id        String?
   entity_supplier_id       String?
 
-  supplier                Supplier                       @relation(fields: [supplier_id], references: [id])
+  // Outgoing-specific fields
+  buyer_id        String?
+  sender_id       String?
+  disposer_id     String?
+  disposer_site_id String?
+  shipment_type   ShipmentType?
+
+  supplier                Supplier?                      @relation(fields: [supplier_id], references: [id])
   carrier                 Carrier?                       @relation(fields: [carrier_id], references: [id])
   entity_supplier         Entity?                        @relation("ContractSupplier", fields: [entity_supplier_id], references: [id])
   agreement_transporter   Entity?                        @relation("ContractTransporter", fields: [agreement_transporter_id], references: [id])
   invoice_entity          Entity?                        @relation("ContractInvoiceEntity", fields: [invoice_entity_id], references: [id])
+  buyer                   Entity?                        @relation("ContractBuyer", fields: [buyer_id], references: [id])
+  sender                  Entity?                        @relation("ContractSender", fields: [sender_id], references: [id])
+  disposer                Entity?                        @relation("ContractDisposer", fields: [disposer_id], references: [id])
+  disposer_site           DisposerSite?                  @relation("ContractDisposerSite", fields: [disposer_site_id], references: [id])
   rate_lines              ContractRateLine[]
   contamination_penalties ContractContaminationPenalty[]
   contract_waste_streams  ContractWasteStream[]
   invoices                Invoice[]
+  outbound_orders         OutboundOrder[]
 
   @@index([supplier_id])
   @@index([carrier_id])
   @@index([entity_supplier_id])
   @@index([agreement_transporter_id])
+  @@index([buyer_id])
   @@index([status])
   @@index([expiry_date])
 }
@@ -968,10 +1050,12 @@ model ContractWasteStream {
   contract_id       String
   waste_stream_id   String
   afvalstroomnummer String
+  receiver_id       String?
   created_at        DateTime @default(now())
 
   contract     SupplierContract   @relation(fields: [contract_id], references: [id])
   waste_stream WasteStream        @relation(fields: [waste_stream_id], references: [id])
+  receiver     Entity?            @relation("CWSReceiver", fields: [receiver_id], references: [id])
   rate_lines   ContractRateLine[]
 
   @@unique([contract_id, waste_stream_id])
@@ -1072,4 +1156,151 @@ model ContaminationIncident {
 
   @@index([order_id])
   @@index([sorting_session_id])
+}
+
+// ─── Outbound Models ───────────────────────────────────────────────────────
+
+model OutboundOrder {
+  id                      String              @id @default(uuid())
+  order_number            String              @unique @map("order_number")
+  contract_id             String              @map("contract_id")
+  buyer_id                String              @map("buyer_id")
+  sender_id               String              @map("sender_id")
+  disposer_id             String              @map("disposer_id")
+  disposer_site_id        String?             @map("disposer_site_id")
+  transporter_id          String              @map("transporter_id")
+  outsourced_transporter_id String?           @map("outsourced_transporter_id")
+  vehicle_plate           String?             @map("vehicle_plate")
+  planned_date            DateTime            @map("planned_date")
+  planned_time_start      DateTime?           @map("planned_time_start")
+  planned_time_end        DateTime?           @map("planned_time_end")
+  shipment_type           ShipmentType        @map("shipment_type")
+  expected_outbounds      Int                 @default(1) @map("expected_outbounds")
+  status                  OutboundOrderStatus @default(PLANNED)
+  notes                   String?
+  created_by              String              @map("created_by")
+  created_at              DateTime            @default(now()) @map("created_at")
+  updated_at              DateTime            @updatedAt @map("updated_at")
+
+  contract                SupplierContract     @relation(fields: [contract_id], references: [id])
+  buyer                   Entity              @relation("OutboundOrderBuyer", fields: [buyer_id], references: [id])
+  sender                  Entity              @relation("OutboundOrderSender", fields: [sender_id], references: [id])
+  disposer                Entity              @relation("OutboundOrderDisposer", fields: [disposer_id], references: [id])
+  transporter             Entity              @relation("OutboundOrderTransporter", fields: [transporter_id], references: [id])
+  outsourced_transporter  Entity?             @relation("OutboundOrderOutsourcedTransporter", fields: [outsourced_transporter_id], references: [id])
+  disposer_site           DisposerSite?       @relation("OutboundOrderDisposerSite", fields: [disposer_site_id], references: [id])
+  created_by_user         User                @relation(fields: [created_by], references: [id])
+  waste_streams           OutboundOrderWasteStream[]
+  outbounds               Outbound[]
+
+  @@map("outbound_orders")
+  @@index([contract_id])
+  @@index([buyer_id])
+  @@index([status])
+}
+
+model OutboundOrderWasteStream {
+  id                String   @id @default(uuid())
+  outbound_order_id String   @map("outbound_order_id")
+  waste_stream_id   String   @map("waste_stream_id")
+  receiver_id       String   @map("receiver_id")
+  asn               String?
+  material_id       String?  @map("material_id")
+  processing_method String?  @map("processing_method")
+  planned_amount_kg Decimal? @map("planned_amount_kg") @db.Decimal(12, 2)
+
+  outbound_order OutboundOrder @relation(fields: [outbound_order_id], references: [id])
+  waste_stream   WasteStream   @relation(fields: [waste_stream_id], references: [id])
+  receiver       Entity        @relation("OOWSReceiver", fields: [receiver_id], references: [id])
+
+  @@unique([outbound_order_id, waste_stream_id])
+  @@map("outbound_order_waste_streams")
+}
+
+model Outbound {
+  id                    String         @id @default(uuid())
+  outbound_number       String         @unique @map("outbound_number")
+  outbound_order_id     String         @map("outbound_order_id")
+  vehicle_plate         String?        @map("vehicle_plate")
+  status                OutboundStatus @default(CREATED)
+  gross_weight_kg       Decimal?       @map("gross_weight_kg") @db.Decimal(12, 2)
+  tare_weight_kg        Decimal?       @map("tare_weight_kg") @db.Decimal(12, 2)
+  net_weight_kg         Decimal?       @map("net_weight_kg") @db.Decimal(12, 2)
+  loading_started_at    DateTime?      @map("loading_started_at")
+  weighing_completed_at DateTime?      @map("weighing_completed_at")
+  documents_ready_at    DateTime?      @map("documents_ready_at")
+  departed_at           DateTime?      @map("departed_at")
+  delivered_at          DateTime?      @map("delivered_at")
+  notes                 String?
+  created_by            String         @map("created_by")
+  created_at            DateTime       @default(now()) @map("created_at")
+  updated_at            DateTime       @updatedAt @map("updated_at")
+
+  outbound_order   OutboundOrder           @relation(fields: [outbound_order_id], references: [id])
+  weighing_records OutboundWeighingRecord[]
+  documents        OutboundDocument[]
+  parcels          OutboundParcel[]
+
+  @@map("outbounds")
+  @@index([outbound_order_id])
+  @@index([status])
+}
+
+model OutboundWeighingRecord {
+  id               String              @id @default(uuid())
+  outbound_id      String              @map("outbound_id")
+  weighing_type    OutboundWeighingType @map("weighing_type")
+  weight_kg        Decimal             @map("weight_kg") @db.Decimal(12, 2)
+  source           WeighingSource      @default(SCALE)
+  pfister_ticket_id String?            @unique @map("pfister_ticket_id")
+  ticket_number    String?             @map("ticket_number")
+  recorded_by      String              @map("recorded_by")
+  recorded_at      DateTime            @default(now()) @map("recorded_at")
+  notes            String?
+
+  outbound       Outbound       @relation(fields: [outbound_id], references: [id])
+  pfister_ticket PfisterTicket? @relation(fields: [pfister_ticket_id], references: [id])
+
+  @@map("outbound_weighing_records")
+  @@index([outbound_id])
+}
+
+model OutboundDocument {
+  id            String                   @id @default(uuid())
+  outbound_id   String                   @map("outbound_id")
+  document_type OutboundDocumentType     @map("document_type")
+  status        DocumentGenerationStatus @default(PENDING)
+  file_name     String?                  @map("file_name")
+  storage_path  String?                  @map("storage_path")
+  generated_at  DateTime?                @map("generated_at")
+  generated_by  String?                  @map("generated_by")
+
+  outbound Outbound @relation(fields: [outbound_id], references: [id])
+
+  @@map("outbound_documents")
+  @@index([outbound_id])
+}
+
+model OutboundParcel {
+  id                  String               @id @default(uuid())
+  parcel_label        String               @unique @map("parcel_label")
+  outbound_id         String?              @map("outbound_id")
+  material_id         String               @map("material_id")
+  container_type      SkipType             @map("container_type")
+  volume_m3           Decimal?             @map("volume_m3") @db.Decimal(8, 2)
+  tare_weight_kg      Decimal?             @map("tare_weight_kg") @db.Decimal(12, 2)
+  description         String?
+  notes               String?
+  status              OutboundParcelStatus @default(AVAILABLE)
+  created_by          String               @map("created_by")
+  created_at          DateTime             @default(now()) @map("created_at")
+  updated_at          DateTime             @updatedAt @map("updated_at")
+
+  outbound Outbound?      @relation(fields: [outbound_id], references: [id])
+  material MaterialMaster @relation(fields: [material_id], references: [id])
+
+  @@map("outbound_parcels")
+  @@index([outbound_id])
+  @@index([material_id])
+  @@index([status])
 }
