@@ -89,6 +89,7 @@ function MaterialFormModal({ material, wasteStreams, allFractions, onClose, onSu
     cbs_code: material?.cbs_code || '', weeelabex_group: material?.weeelabex_group || '',
     eural_code: material?.eural_code || '', weee_category: material?.weee_category || '',
     default_process_description: material?.default_process_description || '',
+    average_weight_kg: material?.average_weight_kg != null ? String(material.average_weight_kg) : '',
     is_active: material?.is_active ?? true,
     fraction_ids: material?.fractions?.map((e) => e.fraction_id) || [],
   });
@@ -105,7 +106,11 @@ function MaterialFormModal({ material, wasteStreams, allFractions, onClose, onSu
     e.preventDefault();
     setSubmitting(true);
     try {
-      const { fraction_ids, ...payload } = form;
+      const { fraction_ids, average_weight_kg, ...rest } = form;
+      const payload = {
+        ...rest,
+        average_weight_kg: average_weight_kg === '' ? null : Number(average_weight_kg),
+      };
       if (isEdit) {
         await updateMaterial(material.id, payload);
         await replaceMaterialFractions(material.id, { fraction_ids });
@@ -155,12 +160,30 @@ function MaterialFormModal({ material, wasteStreams, allFractions, onClose, onSu
             <div><label className="block text-sm font-medium text-grey-700 mb-1.5">{t('materials.euralCode')}</label>
               <input name="eural_code" value={form.eural_code} onChange={handleChange} className={inputClass} /></div>
           </div>
-          <div>
-            <label className="block text-sm font-medium text-grey-700 mb-1.5">{t('materials.weeeCategory')}</label>
-            <select name="weee_category" value={form.weee_category} onChange={handleChange} className={selectClass}>
-              <option value="">{t('materials.select')}</option>
-              {WEEE_CATEGORIES.map((cat) => <option key={cat} value={cat}>{cat}</option>)}
-            </select>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-sm font-medium text-grey-700 mb-1.5">{t('materials.weeeCategory')}</label>
+              <select name="weee_category" value={form.weee_category} onChange={handleChange} className={selectClass}>
+                <option value="">{t('materials.select')}</option>
+                {WEEE_CATEGORIES.map((cat) => <option key={cat} value={cat}>{cat}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-grey-700 mb-1.5">
+                Average weight (kg)
+                <span className="ml-1 text-xs font-normal text-grey-400">— required for reusable tracking</span>
+              </label>
+              <input
+                name="average_weight_kg"
+                type="number"
+                min="0"
+                step="0.001"
+                value={form.average_weight_kg}
+                onChange={handleChange}
+                placeholder="Leave blank if not an appliance-type material"
+                className={inputClass}
+              />
+            </div>
           </div>
           <div>
             <label className="flex items-center gap-2 text-sm text-grey-700 cursor-pointer">
