@@ -731,8 +731,14 @@ async function fetchDownstreamEntryStatement({ sessionId, catalogueEntryId }) {
   const order = entry.asset.inbound.order;
   const totalMaterialKg = Number(entry.weight_kg || 0);
 
-  const record = entry.processing_records[0];
-  const outcomes = record?.outcomes || [];
+  const record = entry.processing_records.find((r) => r.status === 'CONFIRMED')
+    || entry.processing_records.find((r) => r.status === 'FINALIZED');
+  if (!record) {
+    const err = new Error('This material has no confirmed Fase 2 processing — downstream report cannot be generated.');
+    err.statusCode = 409;
+    throw err;
+  }
+  const outcomes = record.outcomes || [];
 
   const rows = outcomes.map((outcome) => {
     const weightKg = Number(outcome.weight_kg || 0);
