@@ -231,11 +231,25 @@ export default function SortingPage() {
     if (!activeAsset) return;
     setSavingCatalogue(true);
     try {
+      const isReusable = Boolean(catalogueForm.is_reusable);
+      const payload = isReusable
+        ? {
+            material_id: catalogueForm.material_id,
+            is_reusable: true,
+            reuse_eligible_quantity: Number(catalogueForm.reuse_eligible_quantity || 0),
+            notes: catalogueForm.notes,
+          }
+        : {
+            material_id: catalogueForm.material_id,
+            is_reusable: false,
+            weight_kg: Number(catalogueForm.weight_kg),
+            notes: catalogueForm.notes,
+          };
       if (editingEntryId) {
-        await updateCatalogueEntry(editingEntryId, catalogueForm);
+        await updateCatalogueEntry(editingEntryId, payload);
         toast.success('Catalogue entry updated');
       } else {
-        await createCatalogueEntry(sessionId, activeAsset.id, catalogueForm);
+        await createCatalogueEntry(sessionId, activeAsset.id, payload);
         toast.success('Catalogue entry created');
       }
       setCatalogueForm(emptyCatalogueForm());
@@ -604,57 +618,84 @@ export default function SortingPage() {
                             ))}
                         </select>
                       </div>
-                      <div>
-                        <label className="block text-sm font-medium text-grey-700 mb-1.5">{t('sorting:catalogue.weight')}</label>
-                        <div className="flex items-center gap-2">
-                          <input
-                            type="number"
-                            min="0.01"
-                            step="0.01"
-                            value={catalogueForm.weight_kg}
-                            onChange={(event) => setCatalogueForm((current) => ({ ...current, weight_kg: event.target.value }))}
-                            className={inputClass}
-                            required
-                          />
-                          {Math.abs(sortingBalance) > 1 && sortingBalance < 0 && (
-                            <button
-                              type="button"
-                              onClick={() => setCatalogueForm((current) => ({ ...current, weight_kg: String(Math.abs(sortingBalance)) }))}
-                              className="shrink-0 h-10 px-3 rounded-md border border-grey-300 text-xs font-medium text-grey-700 hover:bg-grey-50 transition-colors whitespace-nowrap"
-                            >
-                              {t('sorting:catalogue.useRemaining')}
-                            </button>
-                          )}
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-4">
-                        <label className="flex items-center text-sm font-medium text-grey-700 cursor-pointer">
-                          <input
-                            type="checkbox"
-                            checked={catalogueForm.is_reusable}
-                            onChange={(event) => setCatalogueForm((current) => ({
-                              ...current,
-                              is_reusable: event.target.checked,
-                              reuse_eligible_quantity: event.target.checked ? (current.reuse_eligible_quantity === '0' ? '1' : current.reuse_eligible_quantity) : '0',
-                            }))}
-                            className="mr-2 accent-green-500"
-                          />
-                          {t('sorting:catalogue.reusable')}
-                        </label>
-                        {catalogueForm.is_reusable && (
-                          <div className="flex items-center gap-2">
-                            <label className="text-sm font-medium text-grey-700">{t('sorting:catalogue.quantity')}</label>
-                            <input
-                              type="number"
-                              min="1"
-                              value={catalogueForm.reuse_eligible_quantity}
-                              onChange={(event) => setCatalogueForm((current) => ({ ...current, reuse_eligible_quantity: event.target.value }))}
-                              className="w-20 h-10 px-3 rounded-md border border-grey-300 text-sm text-grey-900 focus:border-green-500 focus:ring-[3px] focus:ring-green-500/15 outline-none"
-                              required
-                            />
-                          </div>
-                        )}
-                      </div>
+                      {(() => {
+                        const selectedMaterial = materials.find((m) => m.id === catalogueForm.material_id);
+                        const avgWeight = selectedMaterial?.average_weight_kg != null
+                          ? Number(selectedMaterial.average_weight_kg)
+                          : null;
+                        const canBeReusable = Boolean(avgWeight && avgWeight > 0);
+                        const computedWeight = catalogueForm.is_reusable && canBeReusable
+                          ? Number(((Number(catalogueForm.reuse_eligible_quantity) || 0) * avgWeight).toFixed(3))
+                          : null;
+                        return (
+                          <>
+                            <div>
+                              <label className="block text-sm font-medium text-grey-700 mb-1.5">{t('sorting:catalogue.weight')}</label>
+                              <div className="flex items-center gap-2">
+                                <input
+                                  type="number"
+                                  min="0.01"
+                                  step="0.01"
+                                  value={catalogueForm.is_reusable ? (computedWeight ?? '') : catalogueForm.weight_kg}
+                                  onChange={(event) => setCatalogueForm((current) => ({ ...current, weight_kg: event.target.value }))}
+                                  className={inputClass}
+                                  disabled={catalogueForm.is_reusable}
+                                  required={!catalogueForm.is_reusable}
+                                />
+                                {!catalogueForm.is_reusable && Math.abs(sortingBalance) > 1 && sortingBalance < 0 && (
+                                  <button
+                                    type="button"
+                                    onClick={() => setCatalogueForm((current) => ({ ...current, weight_kg: String(Math.abs(sortingBalance)) }))}
+                                    className="shrink-0 h-10 px-3 rounded-md border border-grey-300 text-xs font-medium text-grey-700 hover:bg-grey-50 transition-colors whitespace-nowrap"
+                                  >
+                                    {t('sorting:catalogue.useRemaining')}
+                                  </button>
+                                )}
+                              </div>
+                              {catalogueForm.is_reusable && canBeReusable && (
+                                <p className="mt-1 text-xs text-grey-700">
+                                  Auto = {catalogueForm.reuse_eligible_quantity || 0} × {avgWeight} kg = {computedWeight ?? 0} kg
+                                </p>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-4">
+                              <label className={`flex items-center text-sm font-medium cursor-pointer ${canBeReusable ? 'text-grey-700' : 'text-grey-400 cursor-not-allowed'}`}>
+                                <input
+                                  type="checkbox"
+                                  checked={catalogueForm.is_reusable}
+                                  disabled={!canBeReusable}
+                                  onChange={(event) => setCatalogueForm((current) => ({
+                                    ...current,
+                                    is_reusable: event.target.checked,
+                                    reuse_eligible_quantity: event.target.checked ? (current.reuse_eligible_quantity === '0' ? '1' : current.reuse_eligible_quantity) : '0',
+                                    weight_kg: event.target.checked ? '' : current.weight_kg,
+                                  }))}
+                                  className="mr-2 accent-green-500"
+                                />
+                                {t('sorting:catalogue.reusable')}
+                              </label>
+                              {catalogueForm.is_reusable && (
+                                <div className="flex items-center gap-2">
+                                  <label className="text-sm font-medium text-grey-700">{t('sorting:catalogue.quantity')}</label>
+                                  <input
+                                    type="number"
+                                    min="1"
+                                    value={catalogueForm.reuse_eligible_quantity}
+                                    onChange={(event) => setCatalogueForm((current) => ({ ...current, reuse_eligible_quantity: event.target.value }))}
+                                    className="w-20 h-10 px-3 rounded-md border border-grey-300 text-sm text-grey-900 focus:border-green-500 focus:ring-[3px] focus:ring-green-500/15 outline-none"
+                                    required
+                                  />
+                                </div>
+                              )}
+                              {catalogueForm.material_id && !canBeReusable && (
+                                <span className="text-xs text-yellow-700">
+                                  No average_weight_kg configured — admin must set it before reusable entries.
+                                </span>
+                              )}
+                            </div>
+                          </>
+                        );
+                      })()}
                       <div>
                         <label className="block text-sm font-medium text-grey-700 mb-1.5">{t('sorting:catalogue.notes')}</label>
                         <textarea
