@@ -27,7 +27,9 @@ import {
 import { generateReport, getReports, downloadReport } from '../../api/reports';
 import { getSortingName } from '../../utils/entityNames';
 import ContaminationRecordModal from '../../components/sorting/ContaminationRecordModal';
+import BalanceWarningDialog from '../../components/sorting/BalanceWarningDialog';
 import { listContaminationIncidents } from '../../api/contamination';
+import { markSessionSorted } from '../../api/sorting';
 
 const inputClass = 'w-full h-10 px-3.5 rounded-md border border-grey-300 text-sm text-grey-900 focus:border-green-500 focus:ring-[3px] focus:ring-green-500/15 outline-none transition-colors';
 const selectClass = `${inputClass} bg-white`;
@@ -118,6 +120,8 @@ export default function SortingPage() {
   const [generatingEntryId, setGeneratingEntryId] = useState(null);
   const [showContaminationModal, setShowContaminationModal] = useState(false);
   const [contaminationCount, setContaminationCount] = useState(0);
+  const [showMarkSortedDialog, setShowMarkSortedDialog] = useState(false);
+  const [markingSorted, setMarkingSorted] = useState(false);
 
   const canOperate = ['ADMIN', 'GATE_OPERATOR', 'SORTING_EMPLOYEE', 'COMPLIANCE_OFFICER'].includes(user?.role);
   const canConfirm = ['ADMIN', 'COMPLIANCE_OFFICER'].includes(user?.role);
@@ -389,20 +393,30 @@ export default function SortingPage() {
             {t('sorting:sessionSubtitle')}
           </p>
         </div>
-        {canOperate && (
-          <button
-            onClick={() => setShowContaminationModal(true)}
-            className="flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium bg-orange-100 text-orange-700 hover:bg-orange-200 transition-colors"
-          >
-            <AlertTriangle size={16} />
-            {t('sorting:recordContamination')}
-            {contaminationCount > 0 && (
-              <span className="ml-1 bg-orange-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
-                {contaminationCount}
-              </span>
-            )}
-          </button>
-        )}
+        <div className="flex items-center gap-2">
+          {canOperate && session.status === 'PLANNED' && session.catalogue_status === 'COMPLETED' && (
+            <button
+              onClick={() => setShowMarkSortedDialog(true)}
+              className="flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium bg-green-500 text-white hover:bg-green-700 transition-colors"
+            >
+              Mark as Sorted
+            </button>
+          )}
+          {canOperate && (
+            <button
+              onClick={() => setShowContaminationModal(true)}
+              className="flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium bg-orange-100 text-orange-700 hover:bg-orange-200 transition-colors"
+            >
+              <AlertTriangle size={16} />
+              {t('sorting:recordContamination')}
+              {contaminationCount > 0 && (
+                <span className="ml-1 bg-orange-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                  {contaminationCount}
+                </span>
+              )}
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="bg-white rounded-lg border border-grey-200 shadow-sm p-4 mb-4">
@@ -1286,6 +1300,41 @@ export default function SortingPage() {
           sortingSessionId={session?.id}
         />
       )}
+      {showMarkSortedDialog && session && (() => {
+        const assets = session.inbound?.assets || [];
+        const entries = session.catalogue_entries || [];
+        const assetNetTotal = assets.reduce((sum, a) => sum + Number(a.net_weight_kg || 0), 0);
+        const catalogueTotal = entries.reduce((sum, e) => sum + Number(e.weight_kg || 0), 0);
+        const gapKg = catalogueTotal - assetNetTotal;
+        const gapRatio = assetNetTotal > 0 ? gapKg / assetNetTotal : 0;
+        return (
+          <BalanceWarningDialog
+            open
+            gapKg={gapKg}
+            gapRatio={gapRatio}
+            threshold={0.05}
+            submitting={markingSorted}
+            onCancel={() => setShowMarkSortedDialog(false)}
+            onConfirm={async ({ reason, notes, lossKg }) => {
+              setMarkingSorted(true);
+              try {
+                await markSessionSorted(sessionId, {
+                  fase1_loss_kg: lossKg,
+                  fase1_loss_reason: reason,
+                  fase1_loss_notes: notes,
+                });
+                toast.success('Session marked as SORTED');
+                setShowMarkSortedDialog(false);
+                await refreshSession();
+              } catch (error) {
+                toast.error(error.response?.data?.error || 'Failed to mark as sorted');
+              } finally {
+                setMarkingSorted(false);
+              }
+            }}
+          />
+        );
+      })()}
     </div>
   );
 }
