@@ -759,6 +759,7 @@ model MaterialMaster {
   weee_category               String   @map("annex_iii_category")
   legacy_category_id          String?
   default_process_description String?
+  average_weight_kg           Decimal? @db.Decimal(10, 3)
   is_active                   Boolean  @default(true)
   created_at                  DateTime @default(now())
   updated_at                  DateTime @updatedAt

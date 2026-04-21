@@ -99,6 +99,43 @@ describe('POST /api/catalogue/materials', () => {
     expect(res.body.data.name).toBe('Test Material Integration');
     createdMaterialId = res.body.data.id;
   });
+
+  it('creates a material with average_weight_kg', async () => {
+    const wsRes = await prisma.wasteStream.findFirst({ where: { code: 'WEEE' } });
+    const res = await request(app)
+      .post('/api/catalogue/materials')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({
+        code: 'MAT-AVG-' + Date.now(),
+        name: 'Test Avg Material',
+        waste_stream_id: wsRes.id,
+        cbs_code: 'TST-CBS',
+        weeelabex_group: 'TST-WLX',
+        eural_code: 'TST-EUR',
+        weee_category: 'Cat 1',
+        average_weight_kg: 3.5,
+      });
+    expect(res.status).toBe(201);
+    expect(Number(res.body.data.average_weight_kg)).toBe(3.5);
+  });
+
+  it('rejects non-positive average_weight_kg', async () => {
+    const wsRes = await prisma.wasteStream.findFirst({ where: { code: 'WEEE' } });
+    const res = await request(app)
+      .post('/api/catalogue/materials')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({
+        code: 'MAT-BAD-' + Date.now(),
+        name: 'Bad Avg Material',
+        waste_stream_id: wsRes.id,
+        cbs_code: 'TST-CBS',
+        weeelabex_group: 'TST-WLX',
+        eural_code: 'TST-EUR',
+        weee_category: 'Cat 1',
+        average_weight_kg: -1,
+      });
+    expect(res.status).toBe(400);
+  });
 });
 
 describe('PUT /api/catalogue/materials/:id', () => {

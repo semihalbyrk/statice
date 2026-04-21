@@ -13,6 +13,15 @@ function createError(message, statusCode) {
   return error;
 }
 
+function normaliseAverageWeight(value) {
+  if (value === null || value === undefined || value === '') return null;
+  const num = Number(value);
+  if (!Number.isFinite(num) || num <= 0) {
+    throw createError('average_weight_kg must be a positive number', 400);
+  }
+  return num;
+}
+
 function mapMaterialForResponse(material) {
   if (!material) return material;
   return {
@@ -114,6 +123,7 @@ async function createMaterial(data, userId) {
         weee_category: data.weee_category || data.annex_iii_category,
         legacy_category_id: data.legacy_category_id || null,
         default_process_description: data.default_process_description || null,
+        average_weight_kg: normaliseAverageWeight(data.average_weight_kg),
         is_active: data.is_active ?? true,
       },
       include: MATERIAL_INCLUDE,
@@ -153,6 +163,9 @@ async function updateMaterial(id, data, userId) {
         default_process_description: data.default_process_description !== undefined
           ? data.default_process_description || null
           : existing.default_process_description,
+        average_weight_kg: data.average_weight_kg !== undefined
+          ? normaliseAverageWeight(data.average_weight_kg)
+          : existing.average_weight_kg,
         is_active: data.is_active !== undefined ? Boolean(data.is_active) : existing.is_active,
       },
       include: MATERIAL_INCLUDE,
