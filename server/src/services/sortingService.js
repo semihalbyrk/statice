@@ -5,6 +5,7 @@ const {
   CATALOGUE_ENTRY_INCLUDE,
   PROCESSING_RECORD_INCLUDE,
   sumOutcomeWeight,
+  syncCompatibilitySortingLines,
 } = require('./sortingWorkflowService');
 const { findActiveContractForSupplier } = require('./contractService');
 
@@ -472,7 +473,7 @@ async function markSessionSorted(sessionId, data, userId) {
       );
     }
 
-    const updated = await tx.sortingSession.update({
+    await tx.sortingSession.update({
       where: { id: sessionId },
       data: {
         status: 'SORTED',
@@ -481,6 +482,12 @@ async function markSessionSorted(sessionId, data, userId) {
         fase1_loss_reason: data.fase1_loss_reason || null,
         fase1_loss_notes: data.fase1_loss_notes || null,
       },
+    });
+
+    await syncCompatibilitySortingLines(tx, sessionId);
+
+    const updated = await tx.sortingSession.findUnique({
+      where: { id: sessionId },
       include: SESSION_INCLUDE,
     });
 

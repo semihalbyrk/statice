@@ -216,21 +216,48 @@ async function resolveLegacyCategoryId(tx, record) {
 }
 
 async function syncCompatibilitySortingLines(tx, sessionId) {
-  const records = await tx.processingRecord.findMany({
-    where: {
-      session_id: sessionId,
-      is_current: true,
-      status: 'CONFIRMED',
-    },
-    include: PROCESSING_RECORD_INCLUDE,
-    orderBy: [
-      { asset_id: 'asc' },
-      { created_at: 'asc' },
-    ],
-  });
+  const [records, catalogueEntries] = await Promise.all([
+    tx.processingRecord.findMany({
+      where: {
+        session_id: sessionId,
+        is_current: true,
+        status: 'CONFIRMED',
+      },
+      include: PROCESSING_RECORD_INCLUDE,
+      orderBy: [
+        { asset_id: 'asc' },
+        { created_at: 'asc' },
+      ],
+    }),
+    tx.assetCatalogueEntry.findMany({
+      where: { session_id: sessionId },
+      include: {
+        material: {
+          include: {
+            waste_stream: { select: { id: true } },
+            legacy_category: { select: { id: true } },
+          },
+        },
+        asset: {
+          select: {
+            id: true,
+            material_category_id: true,
+            waste_stream_id: true,
+          },
+        },
+      },
+      orderBy: [
+        { asset_id: 'asc' },
+        { entry_order: 'asc' },
+      ],
+    }),
+  ]);
 
   await tx.sortingLine.deleteMany({ where: { session_id: sessionId } });
 
+  const recordedEntryIds = new Set(records.map((r) => r.catalogue_entry_id).filter(Boolean));
+
+  // Lines derived from confirmed processing records (Fase 2 complete).
   for (const record of records) {
     const totalWeight = sumOutcomeWeight(record.outcomes);
     if (totalWeight <= 0) continue;
@@ -250,6 +277,47 @@ async function syncCompatibilitySortingLines(tx, sessionId) {
         reused_pct: roundPct((routeTotals.reused / totalWeight) * 100),
         disposed_pct: roundPct((routeTotals.disposed / totalWeight) * 100),
         notes: `Compatibility projection from processing record ${record.id}`,
+      },
+    });
+  }
+
+  // Lines derived from catalogue entries that have no confirmed processing record
+  // (Fase 1 only — Fase 2 was skipped for this material). Fall back to category defaults.
+  for (const entry of catalogueEntries) {
+    if (recordedEntryIds.has(entry.id)) continue;
+    const weight = Number(entry.weight_kg || 0);
+    if (weight <= 0) continue;
+
+    const categoryId = await resolveLegacyCategoryId(tx, {
+      material: entry.material,
+      asset: entry.asset,
+    });
+    if (!categoryId) continue;
+
+    const category = await tx.productCategory.findUnique({
+      where: { id: categoryId },
+      select: { recycled_pct_default: true, reused_pct_default: true, disposed_pct_default: true },
+    });
+
+    const defaultRecycled = Number(category?.recycled_pct_default ?? 0);
+    const defaultReused = Number(category?.reused_pct_default ?? 0);
+    const defaultDisposed = Number(category?.disposed_pct_default ?? 0);
+    const sum = defaultRecycled + defaultReused + defaultDisposed;
+
+    const recycledPct = sum > 0 ? roundPct((defaultRecycled / sum) * 100) : 0;
+    const reusedPct = sum > 0 ? roundPct((defaultReused / sum) * 100) : 0;
+    const disposedPct = sum > 0 ? roundPct(100 - recycledPct - reusedPct) : 100;
+
+    await tx.sortingLine.create({
+      data: {
+        session_id: sessionId,
+        asset_id: entry.asset_id,
+        category_id: categoryId,
+        net_weight_kg: weight,
+        recycled_pct: recycledPct,
+        reused_pct: reusedPct,
+        disposed_pct: disposedPct,
+        notes: `Fase 1 projection from catalogue entry ${entry.id}`,
       },
     });
   }
