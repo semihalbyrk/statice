@@ -173,17 +173,25 @@ async function main() {
   }
 
   const materialsData = [
-    { id: 'mat-hdd', code: 'MAT-HDD', name: 'Hard Disk Drives', cbs_code: 'CBS-HDD', weeelabex_group: 'WL-IT', eural_code: '20 01 35*', weee_category: 'Cat. 3', legacy: 'WEEE-03', process: 'Shredding and ferrous/non-ferrous separation' },
-    { id: 'mat-pcb', code: 'MAT-PCB', name: 'Printed Circuit Board Assemblies', cbs_code: 'CBS-PCB', weeelabex_group: 'WL-IT', eural_code: '20 01 35*', weee_category: 'Cat. 3', legacy: 'WEEE-13', process: 'Manual depopulation and precious metal recovery' },
-    { id: 'mat-sha', code: 'MAT-SHA', name: 'Small Household Appliances', cbs_code: 'CBS-SHA', weeelabex_group: 'WL-SHA', eural_code: '20 01 36', weee_category: 'Cat. 2', legacy: 'WEEE-02', process: 'Shredding and multi-fraction sorting' },
-    { id: 'mat-lha', code: 'MAT-LHA', name: 'Large Household Appliances', cbs_code: 'CBS-LHA', weeelabex_group: 'WL-LHA', eural_code: '20 01 36', weee_category: 'Cat. 1', legacy: 'WEEE-01', process: 'Depollution, shredding, and sorting' },
-    { id: 'mat-scr', code: 'MAT-SCR', name: 'Screens and Monitors', cbs_code: 'CBS-SCR', weeelabex_group: 'WL-SCR', eural_code: '20 01 35*', weee_category: 'Cat. 2', legacy: 'WEEE-11', process: 'Manual dismantling and panel separation' },
+    { id: 'mat-hdd', code: 'MAT-HDD', name: 'Hard Disk Drives', cbs_code: 'CBS-HDD', weeelabex_group: 'WL-IT', eural_code: '20 01 35*', weee_category: 'Cat. 3', legacy: 'WEEE-03', process: 'Shredding and ferrous/non-ferrous separation', average_weight_kg: 0.65 },
+    { id: 'mat-pcb', code: 'MAT-PCB', name: 'Printed Circuit Board Assemblies', cbs_code: 'CBS-PCB', weeelabex_group: 'WL-IT', eural_code: '20 01 35*', weee_category: 'Cat. 3', legacy: 'WEEE-13', process: 'Manual depopulation and precious metal recovery', average_weight_kg: 0.25 },
+    { id: 'mat-sha', code: 'MAT-SHA', name: 'Small Household Appliances', cbs_code: 'CBS-SHA', weeelabex_group: 'WL-SHA', eural_code: '20 01 36', weee_category: 'Cat. 2', legacy: 'WEEE-02', process: 'Shredding and multi-fraction sorting', average_weight_kg: 2.5 },
+    { id: 'mat-lha', code: 'MAT-LHA', name: 'Large Household Appliances', cbs_code: 'CBS-LHA', weeelabex_group: 'WL-LHA', eural_code: '20 01 36', weee_category: 'Cat. 1', legacy: 'WEEE-01', process: 'Depollution, shredding, and sorting', average_weight_kg: 45.0 },
+    { id: 'mat-scr', code: 'MAT-SCR', name: 'Screens and Monitors', cbs_code: 'CBS-SCR', weeelabex_group: 'WL-SCR', eural_code: '20 01 35*', weee_category: 'Cat. 2', legacy: 'WEEE-11', process: 'Manual dismantling and panel separation', average_weight_kg: 18.0 },
   ];
 
   for (const m of materialsData) {
     await prisma.materialMaster.upsert({
       where: { code: m.code },
-      update: { name: m.name, cbs_code: m.cbs_code, weeelabex_group: m.weeelabex_group, eural_code: m.eural_code, weee_category: m.weee_category, default_process_description: m.process },
+      update: {
+        name: m.name,
+        cbs_code: m.cbs_code,
+        weeelabex_group: m.weeelabex_group,
+        eural_code: m.eural_code,
+        weee_category: m.weee_category,
+        default_process_description: m.process,
+        average_weight_kg: m.average_weight_kg,
+      },
       create: {
         id: m.id,
         code: m.code,
@@ -195,6 +203,7 @@ async function main() {
         weee_category: m.weee_category,
         legacy_category_id: legacyCatMap[m.legacy] || null,
         default_process_description: m.process,
+        average_weight_kg: m.average_weight_kg,
       },
     });
   }
