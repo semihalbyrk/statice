@@ -173,12 +173,23 @@ async function updateSessionWorkflowStates(tx, sessionId) {
       : 'IN_PROGRESS';
   }
 
+  // Forward-only auto-transition: processingStatus COMPLETED -> SORTED.
+  // If records exist but are not all confirmed, revert to PLANNED (supports reopen flow).
+  // If no processing records exist at all, preserve current status (protects manual
+  // markSessionSorted when Fase 2 was skipped entirely).
+  let nextStatus = session.status;
+  if (processingStatus === 'COMPLETED') {
+    nextStatus = 'SORTED';
+  } else if (processingRecords.length > 0) {
+    nextStatus = 'PLANNED';
+  }
+
   return tx.sortingSession.update({
     where: { id: sessionId },
     data: {
       catalogue_status: catalogueStatus,
       processing_status: processingStatus,
-      status: processingStatus === 'COMPLETED' ? 'SORTED' : 'PLANNED',
+      status: nextStatus,
     },
   });
 }

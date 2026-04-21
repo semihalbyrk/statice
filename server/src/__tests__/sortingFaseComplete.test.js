@@ -121,3 +121,104 @@ describe('finalizeAsset — Fase 1 only path', () => {
     expect(res.body.data.mode).toBe('FASE1_ONLY');
   });
 });
+
+describe('markSessionSorted (manual Fase 1-only completion)', () => {
+  const SESSION = 'seed-session-005';
+  const ASSET = 'seed-asset-005-a';
+
+  async function reset() {
+    const entries = await prisma.assetCatalogueEntry.findMany({
+      where: { session_id: SESSION },
+      select: { id: true },
+    });
+    const ids = entries.map((e) => e.id);
+    if (ids.length > 0) {
+      await prisma.reusableItem.deleteMany({ where: { catalogue_entry_id: { in: ids } } });
+      await prisma.processingOutcomeLine.deleteMany({
+        where: { processing_record: { catalogue_entry_id: { in: ids } } },
+      });
+      await prisma.processingRecord.deleteMany({ where: { catalogue_entry_id: { in: ids } } });
+      await prisma.assetCatalogueEntry.deleteMany({ where: { id: { in: ids } } });
+    }
+    await prisma.sortingSession.update({
+      where: { id: SESSION },
+      data: {
+        status: 'PLANNED',
+        catalogue_status: 'NOT_STARTED',
+        processing_status: 'NOT_STARTED',
+        fase1_loss_kg: null,
+        fase1_loss_reason: null,
+        fase1_loss_notes: null,
+      },
+    });
+    const session = await prisma.sortingSession.findUnique({ where: { id: SESSION } });
+    await prisma.inbound.update({
+      where: { id: session.inbound_id },
+      data: { status: 'READY_FOR_SORTING' },
+    });
+  }
+
+  beforeEach(async () => {
+    await reset();
+  });
+
+  afterAll(async () => {
+    await reset();
+  });
+
+  it('rejects mark-sorted when Fase 1 incomplete (asset has no entry)', async () => {
+    const res = await request(app)
+      .patch(`/api/sorting/${SESSION}/mark-sorted`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({});
+    expect(res.status).toBe(409);
+    expect(res.body.error).toMatch(/Fase 1/i);
+  });
+
+  it('marks session SORTED when Fase 1 complete and no processing records', async () => {
+    await request(app)
+      .post(`/api/catalogue/sessions/${SESSION}/assets/${ASSET}/entries`)
+      .set('Authorization', `Bearer ${gateToken}`)
+      .send({ material_id: 'mat-hdd', weight_kg: 450 });
+
+    const res = await request(app)
+      .patch(`/api/sorting/${SESSION}/mark-sorted`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ fase1_loss_kg: 0, fase1_loss_reason: 'MEASUREMENT_VARIANCE', fase1_loss_notes: 'test' });
+    expect(res.status).toBe(200);
+    expect(res.body.data.status).toBe('SORTED');
+    expect(res.body.data.fase1_loss_reason).toBe('MEASUREMENT_VARIANCE');
+
+    const session = await prisma.sortingSession.findUnique({ where: { id: SESSION } });
+    expect(session.status).toBe('SORTED');
+    const inbound = await prisma.inbound.findUnique({ where: { id: session.inbound_id } });
+    expect(inbound.status).toBe('SORTED');
+  });
+
+  it('rejects mark-sorted if non-confirmed processing records exist', async () => {
+    const entryRes = await request(app)
+      .post(`/api/catalogue/sessions/${SESSION}/assets/${ASSET}/entries`)
+      .set('Authorization', `Bearer ${gateToken}`)
+      .send({ material_id: 'mat-hdd', weight_kg: 450 });
+
+    await prisma.processingRecord.create({
+      data: {
+        session_id: SESSION,
+        asset_id: ASSET,
+        catalogue_entry_id: entryRes.body.data.id,
+        material_id: 'mat-hdd',
+        material_code_snapshot: 'MAT-HDD',
+        material_name_snapshot: 'Hard Disk Drives',
+        weee_category_snapshot: 'Cat. 3',
+        status: 'DRAFT',
+      },
+    });
+
+    const res = await request(app)
+      .patch(`/api/sorting/${SESSION}/mark-sorted`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({});
+    expect(res.status).toBe(409);
+    expect(res.body.error).toMatch(/Fase 2/i);
+  });
+});

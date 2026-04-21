@@ -34,6 +34,21 @@ async function submitSession(req, res, next) {
   }
 }
 
+async function markSessionSorted(req, res, next) {
+  try {
+    const session = await sortingService.markSessionSorted(
+      req.params.sessionId,
+      req.body || {},
+      req.user.userId,
+    );
+    res.json({ data: session });
+  } catch (err) {
+    if (err.statusCode === 409) return res.status(409).json({ error: err.message });
+    if (err.statusCode === 404) return res.status(404).json({ error: err.message });
+    next(err);
+  }
+}
+
 async function reopenSession(req, res, next) {
   try {
     const { reason } = req.body;
@@ -105,6 +120,6 @@ async function getCategoryDefaults(req, res, next) {
 }
 
 module.exports = {
-  getSession, listSessions, submitSession, reopenSession,
+  getSession, listSessions, submitSession, markSessionSorted, reopenSession,
   createLine, updateLine, deleteLine, listLines, getCategoryDefaults,
 };

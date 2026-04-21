@@ -15,6 +15,11 @@ router.get('/categories/:categoryId/defaults', ctrl.getCategoryDefaults);
 // Session routes
 router.get('/:sessionId', ctrl.getSession);
 router.patch('/:sessionId/submit', requireRole(SORTING_ROLES), ctrl.submitSession);
+router.patch(
+  '/:sessionId/mark-sorted',
+  requireRole([...SORTING_ROLES, 'COMPLIANCE_OFFICER']),
+  ctrl.markSessionSorted,
+);
 router.patch('/:sessionId/reopen', requireRole(['ADMIN']), ctrl.reopenSession);
 
 // Line routes

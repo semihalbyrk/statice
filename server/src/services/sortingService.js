@@ -434,11 +434,96 @@ async function getCategoryDefaults(categoryId) {
   return category;
 }
 
+async function markSessionSorted(sessionId, data, userId) {
+  return prisma.$transaction(async (tx) => {
+    const session = await tx.sortingSession.findUnique({
+      where: { id: sessionId },
+      include: {
+        inbound: {
+          include: {
+            assets: { select: { id: true, net_weight_kg: true } },
+          },
+        },
+        catalogue_entries: { select: { asset_id: true, weight_kg: true } },
+        processing_records: {
+          where: { is_current: true },
+          select: { id: true, status: true },
+        },
+      },
+    });
+
+    if (!session) throw createError('Sorting session not found', 404);
+    if (session.status === 'SORTED') throw createError('Session is already SORTED', 409);
+
+    const assetIds = session.inbound.assets.map((a) => a.id);
+    if (assetIds.length === 0) throw createError('Session has no assets', 409);
+
+    const entriesByAsset = new Set(session.catalogue_entries.map((e) => e.asset_id));
+    const missing = assetIds.filter((id) => !entriesByAsset.has(id));
+    if (missing.length > 0) {
+      throw createError(`Fase 1 incomplete: ${missing.length} asset(s) have no catalogue entries`, 409);
+    }
+
+    const blocking = session.processing_records.filter((r) => r.status !== 'CONFIRMED');
+    if (blocking.length > 0) {
+      throw createError(
+        `Fase 2 in progress: ${blocking.length} processing record(s) are not CONFIRMED. Confirm or delete them first.`,
+        409,
+      );
+    }
+
+    const updated = await tx.sortingSession.update({
+      where: { id: sessionId },
+      data: {
+        status: 'SORTED',
+        catalogue_status: 'COMPLETED',
+        fase1_loss_kg: data.fase1_loss_kg !== undefined ? Number(data.fase1_loss_kg) : null,
+        fase1_loss_reason: data.fase1_loss_reason || null,
+        fase1_loss_notes: data.fase1_loss_notes || null,
+      },
+      include: SESSION_INCLUDE,
+    });
+
+    await writeAuditLog({
+      userId,
+      action: 'MARK_SORTED',
+      entityType: 'SortingSession',
+      entityId: sessionId,
+      before: { status: session.status },
+      after: {
+        status: 'SORTED',
+        fase1_loss_kg: updated.fase1_loss_kg,
+        fase1_loss_reason: updated.fase1_loss_reason,
+      },
+    }, tx);
+
+    const inbound = session.inbound;
+    if (inbound && canInboundTransition(inbound.status, 'SORTED')) {
+      await tx.inbound.update({
+        where: { id: inbound.id },
+        data: { status: 'SORTED' },
+      });
+
+      await writeAuditLog({
+        userId,
+        action: 'STATUS_CHANGE',
+        entityType: 'Inbound',
+        entityId: inbound.id,
+        before: { status: inbound.status },
+        after: { status: 'SORTED', trigger: 'mark_sorted_manual' },
+      }, tx);
+    }
+
+    return addAllocationFields(updated);
+  });
+}
+
 module.exports = {
   getSession,
   listSessionsByOrder,
   listAllSessions,
   submitSession,
+  markSessionSorted,
   reopenSession,
   createLine,
   updateLine,
