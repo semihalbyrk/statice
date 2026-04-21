@@ -44,6 +44,15 @@ enum SortingStatus {
   SORTED
 }
 
+enum LossReason {
+  MOISTURE
+  DUST
+  MEASUREMENT_VARIANCE
+  SPILLAGE
+  CONTAMINATION_REMOVED
+  OTHER
+}
+
 enum SupplierType {
   PRIVATE_INDIVIDUAL
   PRO
@@ -618,6 +627,12 @@ model SortingSession {
   catalogue_status  WorkflowStageStatus @default(NOT_STARTED)
   processing_status WorkflowStageStatus @default(NOT_STARTED)
   notes             String?
+  fase1_loss_kg     Decimal?            @db.Decimal(12, 3)
+  fase1_loss_reason LossReason?
+  fase1_loss_notes  String?
+  fase2_loss_kg     Decimal?            @db.Decimal(12, 3)
+  fase2_loss_reason LossReason?
+  fase2_loss_notes  String?
 
   inbound                 Inbound                 @relation(fields: [inbound_id], references: [id])
   recorded_by_user        User                    @relation(fields: [recorded_by], references: [id])
