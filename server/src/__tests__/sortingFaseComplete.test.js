@@ -235,6 +235,39 @@ describe('markSessionSorted (manual Fase 1-only completion)', () => {
     }
   });
 
+  it('creates a processing record from a catalogue entry on demand', async () => {
+    const entryRes = await request(app)
+      .post(`/api/catalogue/sessions/${SESSION}/assets/${ASSET}/entries`)
+      .set('Authorization', `Bearer ${gateToken}`)
+      .send({ material_id: 'mat-hdd', weight_kg: 50 });
+
+    const res = await request(app)
+      .post(`/api/processing/sessions/${SESSION}/records`)
+      .set('Authorization', `Bearer ${gateToken}`)
+      .send({ catalogue_entry_id: entryRes.body.data.id });
+    expect(res.status).toBe(201);
+    expect(res.body.data.status).toBe('DRAFT');
+    expect(res.body.data.catalogue_entry_id).toBe(entryRes.body.data.id);
+  });
+
+  it('rejects duplicate processing record creation for the same entry', async () => {
+    const entryRes = await request(app)
+      .post(`/api/catalogue/sessions/${SESSION}/assets/${ASSET}/entries`)
+      .set('Authorization', `Bearer ${gateToken}`)
+      .send({ material_id: 'mat-hdd', weight_kg: 50 });
+
+    await request(app)
+      .post(`/api/processing/sessions/${SESSION}/records`)
+      .set('Authorization', `Bearer ${gateToken}`)
+      .send({ catalogue_entry_id: entryRes.body.data.id });
+
+    const duplicate = await request(app)
+      .post(`/api/processing/sessions/${SESSION}/records`)
+      .set('Authorization', `Bearer ${gateToken}`)
+      .send({ catalogue_entry_id: entryRes.body.data.id });
+    expect(duplicate.status).toBe(409);
+  });
+
   it('rejects mark-sorted if non-confirmed processing records exist', async () => {
     const entryRes = await request(app)
       .post(`/api/catalogue/sessions/${SESSION}/assets/${ASSET}/entries`)

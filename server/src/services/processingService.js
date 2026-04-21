@@ -623,6 +623,53 @@ async function reopenAsset(sessionId, assetId, data, userId) {
   });
 }
 
+async function createRecordForEntry(sessionId, data, userId) {
+  const catalogueEntryId = data.catalogue_entry_id;
+  if (!catalogueEntryId) throw createError('catalogue_entry_id is required', 400);
+
+  return prisma.$transaction(async (tx) => {
+    const entry = await tx.assetCatalogueEntry.findUnique({
+      where: { id: catalogueEntryId },
+      include: {
+        material: true,
+        session: { select: { id: true, status: true } },
+      },
+    });
+    if (!entry) throw createError('Catalogue entry not found', 404);
+    if (entry.session_id !== sessionId) throw createError('Catalogue entry does not belong to this session', 400);
+    if (entry.session.status !== 'PLANNED') throw createError('Session is locked', 409);
+
+    const existing = await tx.processingRecord.findFirst({
+      where: { catalogue_entry_id: catalogueEntryId, is_current: true },
+    });
+    if (existing) throw createError('A current processing record already exists for this catalogue entry', 409);
+
+    const created = await tx.processingRecord.create({
+      data: {
+        session_id: sessionId,
+        asset_id: entry.asset_id,
+        catalogue_entry_id: entry.id,
+        material_id: entry.material.id,
+        material_code_snapshot: entry.material.code,
+        material_name_snapshot: entry.material.name,
+        weee_category_snapshot: entry.material.weee_category,
+        status: 'DRAFT',
+      },
+      include: PROCESSING_RECORD_INCLUDE,
+    });
+
+    await writeAuditLog({
+      userId,
+      action: 'CREATE',
+      entityType: 'ProcessingRecord',
+      entityId: created.id,
+      after: { catalogue_entry_id: entry.id, mode: 'manual' },
+    }, tx);
+
+    return mapRecordForResponse(created);
+  });
+}
+
 module.exports = {
   getSessionRecords,
   getRecordHistory,
@@ -633,4 +680,5 @@ module.exports = {
   finalizeAsset,
   confirmAsset,
   reopenAsset,
+  createRecordForEntry,
 };

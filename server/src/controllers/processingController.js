@@ -79,9 +79,24 @@ async function reopenAsset(req, res, next) {
   }
 }
 
+async function createRecord(req, res, next) {
+  try {
+    const data = await processingService.createRecordForEntry(
+      req.params.sessionId,
+      req.body,
+      req.user.userId,
+    );
+    res.status(201).json({ data });
+  } catch (error) {
+    if (error.statusCode) return res.status(error.statusCode).json({ error: error.message });
+    next(error);
+  }
+}
+
 module.exports = {
   listRecords,
   getHistory,
+  createRecord,
   createOutcome,
   updateOutcome,
   deleteOutcome,

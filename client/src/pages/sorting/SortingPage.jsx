@@ -30,6 +30,7 @@ import ContaminationRecordModal from '../../components/sorting/ContaminationReco
 import BalanceWarningDialog from '../../components/sorting/BalanceWarningDialog';
 import { listContaminationIncidents } from '../../api/contamination';
 import { markSessionSorted } from '../../api/sorting';
+import { createProcessingRecord } from '../../api/processing';
 
 const inputClass = 'w-full h-10 px-3.5 rounded-md border border-grey-300 text-sm text-grey-900 focus:border-green-500 focus:ring-[3px] focus:ring-green-500/15 outline-none transition-colors';
 const selectClass = `${inputClass} bg-white`;
@@ -779,9 +780,39 @@ export default function SortingPage() {
                     );
                   })()}
 
-                  {assetProcessingRecords.length === 0 ? (
+                  {assetProcessingRecords.length === 0 && assetCatalogueEntries.length === 0 ? (
                     <div className="bg-white rounded-lg border border-grey-200 shadow-sm p-8 text-center text-sm text-grey-400">
-                      {t('sorting:outcomes.addShreddingFirst')}
+                      {t('sorting:outcomes.addCatalogueFirst')}
+                    </div>
+                  ) : assetProcessingRecords.length === 0 ? (
+                    <div className="bg-white rounded-lg border border-grey-200 shadow-sm p-5 space-y-3">
+                      <p className="text-sm text-grey-700">
+                        Fase 2 is optional. Add fraction breakdown for the materials below if needed.
+                      </p>
+                      {assetCatalogueEntries.map((entry) => (
+                        <div key={entry.id} className="flex items-center justify-between border border-grey-200 rounded-md p-3">
+                          <div>
+                            <p className="text-sm font-medium text-grey-900">{entry.material?.name || entry.material?.code}</p>
+                            <p className="text-xs text-grey-500">{Number(entry.weight_kg).toFixed(1)} kg</p>
+                          </div>
+                          <button
+                            type="button"
+                            disabled={!canOperate}
+                            onClick={async () => {
+                              try {
+                                await createProcessingRecord(sessionId, { catalogue_entry_id: entry.id });
+                                toast.success('Fase 2 record added');
+                                await refreshSession();
+                              } catch (error) {
+                                toast.error(error.response?.data?.error || 'Failed to add record');
+                              }
+                            }}
+                            className="h-9 px-4 rounded-md bg-green-500 text-white text-sm font-semibold hover:bg-green-700 disabled:opacity-50"
+                          >
+                            Add Fase 2 record
+                          </button>
+                        </div>
+                      ))}
                     </div>
                   ) : (
                     assetProcessingRecords.map((record) => {

@@ -8,6 +8,7 @@ const PROCESSING_ROLES = ['SORTING_EMPLOYEE', 'GATE_OPERATOR', 'ADMIN', 'COMPLIA
 router.use(authenticateToken);
 
 router.get('/sessions/:sessionId/records', ctrl.listRecords);
+router.post('/sessions/:sessionId/records', requireRole(PROCESSING_ROLES), ctrl.createRecord);
 router.get('/records/:recordId/history', ctrl.getHistory);
 
 router.post('/records/:recordId/outcomes', requireRole(PROCESSING_ROLES), ctrl.createOutcome);
