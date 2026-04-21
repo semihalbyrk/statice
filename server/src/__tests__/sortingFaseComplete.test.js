@@ -1,4 +1,23 @@
+const request = require('supertest');
+const app = require('../index.js');
 const prisma = require('../utils/prismaClient');
+
+async function getToken(email, password) {
+  const res = await request(app).post('/api/auth/login').send({ email, password });
+  return res.body.accessToken;
+}
+
+let adminToken;
+let gateToken;
+
+beforeAll(async () => {
+  adminToken = await getToken('admin@statice.nl', 'Admin1234!');
+  gateToken = await getToken('gate@statice.nl', 'Gate1234!');
+});
+
+afterAll(async () => {
+  await prisma.$disconnect();
+});
 
 describe('SortingSession loss tracking', () => {
   it('persists fase1_loss fields on the session model', async () => {
@@ -43,5 +62,62 @@ describe('SortingSession loss tracking', () => {
       where: { id: session.id },
       data: { fase2_loss_kg: null, fase2_loss_reason: null },
     });
+  });
+});
+
+describe('finalizeAsset — Fase 1 only path', () => {
+  const SESSION = 'seed-session-005';
+  const ASSET = 'seed-asset-005-a';
+
+  async function reset() {
+    const entries = await prisma.assetCatalogueEntry.findMany({
+      where: { session_id: SESSION },
+      select: { id: true },
+    });
+    const ids = entries.map((e) => e.id);
+    if (ids.length > 0) {
+      await prisma.reusableItem.deleteMany({ where: { catalogue_entry_id: { in: ids } } });
+      await prisma.processingOutcomeLine.deleteMany({
+        where: { processing_record: { catalogue_entry_id: { in: ids } } },
+      });
+      await prisma.processingRecord.deleteMany({ where: { catalogue_entry_id: { in: ids } } });
+      await prisma.assetCatalogueEntry.deleteMany({ where: { id: { in: ids } } });
+    }
+    await prisma.sortingSession.update({
+      where: { id: SESSION },
+      data: { status: 'PLANNED', catalogue_status: 'NOT_STARTED', processing_status: 'NOT_STARTED' },
+    });
+  }
+
+  beforeEach(async () => {
+    await reset();
+  });
+
+  afterAll(async () => {
+    await reset();
+  });
+
+  it('rejects finalize when no catalogue entries and no processing records exist', async () => {
+    const res = await request(app)
+      .post(`/api/processing/sessions/${SESSION}/assets/${ASSET}/finalize`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({});
+    expect(res.status).toBe(409);
+    expect(res.body.error).toMatch(/catalogue entry/i);
+  });
+
+  it('finalizes an asset with Fase 1 entries only (no processing records)', async () => {
+    const entryRes = await request(app)
+      .post(`/api/catalogue/sessions/${SESSION}/assets/${ASSET}/entries`)
+      .set('Authorization', `Bearer ${gateToken}`)
+      .send({ material_id: 'mat-hdd', weight_kg: 100 });
+    expect(entryRes.status).toBe(201);
+
+    const res = await request(app)
+      .post(`/api/processing/sessions/${SESSION}/assets/${ASSET}/finalize`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({});
+    expect(res.status).toBe(200);
+    expect(res.body.data.mode).toBe('FASE1_ONLY');
   });
 });

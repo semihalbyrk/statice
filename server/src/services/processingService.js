@@ -353,7 +353,7 @@ async function deleteOutcome(outcomeId, userId) {
 
 async function finalizeAsset(sessionId, assetId, userId) {
   return prisma.$transaction(async (tx) => {
-    const [session, asset, records] = await Promise.all([
+    const [session, asset, records, catalogueEntries] = await Promise.all([
       tx.sortingSession.findUnique({
         where: { id: sessionId },
         select: { id: true, inbound_id: true, status: true },
@@ -370,17 +370,42 @@ async function finalizeAsset(sessionId, assetId, userId) {
         },
         include: PROCESSING_RECORD_INCLUDE,
       }),
+      tx.assetCatalogueEntry.findMany({
+        where: { session_id: sessionId, asset_id: assetId },
+        select: { id: true },
+      }),
     ]);
 
     if (!session) throw createError('Sorting session not found', 404);
     if (!asset || asset.inbound_id !== session.inbound_id) throw createError('Asset does not belong to this session', 400);
-    if (records.length === 0) throw createError('Create at least one processing record before finalizing', 409);
+
+    // Fase 1 only path: no processing records -> require catalogue entries and short-circuit.
+    if (records.length === 0) {
+      if (catalogueEntries.length === 0) {
+        throw createError('Create at least one catalogue entry before finalizing', 409);
+      }
+
+      await updateSessionWorkflowStates(tx, sessionId);
+      await writeAuditLog({
+        userId,
+        action: 'FINALIZE',
+        entityType: 'Asset',
+        entityId: assetId,
+        after: { session_id: sessionId, mode: 'FASE1_ONLY' },
+      }, tx);
+
+      return {
+        asset_id: assetId,
+        session_id: sessionId,
+        balance_delta_kg: null,
+        status: 'FINALIZED',
+        mode: 'FASE1_ONLY',
+      };
+    }
 
     const totalOutcomeWeight = records.reduce((sum, record) => sum + sumOutcomeWeight(record.outcomes), 0);
     const delta = roundWeight(totalOutcomeWeight - Number(asset.net_weight_kg || 0));
-    if (Math.abs(delta) > 1) {
-      throw createError(`Processing balance must be within +/-1 kg. Current delta: ${delta} kg`, 422);
-    }
+    // Balance gap is no longer a hard block; it is surfaced to the UI and captured in balance_delta_kg.
 
     for (const record of records) {
       if (record.outcomes.length === 0) {
