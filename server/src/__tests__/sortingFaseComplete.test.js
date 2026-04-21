@@ -195,6 +195,46 @@ describe('markSessionSorted (manual Fase 1-only completion)', () => {
     expect(inbound.status).toBe('SORTED');
   });
 
+  it('rejects reopen on INVOICED order without force flag', async () => {
+    await request(app)
+      .post(`/api/catalogue/sessions/${SESSION}/assets/${ASSET}/entries`)
+      .set('Authorization', `Bearer ${gateToken}`)
+      .send({ material_id: 'mat-hdd', weight_kg: 100 });
+
+    await request(app)
+      .patch(`/api/sorting/${SESSION}/mark-sorted`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({});
+
+    const session = await prisma.sortingSession.findUnique({ where: { id: SESSION } });
+    const inbound = await prisma.inbound.findUnique({ where: { id: session.inbound_id } });
+    const originalOrderStatus = (await prisma.inboundOrder.findUnique({ where: { id: inbound.order_id } })).status;
+    await prisma.inboundOrder.update({
+      where: { id: inbound.order_id },
+      data: { status: 'INVOICED' },
+    });
+
+    try {
+      const res = await request(app)
+        .patch(`/api/sorting/${SESSION}/reopen`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ reason: 'test' });
+      expect(res.status).toBe(409);
+      expect(res.body.error).toMatch(/INVOICED/i);
+
+      const resForce = await request(app)
+        .patch(`/api/sorting/${SESSION}/reopen`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ reason: 'test', force: true });
+      expect(resForce.status).toBe(200);
+    } finally {
+      await prisma.inboundOrder.update({
+        where: { id: inbound.order_id },
+        data: { status: originalOrderStatus },
+      });
+    }
+  });
+
   it('rejects mark-sorted if non-confirmed processing records exist', async () => {
     const entryRes = await request(app)
       .post(`/api/catalogue/sessions/${SESSION}/assets/${ASSET}/entries`)

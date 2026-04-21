@@ -236,14 +236,28 @@ async function submitSession(sessionId, userId) {
   });
 }
 
-async function reopenSession(sessionId, reason, userId) {
+async function reopenSession(sessionId, reason, userId, options = {}) {
   return prisma.$transaction(async (tx) => {
     const session = await tx.sortingSession.findUnique({
       where: { id: sessionId },
-      include: { inbound: { select: { id: true, status: true } } },
+      include: {
+        inbound: {
+          select: {
+            id: true,
+            status: true,
+            order: { select: { id: true, status: true } },
+          },
+        },
+      },
     });
     if (!session) throw createError('Sorting session not found', 404);
     if (session.status !== 'SORTED') throw createError('Session is not submitted', 409);
+    if (session.inbound?.order?.status === 'INVOICED' && !options.force) {
+      throw createError(
+        'Cannot reopen: related order is already INVOICED. Pass force=true as ADMIN to override.',
+        409,
+      );
+    }
 
     const updated = await tx.sortingSession.update({
       where: { id: sessionId },

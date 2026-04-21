@@ -514,7 +514,11 @@ async function reopenAsset(sessionId, assetId, data, userId) {
         where: { id: sessionId },
         include: {
           inbound: {
-            select: { id: true, status: true },
+            select: {
+              id: true,
+              status: true,
+              order: { select: { id: true, status: true } },
+            },
           },
         },
       }),
@@ -532,6 +536,12 @@ async function reopenAsset(sessionId, assetId, data, userId) {
     if (records.length === 0) throw createError('Processing records not found', 404);
     if (!records.every((record) => ['FINALIZED', 'CONFIRMED'].includes(record.status))) {
       throw createError('Only finalized or confirmed records can be reopened', 409);
+    }
+    if (session.inbound?.order?.status === 'INVOICED' && !data.force) {
+      throw createError(
+        'Cannot reopen: related order is already INVOICED. Pass force=true as ADMIN to override.',
+        409,
+      );
     }
 
     let nextVersion = Math.max(...records.map((record) => record.version_no), 0) + 1;

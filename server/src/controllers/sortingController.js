@@ -51,8 +51,13 @@ async function markSessionSorted(req, res, next) {
 
 async function reopenSession(req, res, next) {
   try {
-    const { reason } = req.body;
-    const session = await sortingService.reopenSession(req.params.sessionId, reason, req.user.userId);
+    const { reason, force } = req.body;
+    const session = await sortingService.reopenSession(
+      req.params.sessionId,
+      reason,
+      req.user.userId,
+      { force: Boolean(force) },
+    );
     res.json({ data: session });
   } catch (err) {
     if (err.statusCode === 409) return res.status(409).json({ error: err.message });
