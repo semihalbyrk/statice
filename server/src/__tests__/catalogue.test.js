@@ -32,6 +32,89 @@ afterAll(async () => {
   await prisma.$disconnect();
 });
 
+// --------------- Catalogue Entries (Fase 1) ---------------
+
+const FASE1_SESSION = 'seed-session-005';
+const FASE1_ASSET = 'seed-asset-005-a';
+
+async function cleanupFase1Entries() {
+  const entries = await prisma.assetCatalogueEntry.findMany({
+    where: { session_id: FASE1_SESSION },
+    select: { id: true },
+  });
+  const ids = entries.map((e) => e.id);
+  if (ids.length > 0) {
+    await prisma.reusableItem.deleteMany({ where: { catalogue_entry_id: { in: ids } } });
+    await prisma.processingOutcomeLine.deleteMany({ where: { processing_record: { catalogue_entry_id: { in: ids } } } });
+    await prisma.processingRecord.deleteMany({ where: { catalogue_entry_id: { in: ids } } });
+    await prisma.assetCatalogueEntry.deleteMany({ where: { id: { in: ids } } });
+  }
+}
+
+describe('POST /api/catalogue/sessions/:sessionId/assets/:assetId/entries', () => {
+  beforeEach(async () => {
+    await cleanupFase1Entries();
+    // ensure mat-hdd has an avg weight configured (default seed may not set it)
+    await prisma.materialMaster.update({ where: { id: 'mat-hdd' }, data: { average_weight_kg: 2.0 } });
+    // ensure mat-pcb has no avg weight
+    await prisma.materialMaster.update({ where: { id: 'mat-pcb' }, data: { average_weight_kg: null } });
+  });
+
+  afterAll(async () => {
+    await cleanupFase1Entries();
+  });
+
+  it('does NOT auto-create a ProcessingRecord when a catalogue entry is created', async () => {
+    const res = await request(app)
+      .post(`/api/catalogue/sessions/${FASE1_SESSION}/assets/${FASE1_ASSET}/entries`)
+      .set('Authorization', `Bearer ${gateToken}`)
+      .send({ material_id: 'mat-hdd', weight_kg: 10 });
+    expect(res.status).toBe(201);
+
+    const records = await prisma.processingRecord.findMany({
+      where: { catalogue_entry_id: res.body.data.id },
+    });
+    expect(records).toHaveLength(0);
+  });
+
+  it('computes weight_kg from quantity × average_weight_kg for reusable entries', async () => {
+    const res = await request(app)
+      .post(`/api/catalogue/sessions/${FASE1_SESSION}/assets/${FASE1_ASSET}/entries`)
+      .set('Authorization', `Bearer ${gateToken}`)
+      .send({
+        material_id: 'mat-hdd',
+        reuse_eligible_quantity: 3,
+        is_reusable: true,
+      });
+    expect(res.status).toBe(201);
+    expect(Number(res.body.data.weight_kg)).toBe(6.0);
+    expect(res.body.data.reuse_eligible_quantity).toBe(3);
+  });
+
+  it('rejects reusable entry when material has no average_weight_kg', async () => {
+    const res = await request(app)
+      .post(`/api/catalogue/sessions/${FASE1_SESSION}/assets/${FASE1_ASSET}/entries`)
+      .set('Authorization', `Bearer ${gateToken}`)
+      .send({
+        material_id: 'mat-pcb',
+        reuse_eligible_quantity: 2,
+        is_reusable: true,
+      });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/average_weight_kg/i);
+  });
+
+  it('accepts a manual weight_kg for non-reusable entries', async () => {
+    const res = await request(app)
+      .post(`/api/catalogue/sessions/${FASE1_SESSION}/assets/${FASE1_ASSET}/entries`)
+      .set('Authorization', `Bearer ${gateToken}`)
+      .send({ material_id: 'mat-hdd', weight_kg: 12.5 });
+    expect(res.status).toBe(201);
+    expect(Number(res.body.data.weight_kg)).toBe(12.5);
+    expect(res.body.data.reuse_eligible_quantity).toBe(0);
+  });
+});
+
 // --------------- Materials ---------------
 
 describe('GET /api/catalogue/materials', () => {

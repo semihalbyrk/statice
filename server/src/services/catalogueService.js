@@ -349,6 +349,31 @@ async function listSessionEntries(sessionId, assetId) {
   return entries.map(mapCatalogueEntryForResponse);
 }
 
+function resolveEntryWeights(data, material) {
+  const isReusable = data.is_reusable !== undefined
+    ? Boolean(data.is_reusable)
+    : parseInt(data.reuse_eligible_quantity || 0, 10) > 0;
+
+  if (isReusable) {
+    const qty = parseInt(data.reuse_eligible_quantity, 10);
+    if (!Number.isInteger(qty) || qty < 1) {
+      throw createError('reuse_eligible_quantity must be a positive integer for reusable entries', 400);
+    }
+    const avg = material.average_weight_kg != null ? Number(material.average_weight_kg) : null;
+    if (!avg || avg <= 0) {
+      throw createError('Material has no average_weight_kg configured; admin must set it before reusable entries', 400);
+    }
+    const weight_kg = Number((qty * avg).toFixed(3));
+    return { weight_kg, reuse_eligible_quantity: qty, isReusable: true };
+  }
+
+  const weightKg = parseFloat(data.weight_kg);
+  if (Number.isNaN(weightKg) || weightKg <= 0) {
+    throw createError('weight_kg must be greater than 0 for non-reusable entries', 400);
+  }
+  return { weight_kg: weightKg, reuse_eligible_quantity: 0, isReusable: false };
+}
+
 async function createEntry(sessionId, assetId, data, userId) {
   return prisma.$transaction(async (tx) => {
     const materialId = data.material_id || data.product_type_id;
@@ -372,14 +397,7 @@ async function createEntry(sessionId, assetId, data, userId) {
     if (!asset || asset.inbound_id !== session.inbound_id) throw createError('Asset does not belong to this session', 400);
     if (!material || !material.is_active) throw createError('Active material is required', 400);
 
-    const weightKg = parseFloat(data.weight_kg);
-    const reuseEligibleQuantity = parseInt(data.reuse_eligible_quantity || 0, 10);
-    if (Number.isNaN(weightKg) || weightKg <= 0) {
-      throw createError('weight_kg must be greater than 0', 400);
-    }
-    if (Number.isNaN(reuseEligibleQuantity) || reuseEligibleQuantity < 0) {
-      throw createError('reuse_eligible_quantity must be 0 or greater', 400);
-    }
+    const { weight_kg, reuse_eligible_quantity } = resolveEntryWeights(data, material);
 
     const lastEntry = await tx.assetCatalogueEntry.findFirst({
       where: { session_id: sessionId, asset_id: assetId },
@@ -392,33 +410,22 @@ async function createEntry(sessionId, assetId, data, userId) {
         session_id: sessionId,
         asset_id: assetId,
         material_id: material.id,
-        weight_kg: weightKg,
-        reuse_eligible_quantity: reuseEligibleQuantity,
+        weight_kg,
+        reuse_eligible_quantity,
         notes: data.notes || null,
         entry_order: data.entry_order !== undefined ? parseInt(data.entry_order, 10) : (lastEntry?.entry_order || 0) + 1,
       },
       include: CATALOGUE_ENTRY_INCLUDE,
     });
 
-    // Auto-create reusable items if reuse_eligible_quantity > 0
-    if (reuseEligibleQuantity > 0) {
+    if (reuse_eligible_quantity > 0) {
       await tx.reusableItem.createMany({
-        data: Array.from({ length: reuseEligibleQuantity }, () => ({
+        data: Array.from({ length: reuse_eligible_quantity }, () => ({
           catalogue_entry_id: entry.id,
           material_id: material.id,
         })),
       });
     }
-
-    const processingRecord = await tx.processingRecord.create({
-      data: {
-        session_id: sessionId,
-        asset_id: assetId,
-        catalogue_entry_id: entry.id,
-        ...buildMaterialSnapshot(material),
-      },
-      include: PROCESSING_RECORD_INCLUDE,
-    });
 
     await updateSessionWorkflowStates(tx, sessionId);
 
@@ -427,7 +434,7 @@ async function createEntry(sessionId, assetId, data, userId) {
       action: 'CREATE',
       entityType: 'AssetCatalogueEntry',
       entityId: entry.id,
-      after: { ...entry, processing_record_id: processingRecord.id },
+      after: entry,
     }, tx);
 
     return mapCatalogueEntryForResponse(entry);
@@ -463,49 +470,60 @@ async function updateEntry(entryId, data, userId) {
       if (!material || !material.is_active) throw createError('Active material is required', 400);
     }
 
-    const weightKg = data.weight_kg !== undefined
-      ? parseFloat(data.weight_kg)
-      : Number(existing.weight_kg);
-    const reuseEligibleQuantity = data.reuse_eligible_quantity !== undefined
-      ? parseInt(data.reuse_eligible_quantity, 10)
-      : existing.reuse_eligible_quantity;
+    const wasReusable = existing.reuse_eligible_quantity > 0;
+    const willBeReusable = data.is_reusable !== undefined
+      ? Boolean(data.is_reusable)
+      : (data.reuse_eligible_quantity !== undefined
+          ? parseInt(data.reuse_eligible_quantity, 10) > 0
+          : wasReusable);
 
-    if (Number.isNaN(weightKg) || weightKg <= 0) {
-      throw createError('weight_kg must be greater than 0', 400);
-    }
-    if (Number.isNaN(reuseEligibleQuantity) || reuseEligibleQuantity < 0) {
-      throw createError('reuse_eligible_quantity must be 0 or greater', 400);
-    }
+    const mergedData = {
+      material_id: material.id,
+      is_reusable: willBeReusable,
+      reuse_eligible_quantity: data.reuse_eligible_quantity !== undefined
+        ? data.reuse_eligible_quantity
+        : (willBeReusable ? existing.reuse_eligible_quantity : 0),
+      weight_kg: data.weight_kg !== undefined
+        ? data.weight_kg
+        : (willBeReusable ? undefined : Number(existing.weight_kg)),
+    };
+
+    const { weight_kg, reuse_eligible_quantity } = resolveEntryWeights(mergedData, material);
 
     const updated = await tx.assetCatalogueEntry.update({
       where: { id: entryId },
       data: {
         material_id: material.id,
-        weight_kg: weightKg,
-        reuse_eligible_quantity: reuseEligibleQuantity,
+        weight_kg,
+        reuse_eligible_quantity,
         notes: data.notes !== undefined ? data.notes || null : existing.notes,
         entry_order: data.entry_order !== undefined ? parseInt(data.entry_order, 10) : existing.entry_order,
       },
       include: CATALOGUE_ENTRY_INCLUDE,
     });
 
-    // Sync reusable items count
-    const currentReusables = await tx.reusableItem.count({ where: { catalogue_entry_id: entryId } });
-    if (reuseEligibleQuantity > currentReusables) {
-      await tx.reusableItem.createMany({
-        data: Array.from({ length: reuseEligibleQuantity - currentReusables }, () => ({
-          catalogue_entry_id: entryId,
-          material_id: material.id,
-        })),
-      });
-    } else if (reuseEligibleQuantity < currentReusables) {
-      const toDelete = await tx.reusableItem.findMany({
-        where: { catalogue_entry_id: entryId },
-        orderBy: { created_at: 'desc' },
-        take: currentReusables - reuseEligibleQuantity,
-        select: { id: true },
-      });
-      await tx.reusableItem.deleteMany({ where: { id: { in: toDelete.map((r) => r.id) } } });
+    // Reusable toggle handling: clearing reusable flag -> wipe items.
+    // Otherwise sync count LIFO-style.
+    if (wasReusable && !willBeReusable) {
+      await tx.reusableItem.deleteMany({ where: { catalogue_entry_id: entryId } });
+    } else {
+      const currentReusables = await tx.reusableItem.count({ where: { catalogue_entry_id: entryId } });
+      if (reuse_eligible_quantity > currentReusables) {
+        await tx.reusableItem.createMany({
+          data: Array.from({ length: reuse_eligible_quantity - currentReusables }, () => ({
+            catalogue_entry_id: entryId,
+            material_id: material.id,
+          })),
+        });
+      } else if (reuse_eligible_quantity < currentReusables) {
+        const toDelete = await tx.reusableItem.findMany({
+          where: { catalogue_entry_id: entryId },
+          orderBy: { created_at: 'desc' },
+          take: currentReusables - reuse_eligible_quantity,
+          select: { id: true },
+        });
+        await tx.reusableItem.deleteMany({ where: { id: { in: toDelete.map((r) => r.id) } } });
+      }
     }
 
     if (activeRecord) {
