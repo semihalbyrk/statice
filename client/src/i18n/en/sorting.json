@@ -17,7 +17,7 @@
   "empty": "No process sessions found",
   "pageInfo": "{{count}} total sessions",
 
-  "sessionSubtitle": "Sorting and shredding drive the process; downstream statements are generated from the material and fraction records captured here. Shredding is optional.",
+  "sessionSubtitle": "Fase 1 and Fase 2 drive the process; downstream statements are generated from the material and fraction records captured here. Fase 1 is optional.",
   "recordContamination": "Record Contamination",
 
   "infoFields": {
@@ -35,8 +35,8 @@
   "noParcels": "No parcels found on this inbound",
 
   "tabs": {
-    "outcomes": "Sorting",
-    "catalogue": "Shredding",
+    "outcomes": "Fase 2",
+    "catalogue": "Fase 1",
     "reusableItems": "Reusables",
     "history": "History",
     "reports": "Reports"
@@ -45,11 +45,11 @@
   "material": "Material",
 
   "catalogue": {
-    "title": "Shredding Entries",
+    "title": "Fase 1 Entries",
     "subtitle": "Capture materials and weights for {{assetLabel}}.",
     "lineCount": "{{count}} line(s)",
-    "addEntry": "Add Shredding Entry",
-    "editEntry": "Edit Shredding Entry",
+    "addEntry": "Add Fase 1 Entry",
+    "editEntry": "Edit Fase 1 Entry",
     "addSubtitle": "Select the material and enter its weight. Fractions are captured in the sorting tab.",
     "saveCatalogue": "Save Catalogue",
     "noEntries": "No catalogue entries yet",
@@ -66,7 +66,7 @@
     "addEntryBtn": "Add Entry",
     "updateEntry": "Update Entry",
     "balance": {
-      "label": "Shredding Balance:",
+      "label": "Fase 1 Balance:",
       "balanced": "Balanced",
       "over": "Over by {{amount}} kg",
       "remaining": "Remaining {{amount}} kg"
@@ -74,7 +74,7 @@
   },
 
   "outcomes": {
-    "title": "Sorting",
+    "title": "Fase 2",
     "processingOutcomes": "Processing Outcomes",
     "addOutcome": "Add Outcome",
     "saveOutcome": "Save Outcome",
@@ -105,10 +105,10 @@
       "balanced": "Balanced",
       "over": "Over by {{amount}} kg",
       "remaining": "Remaining {{amount}} kg",
-      "hint": "All fractions must balance within ±1 kg of the total shredding weight before finalization.",
-      "finalizeHint": "Finalize when all fractions balance within ±1 kg of the shredding weight."
+      "hint": "All fractions must balance within ±1 kg of the total Fase 1 weight before finalization.",
+      "finalizeHint": "Finalize when all fractions balance within ±1 kg of the Fase 1 weight."
     },
-    "addShreddingFirst": "No sorting records yet. Add shredding entries to auto-generate draft sorting records, or skip shredding entirely — it is optional.",
+    "addCatalogueFirst": "No sorting records yet. Add Fase 1 entries to auto-generate draft sorting records, or skip Fase 1 entirely — it is optional.",
     "actions": {
       "finalizeParcel": "Finalize Parcel",
       "confirmCompliance": "Confirm Compliance",
@@ -125,7 +125,7 @@
 
   "reusables": {
     "title": "Reusable Items",
-    "noItems": "No reusable items. Mark shredding entries as reusable to create items here.",
+    "noItems": "No reusable items. Mark Fase 1 entries as reusable to create items here.",
     "brand": "Brand",
     "model": "Model",
     "type": "Type",
@@ -147,7 +147,7 @@
     "generating": "Generating...",
     "generateReport": "Generate Report",
     "confirmAllFirst": "Confirm all records first",
-    "addShreddingFirst": "Add shredding entries first to generate downstream reports."
+    "addCatalogueFirst": "Add Fase 1 entries first to generate downstream reports."
   },
 
   "reopen": {

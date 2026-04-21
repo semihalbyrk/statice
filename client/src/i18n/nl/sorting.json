@@ -108,7 +108,7 @@
       "hint": "Alle fracties moeten binnen ±1 kg van het totale schreddergewicht balanceren voor definitieve verwerking.",
       "finalizeHint": "Finaliseer wanneer alle fracties binnen ±1 kg van het schreddergewicht balanceren."
     },
-    "addShreddingFirst": "Nog geen sorteerrecords. Voeg schredderinvoer toe om concept-sorteerrecords automatisch aan te maken, of sla het schredderen over — dit is optioneel.",
+    "addFase 1First": "Nog geen sorteerrecords. Voeg schredderinvoer toe om concept-sorteerrecords automatisch aan te maken, of sla het schredderen over — dit is optioneel.",
     "actions": {
       "finalizeParcel": "Collo Finaliseren",
       "confirmCompliance": "Compliance Bevestigen",
@@ -147,7 +147,7 @@
     "generating": "Genereren...",
     "generateReport": "Rapport Genereren",
     "confirmAllFirst": "Bevestig eerst alle records",
-    "addShreddingFirst": "Voeg eerst schredderinvoer toe om downstream rapporten te genereren."
+    "addFase 1First": "Voeg eerst schredderinvoer toe om downstream rapporten te genereren."
   },
 
   "reopen": {
