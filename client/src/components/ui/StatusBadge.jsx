@@ -25,6 +25,16 @@ const STATUS_CONFIG = {
   REUSED: { className: 'bg-green-25 text-green-700 border-green-300' },
   DISPOSED: { className: 'bg-red-25 text-red-700 border-red-300' },
   LANDFILL: { className: 'bg-orange-25 text-orange-700 border-orange-300' },
+  // Outbound statuses
+  CREATED: { className: 'bg-grey-50 text-grey-700 border-grey-300' },
+  LOADING: { className: 'bg-blue-50 text-blue-700 border-blue-300' },
+  WEIGHED: { className: 'bg-purple-50 text-purple-700 border-purple-300' },
+  DOCUMENTS_READY: { className: 'bg-amber-50 text-amber-700 border-amber-300' },
+  DEPARTED: { className: 'bg-cyan-50 text-cyan-700 border-cyan-300' },
+  DELIVERED: { className: 'bg-green-25 text-green-700 border-green-300' },
+  AVAILABLE: { className: 'bg-grey-50 text-grey-700 border-grey-300' },
+  ASSIGNED: { className: 'bg-blue-50 text-blue-700 border-blue-300' },
+  SHIPPED: { className: 'bg-green-25 text-green-700 border-green-300' },
   // Contract statuses
   DRAFT: { className: 'bg-grey-50 text-grey-700 border-grey-300' },
   EXPIRED: { className: 'bg-orange-25 text-orange-700 border-orange-300' },

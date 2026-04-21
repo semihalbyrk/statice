@@ -1,0 +1,99 @@
+{
+  "title": "Outbounds",
+  "searchPlaceholder": "Search by outbound number...",
+  "allStatuses": "All statuses",
+  "table": {
+    "outboundNumber": "Outbound #",
+    "status": "Status",
+    "orderNumber": "Order #",
+    "buyer": "Buyer",
+    "vehiclePlate": "Vehicle Plate",
+    "netWeight": "Net Weight",
+    "departedAt": "Departed At"
+  },
+  "detail": {
+    "title": "Outbound Detail",
+    "order": "Order",
+    "buyer": "Buyer",
+    "sender": "Sender",
+    "transporter": "Transporter",
+    "outsourced": "Outsourced",
+    "vehicle": "Vehicle",
+    "shipment": "Shipment",
+    "plannedDate": "Planned Date",
+    "wasteStreams": "Waste Streams & Weights",
+    "stream": "Stream",
+    "asn": "ASN",
+    "plannedWeight": "Planned",
+    "actualWeight": "Actual",
+    "netWeight": "Net Weight"
+  },
+  "status": {
+    "CREATED": "Created",
+    "LOADING": "Loading",
+    "WEIGHED": "Weighed",
+    "DOCUMENTS_READY": "Documents Ready",
+    "DEPARTED": "Departed",
+    "DELIVERED": "Delivered"
+  },
+  "weighing": {
+    "title": "Weighing",
+    "recordTare": "Record Tare Weighing",
+    "recordGross": "Record Gross Weighing",
+    "tare": "Tare",
+    "gross": "Gross",
+    "net": "Net",
+    "source": "Source",
+    "scale": "Scale",
+    "manual": "Manual",
+    "weight": "Weight (kg)",
+    "notes": "Notes",
+    "record": "Record Weighing",
+    "notesPlaceholder": "Optional notes..."
+  },
+  "documents": {
+    "title": "Documents",
+    "begeleidingsbrief": "Begeleidingsbrief",
+    "generate": "Generate Begeleidingsbrief",
+    "download": "Download",
+    "type": "Type",
+    "status": "Status",
+    "generatedAt": "Generated",
+    "actions": "Actions",
+    "docStatus": {
+      "PENDING": "Pending",
+      "GENERATED": "Generated",
+      "FAILED": "Failed"
+    }
+  },
+  "actions": {
+    "confirmDeparture": "Confirm Departure",
+    "confirmDelivery": "Confirm Delivery",
+    "departureConfirmation": "Has the vehicle left the facility?",
+    "deliveryConfirmation": "Has delivery been confirmed at the destination?",
+    "downloadBgl": "Download Begeleidingsbrief"
+  },
+  "progress": {
+    "created": "Created",
+    "loading": "Loading",
+    "weighed": "Weighed",
+    "documentsReady": "Docs Ready",
+    "departed": "Departed",
+    "delivered": "Delivered"
+  },
+  "toast": {
+    "weighingRecorded": "Weighing recorded",
+    "weighingFailed": "Failed to record weighing",
+    "bglGenerated": "Begeleidingsbrief generated",
+    "bglFailed": "Failed to generate Begeleidingsbrief",
+    "departed": "Departure confirmed",
+    "departureFailed": "Failed to confirm departure",
+    "delivered": "Delivery confirmed",
+    "deliveryFailed": "Failed to confirm delivery",
+    "statusUpdated": "Status updated",
+    "statusFailed": "Failed to update status",
+    "failedToLoad": "Failed to load outbound"
+  },
+  "empty": "No outbounds found",
+  "totalCount": "{{count}} total outbounds"
+}

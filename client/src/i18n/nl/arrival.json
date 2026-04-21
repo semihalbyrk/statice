@@ -29,7 +29,8 @@
   },
   "actions": {
     "registerArrival": "Aankomst Registreren",
-    "addInbound": "+ Inbound Toevoegen",
+    "createInbound": "Inbound Aanmaken",
+    "addInbound": "Inbound Aanmaken",
     "useManualOverride": "Handmatige Override Gebruiken",
     "createAdHocOrder": "Ad-hoc Order Aanmaken",
     "createAdHocOrderInstead": "Ad-hoc Order Aanmaken"
@@ -40,6 +41,13 @@
     "supplier": "Leverancier",
     "wasteStream": "Afvalstroom",
     "parcelProgress": "Pakketvoortgang",
+    "orderType": "Order Type",
+    "orderNumber": "Order #",
+    "vehiclePlate": "Kenteken",
+    "plannedDate": "Geplande Datum",
+    "expectedParcels": "Verwachte Pakketten",
+    "asn": "ASN",
+    "processingMethod": "Verwerkingsmethode",
     "partialDelivery": "Gedeeltelijke levering in uitvoering",
     "inbounds": "Inbounds"
   },

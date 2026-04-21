@@ -345,11 +345,11 @@ describe('PUT /api/reports/schedules/:id', () => {
     const res = await request(app)
       .put(`/api/reports/schedules/${createdIds[0]}`)
       .set('Authorization', `Bearer ${token}`)
-      .send({ frequency: 'WEEKLY', day_of_week: 3 }); // Wednesday
+      .send({ frequency: 'MONTHLY', day_of_month: 28 }); // Late month — never same as daily next-run
 
     expect(res.status).toBe(200);
-    expect(res.body.data.frequency).toBe('WEEKLY');
-    expect(res.body.data.day_of_week).toBe(3);
+    expect(res.body.data.frequency).toBe('MONTHLY');
+    expect(res.body.data.day_of_month).toBe(28);
     // next_run_at should have changed
     expect(res.body.data.next_run_at).not.toBe(originalNextRun);
   });

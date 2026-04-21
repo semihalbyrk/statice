@@ -98,7 +98,7 @@ export default function SortingPage() {
     clearSession,
   } = useSortingStore();
 
-  const [activeTab, setActiveTab] = useState('catalogue');
+  const [activeTab, setActiveTab] = useState('processing');
   const [activeAssetId, setActiveAssetId] = useState(null);
   const [catalogueForm, setCatalogueForm] = useState(emptyCatalogueForm());
   const [editingEntryId, setEditingEntryId] = useState(null);
@@ -451,6 +451,15 @@ export default function SortingPage() {
                 <div className="flex items-center gap-2">
                   <button
                     type="button"
+                    onClick={() => setActiveTab('processing')}
+                    className={`h-9 px-4 rounded-md text-sm font-semibold transition-colors flex items-center gap-2 ${activeTab === 'processing' ? 'bg-green-500 text-white' : 'bg-white border border-grey-300 text-grey-700 hover:bg-grey-50'}`}
+                  >
+                    {t('sorting:tabs.outcomes')}
+                    {session.processing_status === 'COMPLETED' && <span className={`w-2 h-2 rounded-full ${activeTab === 'processing' ? 'bg-white' : 'bg-green-500'}`} />}
+                    {session.processing_status !== 'COMPLETED' && session.processing_status === 'IN_PROGRESS' && <span className={`w-2 h-2 rounded-full ${activeTab === 'processing' ? 'bg-white/60' : 'bg-orange-400'}`} />}
+                  </button>
+                  <button
+                    type="button"
                     onClick={() => setActiveTab('catalogue')}
                     className={`h-9 px-4 rounded-md text-sm font-semibold transition-colors flex items-center gap-2 ${activeTab === 'catalogue' ? 'bg-green-500 text-white' : 'bg-white border border-grey-300 text-grey-700 hover:bg-grey-50'}`}
                   >
@@ -458,15 +467,6 @@ export default function SortingPage() {
                     {assetCatalogueEntries.length > 0 && (
                       <span className={`w-2 h-2 rounded-full ${isSortingBalanced ? (activeTab === 'catalogue' ? 'bg-white' : 'bg-green-500') : 'bg-red-500'}`} />
                     )}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setActiveTab('processing')}
-                    className={`h-9 px-4 rounded-md text-sm font-semibold transition-colors flex items-center gap-2 ${activeTab === 'processing' ? 'bg-green-500 text-white' : 'bg-white border border-grey-300 text-grey-700 hover:bg-grey-50'}`}
-                  >
-                    {t('sorting:tabs.outcomes')}
-                    {session.processing_status === 'COMPLETED' && <span className={`w-2 h-2 rounded-full ${activeTab === 'processing' ? 'bg-white' : 'bg-green-500'}`} />}
-                    {session.processing_status !== 'COMPLETED' && session.processing_status === 'IN_PROGRESS' && <span className={`w-2 h-2 rounded-full ${activeTab === 'processing' ? 'bg-white/60' : 'bg-orange-400'}`} />}
                   </button>
                   <button
                     type="button"

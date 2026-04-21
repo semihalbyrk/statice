@@ -12,6 +12,9 @@ async function getToken(email, password) {
 
 // We'll track IDs of orders we create so we can clean them up
 const createdOrderIds = [];
+let supplierEntityId;
+let carrierEntityId;
+let entityNormalizedOrderId;
 
 afterAll(async () => {
   // Clean up test orders (delete dependents first to avoid FK violations)
@@ -91,6 +94,18 @@ describe('POST /api/orders', () => {
     // Get a waste stream ID from the DB (seeded WEEE)
     const ws = await prisma.wasteStream.findFirst({ where: { code: 'WEEE' } });
     wasteStreamId = ws.id;
+
+    const supplier = await prisma.supplier.findFirst({
+      where: { migrated_to_entity_id: { not: null } },
+      select: { migrated_to_entity_id: true },
+    });
+    supplierEntityId = supplier?.migrated_to_entity_id || null;
+
+    const carrier = await prisma.carrier.findFirst({
+      where: { migrated_to_entity_id: { not: null } },
+      select: { migrated_to_entity_id: true },
+    });
+    carrierEntityId = carrier?.migrated_to_entity_id || null;
   });
 
   it('returns 403 for GATE_OPERATOR role (not allowed to create)', async () => {
@@ -160,6 +175,32 @@ describe('POST /api/orders', () => {
 
     createdOrderIds.push(res.body.id);
   });
+
+  it('accepts entity IDs in supplier_id and carrier_id by normalizing them to legacy foreign keys', async () => {
+    expect(supplierEntityId).toBeTruthy();
+    expect(carrierEntityId).toBeTruthy();
+
+    const res = await request(app)
+      .post('/api/orders')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({
+        supplier_id: supplierEntityId,
+        carrier_id: carrierEntityId,
+        waste_stream_ids: [wasteStreamId],
+        planned_date: '2026-04-17',
+        vehicle_plate: 'ENTITY-01',
+      });
+
+    expect(res.status).toBe(201);
+    expect(res.body.id).toBeTruthy();
+    expect(res.body.supplier_id).not.toBe(supplierEntityId);
+    expect(res.body.entity_supplier_id).toBe(supplierEntityId);
+    expect(res.body.carrier_id).not.toBe(carrierEntityId);
+    expect(res.body.transporter_id).toBe(carrierEntityId);
+
+    entityNormalizedOrderId = res.body.id;
+    createdOrderIds.push(res.body.id);
+  });
 });
 
 describe('GET /api/orders/:id', () => {
@@ -227,6 +268,26 @@ describe('PUT /api/orders/:id', () => {
 
     expect(res.status).toBe(200);
     expect(res.body.notes).toBe('Updated by test');
+  });
+
+  it('accepts entity IDs in carrier_id during updates and preserves legacy foreign keys', async () => {
+    if (!entityNormalizedOrderId) return;
+
+    const token = await getToken('admin@statice.nl', 'Admin1234!');
+
+    const res = await request(app)
+      .put(`/api/orders/${entityNormalizedOrderId}`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        carrier_id: carrierEntityId,
+        notes: 'Updated with entity transporter id',
+      });
+
+    expect(res.status).toBe(200);
+    expect(res.body.id).toBe(entityNormalizedOrderId);
+    expect(res.body.carrier_id).not.toBe(carrierEntityId);
+    expect(res.body.transporter_id).toBe(carrierEntityId);
+    expect(res.body.notes).toBe('Updated with entity transporter id');
   });
 
   it('returns 404 for a non-existent order', async () => {

@@ -10,7 +10,7 @@ const FINANCE_WRITE = ['ADMIN', 'FINANCE_MANAGER'];
 
 const ORDER_ROLES = ['ADMIN', 'LOGISTICS_PLANNER', 'FINANCE_MANAGER', 'FINANCE_USER'];
 
-router.get('/', requireRole(FINANCE_ROLES), ctrl.list);
+router.get('/', requireRole(ORDER_ROLES), ctrl.list);
 router.get('/dashboard', requireRole(FINANCE_ROLES), ctrl.dashboard);
 router.get('/match', requireRole(FINANCE_ROLES), ctrl.match);
 router.get('/match-for-order', requireRole(ORDER_ROLES), ctrl.matchForOrder);

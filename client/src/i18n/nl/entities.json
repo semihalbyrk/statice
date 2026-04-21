@@ -3,15 +3,31 @@
   "createEntity": "Entiteit aanmaken",
   "editEntity": "Entiteit bewerken",
   "entityDetail": "Entiteit detail",
+  "loadFailed": "Entiteit laden mislukt",
+  "entityActivated": "Entiteit geactiveerd",
+  "entityDeactivated": "Entiteit gedeactiveerd",
+  "failedUpdateStatus": "Status bijwerken mislukt",
+  "activate": "Activeren",
+  "deactivate": "Deactiveren",
   "sections": {
     "companyInfo": "Bedrijfsinformatie",
     "contactInfo": "Contactinformatie",
     "roles": "Rollen"
   },
   "detail": {
+    "companyInfo": "Bedrijfsinformatie",
+    "supplierInfo": "Leveranciersgegevens",
+    "disposerInfo": "Verwerkingslocaties",
+    "isAlsoSite": "Deze entiteit is ook een verwerkingslocatie",
     "supplierType": "Leveranciertype",
     "proRegistration": "PRO Registratienummer",
-    "supplierRoles": "Leveranciersrollen"
+    "supplierRoles": "Leveranciersrollen",
+    "contracts": "Contracten",
+    "noContracts": "Nog geen contracten gekoppeld aan deze entiteit.",
+    "contractNumber": "Contractnummer",
+    "contractName": "Contractnaam",
+    "effectiveDate": "Ingangsdatum",
+    "contractRole": "Rol"
   },
   "tabs": {
     "all": "Alle",
@@ -40,6 +56,7 @@
     "isAlsoSite": "Deze entiteit is ook een verwerkingslocatie"
   },
   "roles": {
+    "label": "Rollen",
     "supplier": "Leverancier",
     "transporter": "Transporteur",
     "disposer": "Verwerker",
@@ -60,6 +77,12 @@
     "title": "Verwerkingslocaties",
     "addSite": "Locatie toevoegen",
     "siteName": "Locatienaam",
+    "address": "Adres",
+    "permitNumber": "Vergunningnummer",
+    "empty": "Nog geen verwerkingslocaties toegevoegd.",
+    "activated": "Locatie geactiveerd",
+    "deactivated": "Locatie gedeactiveerd",
+    "statusFailed": "Kan locatiestatus niet bijwerken",
     "noSites": "Nog geen verwerkingslocaties toegevoegd.",
     "isAlsoSiteNote": "Het adres van deze entiteit is beschikbaar als verwerkingslocatie."
   },

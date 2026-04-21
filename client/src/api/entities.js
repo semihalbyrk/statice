@@ -6,6 +6,7 @@ export const createEntity = (data) => api.post('/entities', data);
 export const updateEntity = (id, data) => api.put(`/entities/${id}`, data);
 export const toggleEntityStatus = (id) => api.patch(`/entities/${id}/status`);
 
+export const getProtectedEntity = () => api.get('/entities/protected');
 export const getDisposerSites = (entityId) => api.get(`/entities/${entityId}/disposer-sites`);
 export const createDisposerSite = (entityId, data) => api.post(`/entities/${entityId}/disposer-sites`, data);
 export const updateDisposerSite = (entityId, siteId, data) => api.put(`/entities/${entityId}/disposer-sites/${siteId}`, data);

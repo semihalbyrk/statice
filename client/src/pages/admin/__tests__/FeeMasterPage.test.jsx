@@ -100,7 +100,7 @@ describe('FeeMasterPage', () => {
     renderFeeMasterPage();
 
     await waitFor(() => {
-      expect(screen.getByText('CONTAMINATION_SURCHARGE')).toBeInTheDocument();
+      expect(screen.getByText('Contamination Surcharge')).toBeInTheDocument();
     });
 
     expect(screen.getByText('Toeslag voor verontreinigde lading')).toBeInTheDocument();

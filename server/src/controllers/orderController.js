@@ -25,9 +25,10 @@ async function getById(req, res, next) {
 
 async function create(req, res, next) {
   try {
-    const { carrier_id, supplier_id, waste_stream_id, waste_stream_ids, planned_date } = req.body;
-    if (!carrier_id || !supplier_id || (!waste_stream_id && (!Array.isArray(waste_stream_ids) || waste_stream_ids.length === 0)) || !planned_date) {
-      return res.status(400).json({ error: 'carrier_id, supplier_id, planned_date, and at least one waste stream are required' });
+    const { carrier_id, transporter_id, supplier_id, waste_stream_id, waste_stream_ids, planned_date } = req.body;
+    const hasCarrier = carrier_id || transporter_id;
+    if (!hasCarrier || !supplier_id || (!waste_stream_id && (!Array.isArray(waste_stream_ids) || waste_stream_ids.length === 0)) || !planned_date) {
+      return res.status(400).json({ error: 'transporter, supplier, planned_date, and at least one waste stream are required' });
     }
 
     const order = await orderService.createOrder(req.body, req.user.userId);

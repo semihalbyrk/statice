@@ -8,6 +8,7 @@ router.use(authenticateToken);
 const WRITE_ROLES = ['ADMIN', 'FINANCE_MANAGER'];
 const READ_ROLES = ['ADMIN', 'FINANCE_MANAGER', 'FINANCE_USER', 'LOGISTICS_PLANNER'];
 
+router.get('/protected', requireRole(READ_ROLES), ctrl.getProtected);
 router.get('/', requireRole(READ_ROLES), ctrl.list);
 router.get('/:id', requireRole(READ_ROLES), ctrl.getById);
 router.post('/', requireRole(WRITE_ROLES), ctrl.create);

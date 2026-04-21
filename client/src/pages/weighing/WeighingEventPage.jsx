@@ -284,8 +284,8 @@ export default function InboundDetailPage() {
 
       {/* Layout: single-flow for new mode, dual-panel for legacy */}
       {inbound.weighing_mode ? (
-        /* ── New single-asset layout ── */
-        <div className="mb-4">
+        /* ── New single-asset layout with Parcels beside it ── */
+        <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_420px] gap-4 mb-4">
           <SingleAssetFlowSection
             inbound={inbound}
             inboundId={inboundId}
@@ -299,6 +299,11 @@ export default function InboundDetailPage() {
             isAdmin={isAdmin}
             user={user}
             onConfirmWeighing={handleConfirmWeighing}
+          />
+          <ParcelsTable
+            inbound={inbound}
+            assets={assets}
+            refreshInbound={refreshInbound}
           />
         </div>
       ) : (

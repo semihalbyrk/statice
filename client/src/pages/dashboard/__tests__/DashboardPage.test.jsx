@@ -54,7 +54,7 @@ describe('DashboardPage', () => {
   it('renders the role label', () => {
     mockGetDashboardStats.mockReturnValue(new Promise(() => {}));
     renderDashboardPage();
-    expect(screen.getByText('Admin')).toBeInTheDocument();
+    expect(screen.getByText('You are signed in as Admin.')).toBeInTheDocument();
   });
 
   it('shows loading spinner initially', () => {
@@ -191,7 +191,7 @@ describe('DashboardPage', () => {
     mockUser = { id: 3, email: 'gate@statice.nl', role: 'GATE_OPERATOR', full_name: 'Gate Op' };
     mockGetDashboardStats.mockReturnValue(new Promise(() => {}));
     renderDashboardPage();
-    expect(screen.getByText('Gate Operator')).toBeInTheDocument();
+    expect(screen.getByText('You are signed in as Gate Operator.')).toBeInTheDocument();
   });
 
   it('handles API failure gracefully without crashing', async () => {

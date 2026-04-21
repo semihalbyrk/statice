@@ -1,5 +1,7 @@
+import { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import useAuthStore from './store/authStore';
+import api from './api/axios';
 import LoginPage from './pages/auth/LoginPage';
 import DashboardPage from './pages/dashboard/DashboardPage';
 import DesignTokensPreview from './components/DesignTokensPreview';
@@ -31,6 +33,14 @@ import EntitiesPage from './pages/admin/entities/EntitiesPage';
 import EntityDetailPage from './pages/admin/entities/EntityDetailPage';
 import EntityCreatePage from './pages/admin/entities/EntityCreatePage';
 import EntityEditPage from './pages/admin/entities/EntityEditPage';
+import OutboundOrderCreatePage from './pages/outbound-orders/OutboundOrderCreatePage';
+import OutboundOrderDetailPage from './pages/outbound-orders/OutboundOrderDetailPage';
+import OutboundsPage from './pages/outbounds/OutboundsPage';
+import OutboundDetailPage from './pages/outbounds/OutboundDetailPage';
+import ParcelsPage from './pages/parcels/ParcelsPage';
+import IncomingParcelDetailPage from './pages/parcels/IncomingParcelDetailPage';
+import OutgoingParcelDetailPage from './pages/parcels/OutgoingParcelDetailPage';
+import OutgoingParcelCreatePage from './pages/parcels/OutgoingParcelCreatePage';
 import NotFoundPage from './pages/errors/NotFoundPage';
 import UnauthorisedPage from './pages/errors/UnauthorisedPage';
 
@@ -46,7 +56,43 @@ function ProtectedRoute({ children, allowedRoles }) {
   return children;
 }
 
+function BootstrapLoader() {
+  return (
+    <div className="flex h-screen items-center justify-center text-grey-500">
+      Loading…
+    </div>
+  );
+}
+
 export default function App() {
+  const isBootstrapping = useAuthStore((state) => state.isBootstrapping);
+  const setAuth = useAuthStore((state) => state.setAuth);
+  const setBootstrapping = useAuthStore((state) => state.setBootstrapping);
+  const clearAuth = useAuthStore((state) => state.clearAuth);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const { data } = await api.post('/auth/refresh');
+        if (!cancelled && data?.accessToken) {
+          setAuth(data.accessToken, data.user ?? null);
+        }
+      } catch {
+        if (!cancelled) clearAuth();
+      } finally {
+        if (!cancelled) setBootstrapping(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [clearAuth, setAuth, setBootstrapping]);
+
+  if (isBootstrapping) {
+    return <BootstrapLoader />;
+  }
+
   return (
     <BrowserRouter>
       <Routes>
@@ -64,6 +110,15 @@ export default function App() {
           <Route path="/orders" element={<ProtectedRoute allowedRoles={['ADMIN', 'LOGISTICS_PLANNER']}><OrdersPage /></ProtectedRoute>} />
           <Route path="/orders/new" element={<ProtectedRoute allowedRoles={['ADMIN', 'LOGISTICS_PLANNER']}><OrderCreatePage /></ProtectedRoute>} />
           <Route path="/orders/:id" element={<ProtectedRoute allowedRoles={['ADMIN', 'LOGISTICS_PLANNER']}><OrderDetailPage /></ProtectedRoute>} />
+          <Route path="/outbound-orders" element={<Navigate to="/orders?tab=outbound" replace />} />
+          <Route path="/outbound-orders/new" element={<Navigate to="/orders/new?type=OUTGOING" replace />} />
+          <Route path="/outbound-orders/:id" element={<ProtectedRoute allowedRoles={['ADMIN', 'LOGISTICS_PLANNER']}><OutboundOrderDetailPage /></ProtectedRoute>} />
+          <Route path="/outbounds" element={<ProtectedRoute allowedRoles={['GATE_OPERATOR', 'ADMIN', 'LOGISTICS_PLANNER']}><OutboundsPage /></ProtectedRoute>} />
+          <Route path="/outbounds/:outboundId" element={<ProtectedRoute allowedRoles={['GATE_OPERATOR', 'ADMIN', 'LOGISTICS_PLANNER']}><OutboundDetailPage /></ProtectedRoute>} />
+          <Route path="/parcels" element={<ProtectedRoute allowedRoles={['GATE_OPERATOR', 'ADMIN', 'LOGISTICS_PLANNER']}><ParcelsPage /></ProtectedRoute>} />
+          <Route path="/parcels/incoming/:id" element={<ProtectedRoute allowedRoles={['GATE_OPERATOR', 'ADMIN', 'LOGISTICS_PLANNER']}><IncomingParcelDetailPage /></ProtectedRoute>} />
+          <Route path="/parcels/outgoing/new" element={<ProtectedRoute allowedRoles={['ADMIN', 'LOGISTICS_PLANNER']}><OutgoingParcelCreatePage /></ProtectedRoute>} />
+          <Route path="/parcels/outgoing/:id" element={<ProtectedRoute allowedRoles={['GATE_OPERATOR', 'ADMIN', 'LOGISTICS_PLANNER']}><OutgoingParcelDetailPage /></ProtectedRoute>} />
           <Route path="/arrival" element={<ProtectedRoute allowedRoles={['GATE_OPERATOR', 'ADMIN']}><ArrivalPage /></ProtectedRoute>} />
           <Route path="/inbounds" element={<ProtectedRoute allowedRoles={['GATE_OPERATOR', 'ADMIN']}><InboundsPage /></ProtectedRoute>} />
           <Route path="/inbounds/:inboundId" element={<ProtectedRoute allowedRoles={['GATE_OPERATOR', 'ADMIN']}><WeighingEventPage /></ProtectedRoute>} />

@@ -71,25 +71,25 @@ describe('OrdersPage', () => {
 
   it('renders "New Order" button for ADMIN role', () => {
     renderOrdersPage();
-    expect(screen.getByText('New Order')).toBeInTheDocument();
+    expect(screen.getByText('Create Order')).toBeInTheDocument();
   });
 
   it('renders "New Order" button for LOGISTICS_PLANNER role', () => {
     mockUser = { id: 2, email: 'planner@statice.nl', role: 'LOGISTICS_PLANNER', full_name: 'Planner' };
     renderOrdersPage();
-    expect(screen.getByText('New Order')).toBeInTheDocument();
+    expect(screen.getByText('Create Order')).toBeInTheDocument();
   });
 
   it('does not render "New Order" button for GATE_OPERATOR role', () => {
     mockUser = { id: 3, email: 'gate@statice.nl', role: 'GATE_OPERATOR', full_name: 'Gate Op' };
     renderOrdersPage();
-    expect(screen.queryByText('New Order')).not.toBeInTheDocument();
+    expect(screen.queryByText('Create Order')).not.toBeInTheDocument();
   });
 
-  it('renders tabs for All Orders and Today', () => {
+  it('renders tabs for Inbound Orders and Outbound Orders', () => {
     renderOrdersPage();
-    expect(screen.getByText('All Orders')).toBeInTheDocument();
-    expect(screen.getByText('Today')).toBeInTheDocument();
+    expect(screen.getByText('Inbound Orders')).toBeInTheDocument();
+    expect(screen.getByText('Outbound Orders')).toBeInTheDocument();
   });
 
   it('renders search input', () => {
@@ -145,7 +145,7 @@ describe('OrdersPage', () => {
   it('navigates to new order page on "New Order" button click', async () => {
     const user = userEvent.setup();
     renderOrdersPage();
-    await user.click(screen.getByText('New Order'));
-    expect(mockNavigate).toHaveBeenCalledWith('/orders/new');
+    await user.click(screen.getByText('Create Order'));
+    expect(mockNavigate).toHaveBeenCalledWith('/orders/new?type=INCOMING');
   });
 });

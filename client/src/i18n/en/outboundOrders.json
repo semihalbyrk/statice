@@ -1,0 +1,81 @@
+{
+  "title": "Outbound Orders",
+  "createOrder": "Create Outbound Order",
+  "orderDetail": "Order Detail",
+  "searchPlaceholder": "Search by order number...",
+  "allStatuses": "All statuses",
+  "fields": {
+    "orderNumber": "Order #",
+    "status": "Status",
+    "buyer": "Buyer",
+    "sender": "Sender",
+    "disposer": "Disposer",
+    "disposerSite": "Disposer Site",
+    "shipmentType": "Shipment Type",
+    "agreementTransporter": "Agreement Transporter",
+    "outsourcedTransporter": "Outsourced Transporter",
+    "vehiclePlate": "Vehicle Plate",
+    "plannedDate": "Planned Date",
+    "timeWindowStart": "Time Window Start",
+    "timeWindowEnd": "Time Window End",
+    "expectedOutbounds": "Expected Outbounds",
+    "outbounds": "Outbounds",
+    "contract": "Contract",
+    "notes": "Notes",
+    "wasteStream": "Waste Stream",
+    "receiver": "Receiver",
+    "asn": "ASN",
+    "material": "Material",
+    "processingMethod": "Processing Method",
+    "plannedAmount": "Planned Amount (kg)",
+    "netWeight": "Net Weight",
+    "documents": "Documents",
+    "departedAt": "Departed At"
+  },
+  "status": {
+    "PLANNED": "Planned",
+    "IN_PROGRESS": "In Progress",
+    "COMPLETED": "Completed",
+    "INVOICED": "Invoiced",
+    "CANCELLED": "Cancelled"
+  },
+  "shipmentTypes": {
+    "DOMESTIC_NL": "Domestic NL",
+    "EU_CROSS_BORDER": "EU Cross-Border"
+  },
+  "toast": {
+    "created": "Outbound order created",
+    "createFailed": "Failed to create outbound order",
+    "cancelled": "Outbound order cancelled",
+    "statusUpdated": "Status updated to {{status}}",
+    "statusFailed": "Failed to update status",
+    "outboundCreated": "Outbound created",
+    "outboundCreateFailed": "Failed to create outbound"
+  },
+  "empty": "No outbound orders found",
+  "sections": {
+    "contractParties": "Contract & Parties",
+    "transport": "Transport",
+    "scheduling": "Scheduling",
+    "wasteStreams": "Waste Streams",
+    "notes": "Notes",
+    "outbounds": "Outbounds"
+  },
+  "buttons": {
+    "cancel": "Cancel",
+    "create": "Create Order",
+    "creating": "Creating...",
+    "edit": "Edit",
+    "createOutbound": "Create Outbound"
+  },
+  "pagination": {
+    "total": "{{count}} total outbound orders"
+  },
+  "useOutsourcedTransporter": "Use outsourced transporter for this shipment",
+  "selectBuyer": "Select a buyer...",
+  "selectBuyerFirst": "Select a buyer first...",
+  "selectContract": "Select a contract...",
+  "noWasteStreams": "Select a contract to see waste streams",
+  "notesPlaceholder": "Optional notes...",
+  "outboundsDescription": "Linked outbound shipments for this order."
+}

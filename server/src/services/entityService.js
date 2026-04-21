@@ -13,6 +13,7 @@ const ENTITY_LIST_SELECT = {
   id: true,
   company_name: true,
   city: true,
+  country: true,
   kvk_number: true,
   vihb_number: true,
   status: true,
@@ -20,6 +21,7 @@ const ENTITY_LIST_SELECT = {
   is_transporter: true,
   is_disposer: true,
   is_receiver: true,
+  is_protected: true,
   supplier_type: true,
   supplier_roles: true,
   created_at: true,
@@ -273,6 +275,7 @@ async function toggleEntityStatus(id, userId) {
   return prisma.$transaction(async (tx) => {
     const existing = await tx.entity.findUnique({ where: { id } });
     if (!existing) throw createError('Entity not found', 404);
+    if (existing.is_protected) throw createError('This entity is protected and cannot be deactivated', 403);
 
     const newStatus = existing.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE';
 

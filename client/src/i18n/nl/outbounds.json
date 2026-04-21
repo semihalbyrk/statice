@@ -1,0 +1,99 @@
+{
+  "title": "Uitgaand",
+  "searchPlaceholder": "Zoek op uitgaand nummer...",
+  "allStatuses": "Alle statussen",
+  "table": {
+    "outboundNumber": "Uitgaand #",
+    "status": "Status",
+    "orderNumber": "Bestelling #",
+    "buyer": "Koper",
+    "vehiclePlate": "Kenteken",
+    "netWeight": "Netto Gewicht",
+    "departedAt": "Vertrokken Op"
+  },
+  "detail": {
+    "title": "Uitgaand Detail",
+    "order": "Bestelling",
+    "buyer": "Koper",
+    "sender": "Verzender",
+    "transporter": "Transporteur",
+    "outsourced": "Uitbesteed",
+    "vehicle": "Voertuig",
+    "shipment": "Zending",
+    "plannedDate": "Geplande Datum",
+    "wasteStreams": "Afvalstromen & Gewichten",
+    "stream": "Stroom",
+    "asn": "ASN",
+    "plannedWeight": "Gepland",
+    "actualWeight": "Werkelijk",
+    "netWeight": "Netto Gewicht"
+  },
+  "status": {
+    "CREATED": "Aangemaakt",
+    "LOADING": "Laden",
+    "WEIGHED": "Gewogen",
+    "DOCUMENTS_READY": "Documenten Gereed",
+    "DEPARTED": "Vertrokken",
+    "DELIVERED": "Afgeleverd"
+  },
+  "weighing": {
+    "title": "Weging",
+    "recordTare": "Tarra Weging Vastleggen",
+    "recordGross": "Bruto Weging Vastleggen",
+    "tare": "Tarra",
+    "gross": "Bruto",
+    "net": "Netto",
+    "source": "Bron",
+    "scale": "Weegbrug",
+    "manual": "Handmatig",
+    "weight": "Gewicht (kg)",
+    "notes": "Opmerkingen",
+    "record": "Weging Vastleggen",
+    "notesPlaceholder": "Optionele opmerkingen..."
+  },
+  "documents": {
+    "title": "Documenten",
+    "begeleidingsbrief": "Begeleidingsbrief",
+    "generate": "Begeleidingsbrief Genereren",
+    "download": "Downloaden",
+    "type": "Type",
+    "status": "Status",
+    "generatedAt": "Gegenereerd",
+    "actions": "Acties",
+    "docStatus": {
+      "PENDING": "In Afwachting",
+      "GENERATED": "Gegenereerd",
+      "FAILED": "Mislukt"
+    }
+  },
+  "actions": {
+    "confirmDeparture": "Vertrek Bevestigen",
+    "confirmDelivery": "Aflevering Bevestigen",
+    "departureConfirmation": "Heeft het voertuig de faciliteit verlaten?",
+    "deliveryConfirmation": "Is de aflevering bevestigd op de bestemming?",
+    "downloadBgl": "Begeleidingsbrief Downloaden"
+  },
+  "progress": {
+    "created": "Aangemaakt",
+    "loading": "Laden",
+    "weighed": "Gewogen",
+    "documentsReady": "Docs Gereed",
+    "departed": "Vertrokken",
+    "delivered": "Afgeleverd"
+  },
+  "toast": {
+    "weighingRecorded": "Weging vastgelegd",
+    "weighingFailed": "Weging vastleggen mislukt",
+    "bglGenerated": "Begeleidingsbrief gegenereerd",
+    "bglFailed": "Begeleidingsbrief genereren mislukt",
+    "departed": "Vertrek bevestigd",
+    "departureFailed": "Vertrek bevestigen mislukt",
+    "delivered": "Aflevering bevestigd",
+    "deliveryFailed": "Aflevering bevestigen mislukt",
+    "statusUpdated": "Status bijgewerkt",
+    "statusFailed": "Status bijwerken mislukt",
+    "failedToLoad": "Uitgaand laden mislukt"
+  },
+  "empty": "Geen uitgaande gevonden",
+  "totalCount": "{{count}} totaal uitgaande"
+}

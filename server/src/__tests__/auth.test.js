@@ -1,5 +1,7 @@
 const request = require('supertest');
+const bcrypt = require('bcryptjs');
 const app = require('../index.js');
+const prisma = require('../utils/prismaClient');
 
 /** Helper: login and return { accessToken, refreshCookie } */
 async function loginAs(email, password) {
@@ -17,6 +19,34 @@ async function loginAs(email, password) {
     body: res.body,
   };
 }
+
+beforeAll(async () => {
+  const fixtures = [
+    ['admin@statice.nl', 'Admin1234!', 'Admin User', 'ADMIN', true],
+    ['gate@statice.nl', 'Gate1234!', 'Gate Operator', 'GATE_OPERATOR', true],
+    ['planner@statice.nl', 'Planner123!', 'Logistics Planner', 'LOGISTICS_PLANNER', true],
+    ['system@statice.nl', 'System!NoLogin!2026', 'System', 'ADMIN', false],
+  ];
+
+  for (const [email, password, fullName, role, isActive] of fixtures) {
+    await prisma.user.upsert({
+      where: { email },
+      update: {
+        password_hash: await bcrypt.hash(password, 10),
+        full_name: fullName,
+        role,
+        is_active: isActive,
+      },
+      create: {
+        email,
+        password_hash: await bcrypt.hash(password, 10),
+        full_name: fullName,
+        role,
+        is_active: isActive,
+      },
+    });
+  }
+});
 
 describe('POST /api/auth/login', () => {
   it('returns 400 when email is missing', async () => {
@@ -78,6 +108,13 @@ describe('POST /api/auth/login', () => {
 
     expect(status).toBe(200);
     expect(body.user.role).toBe('GATE_OPERATOR');
+  });
+
+  it('returns 403 for a disabled user even with the correct password', async () => {
+    const { status, body } = await loginAs('system@statice.nl', 'System!NoLogin!2026');
+
+    expect(status).toBe(403);
+    expect(body).toEqual({ error: 'Account disabled' });
   });
 });
 

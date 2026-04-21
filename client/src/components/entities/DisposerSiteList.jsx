@@ -69,31 +69,33 @@ export default function DisposerSiteList({ entityId, sites = [], onRefresh }) {
         <p className="text-sm text-grey-400 text-center py-6">{t('entities:disposerSites.empty')}</p>
       ) : (
         <div className="overflow-x-auto">
-          <table className="w-full text-sm">
+          <table className="w-full text-sm min-w-[900px]">
             <thead>
               <tr className="bg-grey-50 border-b border-grey-200">
                 <th className="text-left px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide">{t('entities:disposerSites.siteName')}</th>
-                <th className="text-left px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide">{t('entities:disposerSites.address')}</th>
-                <th className="text-left px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide">{t('entities:disposerSites.permitNumber')}</th>
                 <th className="text-left px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide">{t('common:table.status')}</th>
+                <th className="text-left px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide">{t('entities:disposerSites.address')}</th>
+                <th className="text-left px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide">{t('entities:country')}</th>
+                <th className="text-left px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide">{t('entities:disposerSites.permitNumber')}</th>
                 <th className="w-10 px-4 py-3"></th>
               </tr>
             </thead>
             <tbody>
               {sites.map((site) => (
                 <tr key={site.id} className="border-b border-grey-100 hover:bg-grey-50 transition-colors">
-                  <td className="px-4 py-3 text-grey-900 font-medium">{site.site_name}</td>
-                  <td className="px-4 py-3 text-grey-700">
-                    {[site.street_and_number, site.city].filter(Boolean).join(', ') || '\u2014'}
-                  </td>
-                  <td className="px-4 py-3 text-grey-700">{site.environmental_permit_number || '\u2014'}</td>
+                  <td className="px-4 py-3 text-green-700 font-medium">{site.site_name}</td>
                   <td className="px-4 py-3">
                     <ClickableStatusBadge
-                      status={site.is_active ? 'ACTIVE' : 'INACTIVE'}
-                      allowedTransitions={site.is_active ? ['INACTIVE'] : ['ACTIVE']}
+                      status={site.status === 'ACTIVE' ? 'ACTIVE' : 'INACTIVE'}
+                      allowedTransitions={site.status === 'ACTIVE' ? ['INACTIVE'] : ['ACTIVE']}
                       onTransition={(newStatus) => handleStatusToggle(site.id, newStatus)}
                     />
                   </td>
+                  <td className="px-4 py-3 text-grey-700">
+                    {[site.street_and_number, site.city].filter(Boolean).join(', ') || '\u2014'}
+                  </td>
+                  <td className="px-4 py-3 text-grey-700">{site.country || '\u2014'}</td>
+                  <td className="px-4 py-3 text-grey-700">{site.environmental_permit_number || '\u2014'}</td>
                   <td className="px-4 py-3 text-right">
                     <RowActionMenu actions={[
                       { label: t('common:buttons.edit'), icon: Pencil, onClick: () => handleEditClick(site) },

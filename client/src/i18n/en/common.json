@@ -45,7 +45,18 @@
     "NOT_STARTED": "Not Started",
     "FINALIZED": "Finalized",
     "CONFIRMED": "Confirmed",
-    "SUPERSEDED": "Superseded"
+    "SUPERSEDED": "Superseded",
+    "CREATED": "Created",
+    "LOADING": "Loading",
+    "WEIGHED": "Weighed",
+    "DOCUMENTS_READY": "Documents Ready",
+    "DEPARTED": "Departed",
+    "DELIVERED": "Delivered",
+    "AVAILABLE": "Available",
+    "ASSIGNED": "Assigned",
+    "SHIPPED": "Shipped",
+    "DOMESTIC_NL": "Domestic (NL)",
+    "EU_CROSS_BORDER": "EU Cross-border"
   },
   "roles": {
     "ADMIN": "Admin",
@@ -132,7 +143,11 @@
     "totalCount": "{{count}} total",
     "pageOf": "Page {{page}} of {{total}}",
     "perPage": "{{count}} / page",
-    "status": "Status"
+    "status": "Status",
+    "rowsPerPage": "Rows per page",
+    "showingRange": "Showing {{from}}–{{to}} of {{total}}",
+    "previous": "Previous",
+    "next": "Next"
   },
   "confirm": {
     "areYouSure": "Are you sure?",
@@ -152,6 +167,8 @@
     "phone": "Phone",
     "status": "Status",
     "notes": "Notes",
+    "createdAt": "Created At",
+    "updatedAt": "Updated At",
     "optional": "Optional",
     "required": "Required",
     "active": "Active",
@@ -162,5 +179,12 @@
   "no": "No",
   "all": "All",
   "total": "Total",
-  "or": "or"
+  "or": "or",
+  "idleWarning": {
+    "title": "You will be signed out soon",
+    "body": "For security, we will sign you out after a period of inactivity.",
+    "stay": "Stay signed in",
+    "signOut": "Sign out",
+    "signedOutToast": "Signed out due to inactivity"
+  }
 }

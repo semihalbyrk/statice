@@ -129,7 +129,7 @@ export default function EntitiesPage() {
 
       {/* Table */}
       <div className="bg-white rounded-lg border border-grey-200 shadow-sm overflow-visible">
-        <table className="w-full text-sm">
+        <table className="w-full text-sm min-w-[900px]">
           <thead>
             <tr className="bg-grey-50 border-b border-grey-200">
               <th className="text-left px-4 py-3 text-xs font-medium text-grey-500 uppercase tracking-wide">{t('entities:companyName')}</th>
@@ -158,8 +158,8 @@ export default function EntitiesPage() {
                 </td>
                 <td className="px-4 py-3">
                   <ClickableStatusBadge
-                    status={entity.is_active ? 'ACTIVE' : 'INACTIVE'}
-                    allowedTransitions={entity.is_active ? ['INACTIVE'] : ['ACTIVE']}
+                    status={entity.status === 'ACTIVE' ? 'ACTIVE' : 'INACTIVE'}
+                    allowedTransitions={entity.status === 'ACTIVE' ? ['INACTIVE'] : ['ACTIVE']}
                     onTransition={(newStatus) => handleStatusTransition(entity.id, newStatus)}
                   />
                 </td>
@@ -182,8 +182,8 @@ export default function EntitiesPage() {
                       onClick: () => window.location.href = `/admin/entities/${entity.id}`,
                     },
                     {
-                      label: entity.is_active ? t('entities:deactivate') : t('entities:activate'),
-                      onClick: () => handleStatusTransition(entity.id, entity.is_active ? 'INACTIVE' : 'ACTIVE'),
+                      label: entity.status === 'ACTIVE' ? t('entities:deactivate') : t('entities:activate'),
+                      onClick: () => handleStatusTransition(entity.id, entity.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE'),
                     },
                   ]} />
                 </td>

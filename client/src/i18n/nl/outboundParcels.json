@@ -1,0 +1,39 @@
+{
+  "title": "Uitgaande Parcels",
+  "createParcel": "Uitgaande Parcel Aanmaken",
+  "parcelDetail": "Parcel Detail",
+  "fields": {
+    "parcelLabel": "Parcel Label",
+    "material": "Materiaal",
+    "containerType": "Containertype",
+    "volumeM3": "Volume (m³)",
+    "tareWeightKg": "Tarra Gewicht (kg)",
+    "description": "Beschrijving",
+    "notes": "Opmerkingen",
+    "status": "Status",
+    "outbound": "Uitgaand",
+    "buyer": "Koper"
+  },
+  "status": {
+    "AVAILABLE": "Beschikbaar",
+    "ASSIGNED": "Toegewezen",
+    "SHIPPED": "Verzonden"
+  },
+  "attach": "Parcels Koppelen",
+  "detach": "Loskoppelen",
+  "confirmDetach": "Weet je zeker dat je deze parcel wilt loskoppelen van het uitgaand dossier?",
+  "attachSearch": "Zoek beschikbare parcels...",
+  "attachSelected": "Selectie koppelen",
+  "noAvailableParcels": "Geen beschikbare parcels gevonden.",
+  "noParcelsAttached": "Geen parcels gekoppeld aan dit uitgaand dossier.",
+  "totalSummary": "{{count}} parcels, {{volume}} m³, {{weight}} kg tarra",
+  "toast": {
+    "created": "Uitgaande parcel aangemaakt",
+    "createFailed": "Uitgaande parcel aanmaken mislukt",
+    "attachSuccess": "Parcels gekoppeld",
+    "attachFailed": "Parcels koppelen mislukt",
+    "detachSuccess": "Parcel losgekoppeld",
+    "detachFailed": "Parcel loskoppelen mislukt",
+    "loadFailed": "Parcels laden mislukt"
+  }
+}

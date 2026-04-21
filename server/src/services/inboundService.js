@@ -292,8 +292,19 @@ async function listInboundsByOrder(orderId) {
 
 async function createInbound(data, userId) {
   return prisma.$transaction(async (tx) => {
-    const order = await tx.inboundOrder.findUnique({ where: { id: data.order_id } });
-    if (!order) throw new Error('Order not found');
+    const orderId = data.order_id || data.orderId || data.inbound_order_id || null;
+    if (!orderId) {
+      const err = new Error('order_id is required');
+      err.statusCode = 400;
+      throw err;
+    }
+
+    const order = await tx.inboundOrder.findUnique({ where: { id: orderId } });
+    if (!order) {
+      const err = new Error('Order not found');
+      err.statusCode = 404;
+      throw err;
+    }
 
     if (!['PLANNED', 'ARRIVED', 'IN_PROGRESS'].includes(order.status)) {
       const err = new Error(`Order must be PLANNED, ARRIVED or IN_PROGRESS to create an inbound (current: ${order.status})`);
@@ -321,7 +332,7 @@ async function createInbound(data, userId) {
     const inbound = await tx.inbound.create({
       data: {
         inbound_number: inboundNumber,
-        order_id: data.order_id,
+        order_id: orderId,
         vehicle_id: vehicle.id,
         waste_stream_id: data.waste_stream_id || null,
         incident_category: data.incident_category || null,

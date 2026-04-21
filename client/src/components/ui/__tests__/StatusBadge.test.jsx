@@ -75,7 +75,6 @@ describe('StatusBadge', () => {
     ];
     expectedStatuses.forEach((status) => {
       expect(STATUS_CONFIG[status]).toBeDefined();
-      expect(STATUS_CONFIG[status].label).toBeTruthy();
       expect(STATUS_CONFIG[status].className).toBeTruthy();
     });
   });

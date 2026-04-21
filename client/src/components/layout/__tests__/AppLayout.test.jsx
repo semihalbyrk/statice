@@ -29,7 +29,11 @@ const mockClearAuth = vi.fn();
 
 vi.mock('../../../store/authStore', () => ({
   default: (selector) => {
-    const state = { user: mockUser, clearAuth: mockClearAuth };
+    const state = {
+      user: mockUser,
+      clearAuth: mockClearAuth,
+      isAuthenticated: () => !!mockUser,
+    };
     return selector(state);
   },
 }));

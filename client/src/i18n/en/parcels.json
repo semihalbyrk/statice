@@ -1,0 +1,52 @@
+{
+  "title": "Parcels",
+  "createOutgoing": "Create Outgoing Parcel",
+  "searchPlaceholder": "Search by parcel label...",
+  "tabs": {
+    "all": "All",
+    "incoming": "Incoming",
+    "outgoing": "Outgoing"
+  },
+  "type": {
+    "incoming": "Incoming",
+    "outgoing": "Outgoing"
+  },
+  "columns": {
+    "label": "Parcel Label",
+    "type": "Type",
+    "status": "Status",
+    "containerType": "Container Type",
+    "containerLabel": "Container Label",
+    "material": "Material",
+    "wasteStream": "Waste Stream",
+    "inbound": "Inbound #",
+    "order": "Order #",
+    "supplier": "Supplier",
+    "netWeight": "Net Weight (kg)",
+    "createdAt": "Created At",
+    "volume": "Volume (m³)",
+    "tareWeight": "Tare Weight (kg)",
+    "outbound": "Outbound #",
+    "buyer": "Buyer"
+  },
+  "incomingDetail": {
+    "title": "Incoming Parcel",
+    "inboundContext": "Inbound Context",
+    "processingHistory": "Processing History",
+    "notProcessed": "Processing history will be available in a future update."
+  },
+  "outgoingDetail": {
+    "title": "Outgoing Parcel",
+    "outboundContext": "Outbound Context",
+    "notAssigned": "This parcel is not yet assigned to an outbound."
+  },
+  "empty": {
+    "all": "No parcels found.",
+    "incoming": "No incoming parcels found.",
+    "outgoing": "No outgoing parcels found."
+  },
+  "toast": {
+    "loadFailed": "Failed to load parcels",
+    "detailFailed": "Failed to load parcel detail"
+  }
+}

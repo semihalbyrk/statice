@@ -56,7 +56,7 @@ export default function EntityDetailPage() {
   if (loading) return <div className="text-center py-12 text-grey-400">{t('common:table.loading')}</div>;
   if (!entity) return null;
 
-  const status = entity.is_active ? 'ACTIVE' : 'INACTIVE';
+  const status = entity.status === 'ACTIVE' ? 'ACTIVE' : 'INACTIVE';
   const contracts = [
     ...(entity.contracts_as_supplier || []).map((c) => ({ ...c, role: t('entities:roles.supplier') })),
     ...(entity.contracts_as_transporter || []).map((c) => ({ ...c, role: t('entities:roles.transporter') })),
@@ -74,7 +74,7 @@ export default function EntityDetailPage() {
             <h1 className="text-xl font-semibold text-grey-900">{entity.company_name}</h1>
             <ClickableStatusBadge
               status={status}
-              allowedTransitions={canWrite ? (entity.is_active ? ['INACTIVE'] : ['ACTIVE']) : []}
+              allowedTransitions={canWrite ? (entity.status === 'ACTIVE' ? ['INACTIVE'] : ['ACTIVE']) : []}
               onTransition={handleStatusTransition}
             />
           </div>
@@ -95,8 +95,8 @@ export default function EntityDetailPage() {
                   onClick: () => navigate(`/admin/entities/${id}/edit`),
                 },
                 {
-                  label: entity.is_active ? t('entities:deactivate') : t('entities:activate'),
-                  onClick: () => handleStatusTransition(entity.is_active ? 'INACTIVE' : 'ACTIVE'),
+                  label: entity.status === 'ACTIVE' ? t('entities:deactivate') : t('entities:activate'),
+                  onClick: () => handleStatusTransition(entity.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE'),
                 },
               ]} />
             )}

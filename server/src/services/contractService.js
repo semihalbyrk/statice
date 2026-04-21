@@ -1,6 +1,7 @@
 const prisma = require('../utils/prismaClient');
 const { writeAuditLog } = require('../utils/auditLog');
 const { generateContractNumber } = require('../utils/contractNumber');
+const { getStaticeEntityId } = require('../utils/systemEntities');
 
 function createError(message, statusCode) {
   const error = new Error(message);
@@ -18,15 +19,22 @@ const MATERIAL_SELECT = {
   eural_code: true,
 };
 
+const ENTITY_BRIEF_SELECT = { id: true, company_name: true, street_and_number: true, postal_code: true, city: true, country: true, kvk_number: true, vihb_number: true, environmental_permit_number: true, status: true, is_also_site: true };
+
 const CONTRACT_INCLUDE = {
   supplier: { select: { id: true, name: true, supplier_type: true } },
   carrier: { select: { id: true, name: true } },
   entity_supplier: { select: { id: true, company_name: true, kvk_number: true, vihb_number: true, status: true } },
   agreement_transporter: { select: { id: true, company_name: true, vihb_number: true, status: true } },
   invoice_entity: { select: { id: true, company_name: true, status: true } },
+  buyer: { select: ENTITY_BRIEF_SELECT },
+  sender: { select: ENTITY_BRIEF_SELECT },
+  disposer: { select: ENTITY_BRIEF_SELECT },
+  disposer_site: true,
   contract_waste_streams: {
     include: {
       waste_stream: { select: { id: true, name: true, code: true } },
+      receiver: { select: { id: true, company_name: true } },
       rate_lines: {
         where: { superseded_at: null },
         include: { material: { select: MATERIAL_SELECT } },
@@ -50,7 +58,22 @@ const CONTRACT_LIST_INCLUDE = {
   supplier: { select: { id: true, name: true, supplier_type: true } },
   carrier: { select: { id: true, name: true } },
   entity_supplier: { select: { id: true, company_name: true } },
-  agreement_transporter: { select: { id: true, company_name: true } },
+  agreement_transporter: { select: { id: true, company_name: true, vihb_number: true, status: true } },
+  buyer: { select: ENTITY_BRIEF_SELECT },
+  sender: { select: ENTITY_BRIEF_SELECT },
+  disposer: { select: ENTITY_BRIEF_SELECT },
+  disposer_site: true,
+  contract_waste_streams: {
+    include: {
+      waste_stream: { select: { id: true, name: true, code: true } },
+      receiver: { select: { id: true, company_name: true } },
+      rate_lines: {
+        where: { superseded_at: null },
+        include: { material: { select: MATERIAL_SELECT } },
+        orderBy: { valid_from: 'asc' },
+      },
+    },
+  },
   _count: { select: { rate_lines: { where: { superseded_at: null } } } },
 };
 
@@ -84,7 +107,7 @@ function enrichContract(contract) {
 
 // --- CRUD ---
 
-async function listContracts({ status, supplier_id, entity_supplier_id, search, page = 1, limit = 20 }) {
+async function listContracts({ status, supplier_id, entity_supplier_id, contract_type, buyer_id, search, page = 1, limit = 20 }) {
   const pageNum = Math.max(1, parseInt(page, 10));
   const limitNum = Math.min(100, Math.max(1, parseInt(limit, 10)));
   const skip = (pageNum - 1) * limitNum;
@@ -93,12 +116,15 @@ async function listContracts({ status, supplier_id, entity_supplier_id, search, 
   if (status) where.status = status;
   if (supplier_id) where.supplier_id = supplier_id;
   if (entity_supplier_id) where.entity_supplier_id = entity_supplier_id;
+  if (contract_type) where.contract_type = contract_type;
+  if (buyer_id) where.buyer_id = buyer_id;
   if (search) {
     where.OR = [
       { contract_number: { contains: search, mode: 'insensitive' } },
       { name: { contains: search, mode: 'insensitive' } },
       { supplier: { name: { contains: search, mode: 'insensitive' } } },
       { entity_supplier: { company_name: { contains: search, mode: 'insensitive' } } },
+      { buyer: { company_name: { contains: search, mode: 'insensitive' } } },
     ];
   }
 
@@ -178,32 +204,62 @@ async function getDashboardSummary() {
 
 async function createContract(data, userId) {
   return prisma.$transaction(async (tx) => {
-    const supplier = await tx.supplier.findUnique({
-      where: { id: data.supplier_id },
-      select: { id: true, is_active: true },
-    });
-    if (!supplier || !supplier.is_active) throw createError('Active supplier not found', 404);
+    const isOutgoing = data.contract_type === 'OUTGOING';
 
-    // Validate carrier if provided
-    if (data.carrier_id) {
-      const carrier = await tx.carrier.findUnique({
-        where: { id: data.carrier_id },
+    // ── INCOMING validation ──
+    if (!isOutgoing) {
+      const supplier = await tx.supplier.findUnique({
+        where: { id: data.supplier_id },
         select: { id: true, is_active: true },
       });
-      if (!carrier || !carrier.is_active) throw createError('Active carrier not found', 404);
+      if (!supplier || !supplier.is_active) throw createError('Active supplier not found', 404);
+
+      if (data.carrier_id) {
+        const carrier = await tx.carrier.findUnique({
+          where: { id: data.carrier_id },
+          select: { id: true, is_active: true },
+        });
+        if (!carrier || !carrier.is_active) throw createError('Active carrier not found', 404);
+      }
+
+      if (data.entity_supplier_id) {
+        const entitySupplier = await tx.entity.findUnique({
+          where: { id: data.entity_supplier_id },
+          select: { id: true, is_supplier: true, status: true },
+        });
+        if (!entitySupplier || entitySupplier.status !== 'ACTIVE') throw createError('Active entity supplier not found', 404);
+        if (!entitySupplier.is_supplier) throw createError('Entity is not flagged as a supplier', 400);
+      }
     }
 
-    // Validate entity_supplier_id if provided
-    if (data.entity_supplier_id) {
-      const entitySupplier = await tx.entity.findUnique({
-        where: { id: data.entity_supplier_id },
-        select: { id: true, is_supplier: true, status: true },
+    // ── OUTGOING validation ──
+    if (isOutgoing) {
+      if (!data.buyer_id) throw createError('Buyer is required for outgoing contracts', 400);
+      if (!data.agreement_transporter_id) throw createError('Agreement transporter is required for outgoing contracts', 400);
+      if (!data.shipment_type) throw createError('Shipment type is required for outgoing contracts', 400);
+
+      const buyer = await tx.entity.findUnique({
+        where: { id: data.buyer_id },
+        select: { id: true, status: true },
       });
-      if (!entitySupplier || entitySupplier.status !== 'ACTIVE') throw createError('Active entity supplier not found', 404);
-      if (!entitySupplier.is_supplier) throw createError('Entity is not flagged as a supplier', 400);
+      if (!buyer || buyer.status !== 'ACTIVE') throw createError('Active buyer entity not found', 404);
+
+      // Auto-fill sender and disposer from Statice entity if not provided
+      const staticeId = await getStaticeEntityId(tx);
+      if (!data.sender_id && staticeId) data.sender_id = staticeId;
+      if (!data.disposer_id && staticeId) data.disposer_id = staticeId;
+
+      if (data.disposer_id) {
+        const disposer = await tx.entity.findUnique({
+          where: { id: data.disposer_id },
+          select: { id: true, is_disposer: true, status: true },
+        });
+        if (!disposer || disposer.status !== 'ACTIVE') throw createError('Active disposer entity not found', 404);
+        if (!disposer.is_disposer) throw createError('Entity is not flagged as a disposer', 400);
+      }
     }
 
-    // Validate agreement_transporter_id if provided
+    // ── Shared validation ──
     if (data.agreement_transporter_id) {
       const entityTransporter = await tx.entity.findUnique({
         where: { id: data.agreement_transporter_id },
@@ -213,7 +269,6 @@ async function createContract(data, userId) {
       if (!entityTransporter.is_transporter) throw createError('Entity is not flagged as a transporter', 400);
     }
 
-    // Validate invoice_entity_id if provided
     if (data.invoice_entity_id) {
       const invoiceEntity = await tx.entity.findUnique({
         where: { id: data.invoice_entity_id },
@@ -224,21 +279,31 @@ async function createContract(data, userId) {
 
     const contractNumber = await generateContractNumber(tx);
 
-    // Auto-fill receiver_name from SystemSetting
+    // Auto-fill receiver_name
     let receiverName = 'Statice B.V.';
-    const settings = await tx.systemSetting.findFirst();
-    if (settings?.facility_name) receiverName = settings.facility_name;
+    if (isOutgoing) {
+      const buyerEntity = await tx.entity.findUnique({ where: { id: data.buyer_id }, select: { company_name: true } });
+      if (buyerEntity) receiverName = buyerEntity.company_name;
+    } else {
+      const settings = await tx.systemSetting.findFirst();
+      if (settings?.facility_name) receiverName = settings.facility_name;
+    }
 
-    // Check for overlapping active contracts for same supplier + carrier before creation
+    // Check for overlapping active contracts (scoped by contract_type)
     const effectiveDate = new Date(data.effective_date);
     const expiryDate = data.expiry_date ? new Date(data.expiry_date) : null;
 
     const overlapWhere = {
-      supplier_id: data.supplier_id,
+      contract_type: data.contract_type || 'INCOMING',
       status: 'ACTIVE',
       is_active: true,
     };
-    if (data.carrier_id) overlapWhere.carrier_id = data.carrier_id;
+    if (!isOutgoing) {
+      overlapWhere.supplier_id = data.supplier_id;
+      overlapWhere.carrier_id = data.carrier_id || null;
+    } else {
+      overlapWhere.buyer_id = data.buyer_id;
+    }
     if (expiryDate) {
       overlapWhere.effective_date = { lte: expiryDate };
     }
@@ -258,12 +323,17 @@ async function createContract(data, userId) {
     const contract = await tx.supplierContract.create({
       data: {
         contract_number: contractNumber,
-        supplier_id: data.supplier_id,
-        carrier_id: data.carrier_id || null,
+        supplier_id: isOutgoing ? null : data.supplier_id,
+        carrier_id: isOutgoing ? null : (data.carrier_id || null),
         contract_type: data.contract_type || 'INCOMING',
-        entity_supplier_id: data.entity_supplier_id || null,
+        entity_supplier_id: isOutgoing ? null : (data.entity_supplier_id || null),
         agreement_transporter_id: data.agreement_transporter_id || null,
         invoice_entity_id: data.invoice_entity_id || null,
+        buyer_id: isOutgoing ? data.buyer_id : null,
+        sender_id: isOutgoing ? (data.sender_id || null) : null,
+        disposer_id: isOutgoing ? (data.disposer_id || null) : null,
+        disposer_site_id: isOutgoing ? (data.disposer_site_id || null) : null,
+        shipment_type: isOutgoing ? data.shipment_type : null,
         name: data.name,
         status: 'ACTIVE',
         effective_date: effectiveDate,
@@ -273,7 +343,7 @@ async function createContract(data, userId) {
         invoicing_frequency: data.invoicing_frequency ?? 'MONTHLY',
         currency: data.currency ?? 'EUR',
         invoice_delivery_method: data.invoice_delivery_method || null,
-        contamination_tolerance_pct: data.contamination_tolerance_pct ?? 0,
+        contamination_tolerance_pct: isOutgoing ? 0 : (data.contamination_tolerance_pct ?? 0),
       },
     });
 
@@ -319,6 +389,7 @@ async function createContract(data, userId) {
             contract_id: contract.id,
             waste_stream_id: cwsData.waste_stream_id,
             afvalstroomnummer: cwsData.afvalstroomnummer,
+            receiver_id: cwsData.receiver_id || null,
           },
         });
 
@@ -424,6 +495,13 @@ async function updateContract(id, data, userId) {
     if (data.contamination_tolerance_pct !== undefined) updateData.contamination_tolerance_pct = data.contamination_tolerance_pct;
     if (data.contract_type !== undefined) updateData.contract_type = data.contract_type;
 
+    // OUTGOING-specific fields
+    if (data.buyer_id !== undefined) updateData.buyer_id = data.buyer_id || null;
+    if (data.sender_id !== undefined) updateData.sender_id = data.sender_id || null;
+    if (data.disposer_id !== undefined) updateData.disposer_id = data.disposer_id || null;
+    if (data.disposer_site_id !== undefined) updateData.disposer_site_id = data.disposer_site_id || null;
+    if (data.shipment_type !== undefined) updateData.shipment_type = data.shipment_type || null;
+
     // Validate and set entity_supplier_id
     if (data.entity_supplier_id !== undefined) {
       if (data.entity_supplier_id) {
@@ -527,6 +605,7 @@ async function updateContract(id, data, userId) {
             contract_id: id,
             waste_stream_id: cwsData.waste_stream_id,
             afvalstroomnummer: cwsData.afvalstroomnummer,
+            receiver_id: cwsData.receiver_id || null,
           },
         });
 

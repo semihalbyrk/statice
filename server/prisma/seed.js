@@ -9,6 +9,14 @@ async function main() {
   // ═══════════════════════════════════════════════════════════════════════════
   // CLEANUP — operational models first (child → parent order)
   // ═══════════════════════════════════════════════════════════════════════════
+  // Outbound models cleanup
+  await prisma.outboundDocument.deleteMany();
+  await prisma.outboundWeighingRecord.deleteMany();
+  await prisma.outbound.deleteMany();
+  await prisma.outboundOrderWasteStream.deleteMany();
+  await prisma.outboundOrder.deleteMany();
+
+  // Delete contract sub-tables so MaterialMaster/FractionMaster can be re-seeded with correct IDs
   await prisma.contaminationIncident.deleteMany();
   await prisma.invoiceLine.deleteMany();
   await prisma.invoice.deleteMany();
@@ -37,6 +45,8 @@ async function main() {
   await prisma.supplier.updateMany({ data: { migrated_to_entity_id: null } });
   await prisma.carrier.updateMany({ data: { migrated_to_entity_id: null } });
   await prisma.entity.deleteMany();
+  // Remove MaterialFraction junctions so they can be rebuilt with correct IDs below
+  await prisma.materialFraction.deleteMany();
   console.log('Operational data cleaned.');
 
   // ─── Users ───────────────────────────────────────────────────────────
@@ -48,40 +58,55 @@ async function main() {
   const financeHash = await bcrypt.hash('Finance123!', 10);
   const systemHash = await bcrypt.hash('System!NoLogin!2026', 10);
 
-  const adminUser = await prisma.user.upsert({
-    where: { email: 'admin@statice.nl' },
-    update: {},
-    create: { email: 'admin@statice.nl', password_hash: passwordHash, full_name: 'Admin User', role: 'ADMIN' },
+  async function upsertUser(email, data) {
+    return prisma.user.upsert({
+      where: { email },
+      update: data,
+      create: { email, ...data },
+    });
+  }
+
+  const adminUser = await upsertUser('admin@statice.nl', {
+    password_hash: passwordHash,
+    full_name: 'Admin User',
+    role: 'ADMIN',
+    is_active: true,
   });
-  await prisma.user.upsert({
-    where: { email: 'planner@statice.nl' },
-    update: {},
-    create: { email: 'planner@statice.nl', password_hash: plannerHash, full_name: 'Logistics Planner', role: 'LOGISTICS_PLANNER' },
+  await upsertUser('planner@statice.nl', {
+    password_hash: plannerHash,
+    full_name: 'Logistics Planner',
+    role: 'LOGISTICS_PLANNER',
+    is_active: true,
   });
-  const gateUser = await prisma.user.upsert({
-    where: { email: 'gate@statice.nl' },
-    update: {},
-    create: { email: 'gate@statice.nl', password_hash: gateHash, full_name: 'Gate Operator', role: 'GATE_OPERATOR' },
+  const gateUser = await upsertUser('gate@statice.nl', {
+    password_hash: gateHash,
+    full_name: 'Gate Operator',
+    role: 'GATE_OPERATOR',
+    is_active: true,
   });
-  await prisma.user.upsert({
-    where: { email: 'reporting@statice.nl' },
-    update: {},
-    create: { email: 'reporting@statice.nl', password_hash: reportHash, full_name: 'Reporting Manager', role: 'REPORTING_MANAGER' },
+  await upsertUser('reporting@statice.nl', {
+    password_hash: reportHash,
+    full_name: 'Reporting Manager',
+    role: 'REPORTING_MANAGER',
+    is_active: true,
   });
-  const sortingUser = await prisma.user.upsert({
-    where: { email: 'sorting@statice.nl' },
-    update: {},
-    create: { email: 'sorting@statice.nl', password_hash: sortingHash, full_name: 'Sorting Employee', role: 'SORTING_EMPLOYEE' },
+  const sortingUser = await upsertUser('sorting@statice.nl', {
+    password_hash: sortingHash,
+    full_name: 'Sorting Employee',
+    role: 'SORTING_EMPLOYEE',
+    is_active: true,
   });
-  const financeUser = await prisma.user.upsert({
-    where: { email: 'finance@statice.nl' },
-    update: {},
-    create: { email: 'finance@statice.nl', password_hash: financeHash, full_name: 'Finance Manager', role: 'FINANCE_MANAGER' },
+  const financeUser = await upsertUser('finance@statice.nl', {
+    password_hash: financeHash,
+    full_name: 'Finance Manager',
+    role: 'FINANCE_MANAGER',
+    is_active: true,
   });
-  await prisma.user.upsert({
-    where: { email: 'system@statice.nl' },
-    update: {},
-    create: { email: 'system@statice.nl', password_hash: systemHash, full_name: 'System', role: 'ADMIN', is_active: false },
+  await upsertUser('system@statice.nl', {
+    password_hash: systemHash,
+    full_name: 'System',
+    role: 'ADMIN',
+    is_active: true,
   });
   console.log('Users seeded.');
 
@@ -216,12 +241,30 @@ async function main() {
     'mat-scr': [{ frc: 'frc-gls', order: 1 }, { frc: 'frc-fe', order: 2 }, { frc: 'frc-pla', order: 3 }, { frc: 'frc-pcb', order: 4 }, { frc: 'frc-cu', order: 5 }, { frc: 'frc-res', order: 6 }],
   };
 
-  for (const [matId, fractions] of Object.entries(materialFractionMap)) {
+  // Lookup actual DB IDs by code (may differ from seed IDs on existing databases)
+  const actualMaterials = await prisma.materialMaster.findMany({ select: { id: true, code: true } });
+  const materialIdByCode = Object.fromEntries(actualMaterials.map((m) => [m.code.toLowerCase().replace('-', ''), m.id]));
+  // Also index by seed-style code (e.g. 'mat-hdd' → 'MAT-HDD' → lookup)
+  const materialSeedIds = {};
+  for (const m of materialsData) {
+    const actual = actualMaterials.find((a) => a.code === m.code);
+    if (actual) materialSeedIds[m.id] = actual.id;
+  }
+  const actualFractions = await prisma.fractionMaster.findMany({ select: { id: true, code: true } });
+  const fractionSeedIds = {};
+  for (const f of fractionsData) {
+    const actual = actualFractions.find((a) => a.code === f.code);
+    if (actual) fractionSeedIds[f.id] = actual.id;
+  }
+
+  for (const [matSeedId, fractions] of Object.entries(materialFractionMap)) {
+    const materialId = materialSeedIds[matSeedId] || matSeedId;
     for (const { frc, order } of fractions) {
+      const fractionId = fractionSeedIds[frc] || frc;
       await prisma.materialFraction.upsert({
-        where: { material_id_fraction_id: { material_id: matId, fraction_id: frc } },
+        where: { material_id_fraction_id: { material_id: materialId, fraction_id: fractionId } },
         update: { sort_order: order },
-        create: { material_id: matId, fraction_id: frc, sort_order: order },
+        create: { material_id: materialId, fraction_id: fractionId, sort_order: order },
       });
     }
   }
@@ -439,6 +482,33 @@ async function main() {
   }
   console.log('Entities seeded.');
 
+  // ─── Statice Protected Entity ───────────────────────────────────────
+  const staticeEntity = await prisma.entity.upsert({
+    where: { id: 'entity-statice-helden' },
+    update: { company_name: 'Statice Helden B.V.' },
+    create: {
+      id: 'entity-statice-helden',
+      company_name: 'Statice Helden B.V.',
+      street_and_number: 'De Oude Kooien 15',
+      postal_code: '5986 PJ',
+      city: 'Beringe',
+      country: 'NL',
+      vihb_number: 'LI 501719 VIHX',
+      environmental_permit_number: 'PL 04/73113',
+      kvk_number: '12345678',
+      contact_email: 'info@statice.eu',
+      contact_phone: '+31 (0)77 306 0688',
+      is_supplier: false,
+      is_transporter: false,
+      is_disposer: true,
+      is_receiver: true,
+      is_also_site: true,
+      is_protected: true,
+      status: 'ACTIVE',
+    },
+  });
+  console.log('Statice protected entity seeded.');
+
   // ─── Link Suppliers → migrated_to_entity_id ─────────────────────────
   const supplierToEntityMap = {
     'supplier-stichting-open': 'entity-stichting-open',
@@ -524,11 +594,11 @@ async function main() {
   };
 
   const contractsData = [
-    { number: 'CTR-00001', supplier_id: 'supplier-stichting-open', carrier_id: 'carrier-van-happen', entity_supplier_id: 'entity-stichting-open', agreement_transporter_id: 'entity-van-happen', name: '2026 Stichting Open WEEE Agreement', effective: '2026-01-01', expiry: '2026-12-31', freq: 'MONTHLY', term: 30, tolerance: 5.0, asn: 'AFS-2026-001', rateFactor: 1.0, penalties: [feeSurcharge, feeFlat] },
-    { number: 'CTR-00002', supplier_id: 'supplier-techrecycle', carrier_id: 'carrier-renewi', entity_supplier_id: 'entity-techrecycle', agreement_transporter_id: 'entity-renewi', name: '2026 TechRecycle WEEE Agreement', effective: '2026-01-01', expiry: '2026-12-31', freq: 'MONTHLY', term: 14, tolerance: 3.0, asn: 'AFS-2026-003', rateFactor: 0.95, penalties: [feeSurcharge] },
-    { number: 'CTR-00003', supplier_id: 'supplier-wecycle', carrier_id: 'carrier-suez', entity_supplier_id: 'entity-wecycle', agreement_transporter_id: 'entity-suez', name: '2026 Wecycle WEEE Agreement', effective: '2026-01-01', expiry: '2026-12-31', freq: 'QUARTERLY', term: 30, tolerance: 5.0, asn: 'AFS-2026-004', rateFactor: 1.05, penalties: [feeSurcharge, feeFlat] },
-    { number: 'CTR-00004', supplier_id: 'supplier-coolrec', carrier_id: 'carrier-dejong', entity_supplier_id: 'entity-coolrec', agreement_transporter_id: 'entity-dejong', name: '2026 Coolrec WEEE Agreement', effective: '2026-03-01', expiry: '2027-02-28', freq: 'MONTHLY', term: 45, tolerance: 4.0, asn: 'AFS-2026-005', rateFactor: 0.90, penalties: [feeFlat] },
-    { number: 'CTR-00005', supplier_id: 'supplier-stichting-open', carrier_id: 'carrier-direct-dropoff', entity_supplier_id: 'entity-stichting-open', agreement_transporter_id: 'entity-direct-dropoff', name: '2026 Stichting Open Ad-hoc Drops', effective: '2026-01-01', expiry: '2026-12-31', freq: 'PER_ORDER', term: 30, tolerance: 2.0, asn: 'AFS-2026-001', rateFactor: 1.10, penalties: [feeSurcharge] },
+    { number: 'I-Contract #1', supplier_id: 'supplier-stichting-open', carrier_id: 'carrier-van-happen', entity_supplier_id: 'entity-stichting-open', agreement_transporter_id: 'entity-van-happen', name: '2026 Stichting Open WEEE Agreement', effective: '2026-01-01', expiry: '2026-12-31', freq: 'MONTHLY', term: 30, tolerance: 5.0, asn: 'AFS-2026-001', rateFactor: 1.0, penalties: [feeSurcharge, feeFlat] },
+    { number: 'I-Contract #2', supplier_id: 'supplier-techrecycle', carrier_id: 'carrier-renewi', entity_supplier_id: 'entity-techrecycle', agreement_transporter_id: 'entity-renewi', name: '2026 TechRecycle WEEE Agreement', effective: '2026-01-01', expiry: '2026-12-31', freq: 'MONTHLY', term: 14, tolerance: 3.0, asn: 'AFS-2026-003', rateFactor: 0.95, penalties: [feeSurcharge] },
+    { number: 'I-Contract #3', supplier_id: 'supplier-wecycle', carrier_id: 'carrier-suez', entity_supplier_id: 'entity-wecycle', agreement_transporter_id: 'entity-suez', name: '2026 Wecycle WEEE Agreement', effective: '2026-01-01', expiry: '2026-12-31', freq: 'QUARTERLY', term: 30, tolerance: 5.0, asn: 'AFS-2026-004', rateFactor: 1.05, penalties: [feeSurcharge, feeFlat] },
+    { number: 'I-Contract #4', supplier_id: 'supplier-coolrec', carrier_id: 'carrier-dejong', entity_supplier_id: 'entity-coolrec', agreement_transporter_id: 'entity-dejong', name: '2026 Coolrec WEEE Agreement', effective: '2026-03-01', expiry: '2027-02-28', freq: 'MONTHLY', term: 45, tolerance: 4.0, asn: 'AFS-2026-005', rateFactor: 0.90, penalties: [feeFlat] },
+    { number: 'I-Contract #5', supplier_id: 'supplier-stichting-open', carrier_id: 'carrier-direct-dropoff', entity_supplier_id: 'entity-stichting-open', agreement_transporter_id: 'entity-direct-dropoff', name: '2026 Stichting Open Ad-hoc Drops', effective: '2026-01-01', expiry: '2026-12-31', freq: 'PER_ORDER', term: 30, tolerance: 2.0, asn: 'AFS-2026-001', rateFactor: 1.10, penalties: [feeSurcharge] },
   ];
 
   const materialIds = materialsData.map((m) => m.id);
@@ -602,6 +672,67 @@ async function main() {
     console.log(`Contract ${c.number} seeded.`);
   }
 
+  // ─── OUTGOING Contract (1) ─────────────────────────────────────────
+  const existingOutgoing = await prisma.supplierContract.findFirst({ where: { contract_number: 'O-Contract #1' } });
+  if (existingOutgoing) {
+    await prisma.$transaction(async (tx) => {
+      await tx.contractRateLine.deleteMany({ where: { contract_id: existingOutgoing.id } });
+      await tx.contractWasteStream.deleteMany({ where: { contract_id: existingOutgoing.id } });
+      await tx.contractContaminationPenalty.deleteMany({ where: { contract_id: existingOutgoing.id } });
+      await tx.supplierContract.delete({ where: { id: existingOutgoing.id } });
+    });
+  }
+  await prisma.$transaction(async (tx) => {
+    const outgoingContract = await tx.supplierContract.create({
+      data: {
+        contract_number: 'O-Contract #1',
+        name: '2026 Renewi WEEE Outbound Agreement',
+        contract_type: 'OUTGOING',
+        supplier_id: null,
+        carrier_id: null,
+        entity_supplier_id: null,
+        buyer_id: 'entity-renewi',
+        sender_id: staticeEntity.id,
+        disposer_id: staticeEntity.id,
+        agreement_transporter_id: 'entity-renewi',
+        invoice_entity_id: 'entity-renewi',
+        shipment_type: 'DOMESTIC_NL',
+        effective_date: new Date('2026-01-01'),
+        expiry_date: new Date('2026-12-31'),
+        status: 'ACTIVE',
+        payment_term_days: 30,
+        invoicing_frequency: 'MONTHLY',
+        currency: 'EUR',
+        receiver_name: 'Renewi Nederland B.V.',
+      },
+    });
+    const outCws = await tx.contractWasteStream.create({
+      data: {
+        contract_id: outgoingContract.id,
+        waste_stream_id: weeeStream.id,
+        afvalstroomnummer: 'AFS-OUT-2026-001',
+        receiver_id: 'entity-renewi',
+      },
+    });
+    for (const matId of materialIds) {
+      const rate = parseFloat((baseRates[matId] * 0.85).toFixed(3));
+      await tx.contractRateLine.create({
+        data: {
+          contract_id: outgoingContract.id,
+          contract_waste_stream_id: outCws.id,
+          material_id: matId,
+          pricing_model: 'WEIGHT',
+          unit_rate: rate,
+          btw_rate: 21,
+          processing_method: processingMethods[matId] || null,
+          valid_from: new Date('2026-01-01'),
+          valid_to: new Date('2026-12-31'),
+        },
+      });
+    }
+  });
+  console.log('OUTGOING contract CTR-00006 seeded.');
+
   console.log('Master data seeding complete.');
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -610,11 +741,11 @@ async function main() {
 
   // ─── Vehicles (5) ──────────────────────────────────────────────────
   const vehiclesData = [
-    { id: 'seed-vehicle-vh-001', registration_plate: 'NL-VH-142', carrier_id: 'carrier-van-happen', type: 'Truck' },
-    { id: 'seed-vehicle-rn-001', registration_plate: 'NL-RN-308', carrier_id: 'carrier-renewi', type: 'Truck' },
-    { id: 'seed-vehicle-sz-001', registration_plate: 'NL-SZ-517', carrier_id: 'carrier-suez', type: 'Truck' },
-    { id: 'seed-vehicle-dj-001', registration_plate: 'NL-DJ-224', carrier_id: 'carrier-dejong', type: 'Truck' },
-    { id: 'seed-vehicle-dd-001', registration_plate: 'NL-DD-099', carrier_id: 'carrier-direct-dropoff', type: 'Van' },
+    { id: 'seed-vehicle-vh-001', registration_plate: '12-ABC-3', carrier_id: 'carrier-van-happen', type: 'Truck' },
+    { id: 'seed-vehicle-rn-001', registration_plate: '34-BDF-5', carrier_id: 'carrier-renewi', type: 'Truck' },
+    { id: 'seed-vehicle-sz-001', registration_plate: '56-GJK-7', carrier_id: 'carrier-suez', type: 'Truck' },
+    { id: 'seed-vehicle-dj-001', registration_plate: '78-LMN-9', carrier_id: 'carrier-dejong', type: 'Truck' },
+    { id: 'seed-vehicle-dd-001', registration_plate: '90-PQR-1', carrier_id: 'carrier-direct-dropoff', type: 'Van' },
   ];
 
   for (const v of vehiclesData) {
@@ -635,13 +766,13 @@ async function main() {
 
   // ─── Inbound Orders (7) ───────────────────────────────────────────
   const ordersData = [
-    { id: 'seed-order-001', order_number: 'ORD-00001', supplier_id: 'supplier-stichting-open', carrier_id: 'carrier-van-happen', entity_supplier_id: 'entity-stichting-open', transporter_id: 'entity-van-happen', planned_date: '2026-03-10', expected_skip_count: 2, status: 'COMPLETED', vehicle_plate: 'NL-VH-142', afvalstroomnummer: 'AFS-2026-001', received_asset_count: 2 },
-    { id: 'seed-order-002', order_number: 'ORD-00002', supplier_id: 'supplier-techrecycle', carrier_id: 'carrier-renewi', entity_supplier_id: 'entity-techrecycle', transporter_id: 'entity-renewi', planned_date: '2026-03-12', expected_skip_count: 1, status: 'COMPLETED', vehicle_plate: 'NL-RN-308', afvalstroomnummer: 'AFS-2026-003', received_asset_count: 1 },
-    { id: 'seed-order-003', order_number: 'ORD-00003', supplier_id: 'supplier-wecycle', carrier_id: 'carrier-suez', entity_supplier_id: 'entity-wecycle', transporter_id: 'entity-suez', planned_date: '2026-03-14', expected_skip_count: 3, status: 'COMPLETED', vehicle_plate: 'NL-SZ-517', afvalstroomnummer: 'AFS-2026-004', received_asset_count: 3 },
-    { id: 'seed-order-004', order_number: 'ORD-00004', supplier_id: 'supplier-coolrec', carrier_id: 'carrier-dejong', entity_supplier_id: 'entity-coolrec', transporter_id: 'entity-dejong', planned_date: '2026-03-17', expected_skip_count: 1, status: 'COMPLETED', vehicle_plate: 'NL-DJ-224', afvalstroomnummer: 'AFS-2026-005', received_asset_count: 1 },
-    { id: 'seed-order-005', order_number: 'ORD-00005', supplier_id: 'supplier-stichting-open', carrier_id: 'carrier-direct-dropoff', entity_supplier_id: 'entity-stichting-open', transporter_id: 'entity-direct-dropoff', planned_date: '2026-03-20', expected_skip_count: 1, status: 'IN_PROGRESS', vehicle_plate: 'NL-DD-099', afvalstroomnummer: 'AFS-2026-001', received_asset_count: 1 },
-    { id: 'seed-order-006', order_number: 'ORD-00006', supplier_id: 'supplier-techrecycle', carrier_id: 'carrier-renewi', entity_supplier_id: 'entity-techrecycle', transporter_id: 'entity-renewi', planned_date: '2026-03-22', expected_skip_count: 1, status: 'ARRIVED', vehicle_plate: 'NL-RN-308', afvalstroomnummer: 'AFS-2026-003', received_asset_count: 1 },
-    { id: 'seed-order-007', order_number: 'ORD-00007', supplier_id: 'supplier-wecycle', carrier_id: 'carrier-suez', entity_supplier_id: 'entity-wecycle', transporter_id: 'entity-suez', planned_date: '2026-03-25', expected_skip_count: 2, status: 'PLANNED', vehicle_plate: 'NL-SZ-517', afvalstroomnummer: 'AFS-2026-004', received_asset_count: 0 },
+    { id: 'seed-order-001', order_number: 'ORD-00001', supplier_id: 'supplier-stichting-open', carrier_id: 'carrier-van-happen', entity_supplier_id: 'entity-stichting-open', transporter_id: 'entity-van-happen', planned_date: '2026-03-10', expected_skip_count: 2, status: 'COMPLETED', vehicle_plate: '12-ABC-3', afvalstroomnummer: 'AFS-2026-001', received_asset_count: 2 },
+    { id: 'seed-order-002', order_number: 'ORD-00002', supplier_id: 'supplier-techrecycle', carrier_id: 'carrier-renewi', entity_supplier_id: 'entity-techrecycle', transporter_id: 'entity-renewi', planned_date: '2026-03-12', expected_skip_count: 1, status: 'COMPLETED', vehicle_plate: '34-BDF-5', afvalstroomnummer: 'AFS-2026-003', received_asset_count: 1 },
+    { id: 'seed-order-003', order_number: 'ORD-00003', supplier_id: 'supplier-wecycle', carrier_id: 'carrier-suez', entity_supplier_id: 'entity-wecycle', transporter_id: 'entity-suez', planned_date: '2026-03-14', expected_skip_count: 3, status: 'COMPLETED', vehicle_plate: '56-GJK-7', afvalstroomnummer: 'AFS-2026-004', received_asset_count: 3 },
+    { id: 'seed-order-004', order_number: 'ORD-00004', supplier_id: 'supplier-coolrec', carrier_id: 'carrier-dejong', entity_supplier_id: 'entity-coolrec', transporter_id: 'entity-dejong', planned_date: '2026-03-17', expected_skip_count: 1, status: 'COMPLETED', vehicle_plate: '78-LMN-9', afvalstroomnummer: 'AFS-2026-005', received_asset_count: 1 },
+    { id: 'seed-order-005', order_number: 'ORD-00005', supplier_id: 'supplier-stichting-open', carrier_id: 'carrier-direct-dropoff', entity_supplier_id: 'entity-stichting-open', transporter_id: 'entity-direct-dropoff', planned_date: '2026-03-20', expected_skip_count: 1, status: 'IN_PROGRESS', vehicle_plate: '90-PQR-1', afvalstroomnummer: 'AFS-2026-001', received_asset_count: 1 },
+    { id: 'seed-order-006', order_number: 'ORD-00006', supplier_id: 'supplier-techrecycle', carrier_id: 'carrier-renewi', entity_supplier_id: 'entity-techrecycle', transporter_id: 'entity-renewi', planned_date: '2026-03-22', expected_skip_count: 1, status: 'ARRIVED', vehicle_plate: '34-BDF-5', afvalstroomnummer: 'AFS-2026-003', received_asset_count: 1 },
+    { id: 'seed-order-007', order_number: 'ORD-00007', supplier_id: 'supplier-wecycle', carrier_id: 'carrier-suez', entity_supplier_id: 'entity-wecycle', transporter_id: 'entity-suez', planned_date: '2026-03-25', expected_skip_count: 2, status: 'PLANNED', vehicle_plate: '56-GJK-7', afvalstroomnummer: 'AFS-2026-004', received_asset_count: 0 },
   ];
 
   for (const o of ordersData) {
@@ -717,12 +848,12 @@ async function main() {
 
   // ─── Inbounds (for orders 1-6) ────────────────────────────────────
   const inboundsData = [
-    { id: 'seed-inbound-001', inbound_number: 'INB-00001', order_id: 'seed-order-001', vehicle_id: 'seed-vehicle-vh-001', status: 'SORTED', arrived_at: '2026-03-10T08:10:00Z', gross_weight_kg: 5400, tare_weight_kg: 3300, net_weight_kg: 2100 },
-    { id: 'seed-inbound-002', inbound_number: 'INB-00002', order_id: 'seed-order-002', vehicle_id: 'seed-vehicle-rn-001', status: 'SORTED', arrived_at: '2026-03-12T08:55:00Z', gross_weight_kg: 3270, tare_weight_kg: 2500, net_weight_kg: 770 },
-    { id: 'seed-inbound-003', inbound_number: 'INB-00003', order_id: 'seed-order-003', vehicle_id: 'seed-vehicle-sz-001', status: 'SORTED', arrived_at: '2026-03-14T07:25:00Z', gross_weight_kg: 6720, tare_weight_kg: 5000, net_weight_kg: 1720 },
-    { id: 'seed-inbound-004', inbound_number: 'INB-00004', order_id: 'seed-order-004', vehicle_id: 'seed-vehicle-dj-001', status: 'SORTED', arrived_at: '2026-03-17T08:40:00Z', gross_weight_kg: 4580, tare_weight_kg: 3500, net_weight_kg: 1080 },
-    { id: 'seed-inbound-005', inbound_number: 'INB-00005', order_id: 'seed-order-005', vehicle_id: 'seed-vehicle-dd-001', status: 'READY_FOR_SORTING', arrived_at: '2026-03-20T09:25:00Z', gross_weight_kg: 2950, tare_weight_kg: 2500, net_weight_kg: 450 },
-    { id: 'seed-inbound-006', inbound_number: 'INB-00006', order_id: 'seed-order-006', vehicle_id: 'seed-vehicle-rn-001', status: 'ARRIVED', arrived_at: '2026-03-22T09:55:00Z', gross_weight_kg: 3100, tare_weight_kg: null, net_weight_kg: null },
+    { id: 'seed-inbound-001', inbound_number: 'Inbound #1', order_id: 'seed-order-001', vehicle_id: 'seed-vehicle-vh-001', status: 'SORTED', arrived_at: '2026-03-10T08:10:00Z', gross_weight_kg: 5400, tare_weight_kg: 3300, net_weight_kg: 2100 },
+    { id: 'seed-inbound-002', inbound_number: 'Inbound #2', order_id: 'seed-order-002', vehicle_id: 'seed-vehicle-rn-001', status: 'SORTED', arrived_at: '2026-03-12T08:55:00Z', gross_weight_kg: 3270, tare_weight_kg: 2500, net_weight_kg: 770 },
+    { id: 'seed-inbound-003', inbound_number: 'Inbound #3', order_id: 'seed-order-003', vehicle_id: 'seed-vehicle-sz-001', status: 'SORTED', arrived_at: '2026-03-14T07:25:00Z', gross_weight_kg: 6720, tare_weight_kg: 5000, net_weight_kg: 1720 },
+    { id: 'seed-inbound-004', inbound_number: 'Inbound #4', order_id: 'seed-order-004', vehicle_id: 'seed-vehicle-dj-001', status: 'SORTED', arrived_at: '2026-03-17T08:40:00Z', gross_weight_kg: 4580, tare_weight_kg: 3500, net_weight_kg: 1080 },
+    { id: 'seed-inbound-005', inbound_number: 'Inbound #5', order_id: 'seed-order-005', vehicle_id: 'seed-vehicle-dd-001', status: 'READY_FOR_SORTING', arrived_at: '2026-03-20T09:25:00Z', gross_weight_kg: 2950, tare_weight_kg: 2500, net_weight_kg: 450 },
+    { id: 'seed-inbound-006', inbound_number: 'Inbound #6', order_id: 'seed-order-006', vehicle_id: 'seed-vehicle-rn-001', status: 'ARRIVED', arrived_at: '2026-03-22T09:55:00Z', gross_weight_kg: 3100, tare_weight_kg: null, net_weight_kg: null },
   ];
 
   for (const ib of inboundsData) {

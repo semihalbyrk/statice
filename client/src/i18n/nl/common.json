@@ -45,7 +45,18 @@
     "NOT_STARTED": "Niet Gestart",
     "FINALIZED": "Definitief",
     "CONFIRMED": "Bevestigd",
-    "SUPERSEDED": "Vervangen"
+    "SUPERSEDED": "Vervangen",
+    "CREATED": "Aangemaakt",
+    "LOADING": "Laden",
+    "WEIGHED": "Gewogen",
+    "DOCUMENTS_READY": "Documenten Gereed",
+    "DEPARTED": "Vertrokken",
+    "DELIVERED": "Afgeleverd",
+    "AVAILABLE": "Beschikbaar",
+    "ASSIGNED": "Toegewezen",
+    "SHIPPED": "Verzonden",
+    "DOMESTIC_NL": "Nationaal (NL)",
+    "EU_CROSS_BORDER": "EU Grensoverschrijdend"
   },
   "roles": {
     "ADMIN": "Beheerder",
@@ -132,7 +143,11 @@
     "totalCount": "{{count}} totaal",
     "pageOf": "Pagina {{page}} van {{total}}",
     "perPage": "{{count}} / pagina",
-    "status": "Status"
+    "status": "Status",
+    "rowsPerPage": "Rijen per pagina",
+    "showingRange": "{{from}}–{{to}} van {{total}}",
+    "previous": "Vorige",
+    "next": "Volgende"
   },
   "confirm": {
     "areYouSure": "Weet u het zeker?",
@@ -152,6 +167,8 @@
     "phone": "Telefoon",
     "status": "Status",
     "notes": "Opmerkingen",
+    "createdAt": "Aangemaakt op",
+    "updatedAt": "Bijgewerkt op",
     "optional": "Optioneel",
     "required": "Verplicht",
     "active": "Actief",
@@ -162,5 +179,12 @@
   "no": "Nee",
   "all": "Alle",
   "total": "Totaal",
-  "or": "of"
+  "or": "of",
+  "idleWarning": {
+    "title": "U wordt binnenkort uitgelogd",
+    "body": "Om veiligheidsredenen wordt u na een periode van inactiviteit uitgelogd.",
+    "stay": "Ingelogd blijven",
+    "signOut": "Uitloggen",
+    "signedOutToast": "Uitgelogd wegens inactiviteit"
+  }
 }

@@ -193,7 +193,7 @@ describe('ContractDetailPage', () => {
       expect(screen.getByText('Contamination Penalties (1)')).toBeInTheDocument();
     });
 
-    expect(screen.getByText('CONTAMINATION_SURCHARGE')).toBeInTheDocument();
+    expect(screen.getByText('Contamination Surcharge')).toBeInTheDocument();
     expect(screen.getByText('10%')).toBeInTheDocument();
   });
 

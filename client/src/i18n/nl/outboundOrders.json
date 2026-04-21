@@ -1,0 +1,81 @@
+{
+  "title": "Uitgaande Bestellingen",
+  "createOrder": "Uitgaande Bestelling Aanmaken",
+  "orderDetail": "Besteldetails",
+  "searchPlaceholder": "Zoek op bestelnummer...",
+  "allStatuses": "Alle statussen",
+  "fields": {
+    "orderNumber": "Bestelling #",
+    "status": "Status",
+    "buyer": "Koper",
+    "sender": "Afzender",
+    "disposer": "Verwerker",
+    "disposerSite": "Verwerkerlocatie",
+    "shipmentType": "Verzendtype",
+    "agreementTransporter": "Contracttransporteur",
+    "outsourcedTransporter": "Uitbestede Transporteur",
+    "vehiclePlate": "Kenteken",
+    "plannedDate": "Geplande Datum",
+    "timeWindowStart": "Tijdvenster Begin",
+    "timeWindowEnd": "Tijdvenster Einde",
+    "expectedOutbounds": "Verwachte Uitgaven",
+    "outbounds": "Uitgaande Zendingen",
+    "contract": "Contract",
+    "notes": "Notities",
+    "wasteStream": "Afvalstroom",
+    "receiver": "Ontvanger",
+    "asn": "ASN",
+    "material": "Materiaal",
+    "processingMethod": "Verwerkingsmethode",
+    "plannedAmount": "Geplande Hoeveelheid (kg)",
+    "netWeight": "Netto Gewicht",
+    "documents": "Documenten",
+    "departedAt": "Vertrokken Op"
+  },
+  "status": {
+    "PLANNED": "Gepland",
+    "IN_PROGRESS": "In Uitvoering",
+    "COMPLETED": "Voltooid",
+    "INVOICED": "Gefactureerd",
+    "CANCELLED": "Geannuleerd"
+  },
+  "shipmentTypes": {
+    "DOMESTIC_NL": "Binnenland NL",
+    "EU_CROSS_BORDER": "EU Grensoverschrijdend"
+  },
+  "toast": {
+    "created": "Uitgaande bestelling aangemaakt",
+    "createFailed": "Uitgaande bestelling aanmaken mislukt",
+    "cancelled": "Uitgaande bestelling geannuleerd",
+    "statusUpdated": "Status bijgewerkt naar {{status}}",
+    "statusFailed": "Status bijwerken mislukt",
+    "outboundCreated": "Uitgaande zending aangemaakt",
+    "outboundCreateFailed": "Uitgaande zending aanmaken mislukt"
+  },
+  "empty": "Geen uitgaande bestellingen gevonden",
+  "sections": {
+    "contractParties": "Contract & Partijen",
+    "transport": "Transport",
+    "scheduling": "Planning",
+    "wasteStreams": "Afvalstromen",
+    "notes": "Notities",
+    "outbounds": "Uitgaande Zendingen"
+  },
+  "buttons": {
+    "cancel": "Annuleren",
+    "create": "Bestelling Aanmaken",
+    "creating": "Aanmaken...",
+    "edit": "Bewerken",
+    "createOutbound": "Uitgaande Zending Aanmaken"
+  },
+  "pagination": {
+    "total": "{{count}} uitgaande bestellingen in totaal"
+  },
+  "useOutsourcedTransporter": "Gebruik uitbestede transporteur voor deze zending",
+  "selectBuyer": "Selecteer een koper...",
+  "selectBuyerFirst": "Selecteer eerst een koper...",
+  "selectContract": "Selecteer een contract...",
+  "noWasteStreams": "Selecteer een contract om afvalstromen te zien",
+  "notesPlaceholder": "Optionele notities...",
+  "outboundsDescription": "Gekoppelde uitgaande zendingen voor deze bestelling."
+}

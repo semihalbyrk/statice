@@ -63,10 +63,10 @@ describe('ClickableStatusBadge', () => {
     );
 
     fireEvent.click(screen.getByRole('button'));
-    expect(screen.getByText('Weigh In')).toBeInTheDocument();
+    expect(screen.getByText('Weighed In')).toBeInTheDocument();
 
-    fireEvent.click(screen.getByText('Weigh In'));
-    expect(screen.queryByText('Weigh In')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByText('Weighed In'));
+    expect(screen.queryByText('Weighed In')).not.toBeInTheDocument();
   });
 
   it('shows chevron indicator when transitions are available', () => {
@@ -110,7 +110,7 @@ describe('ClickableStatusBadge', () => {
 
   it('falls back to raw status string for unknown statuses', () => {
     render(<ClickableStatusBadge status="UNKNOWN_STATUS" />);
-    expect(screen.getByText('UNKNOWN_STATUS')).toBeInTheDocument();
+    expect(screen.getByText('UNKNOWN STATUS')).toBeInTheDocument();
   });
 
   it('closes the dropdown on outside click', () => {
@@ -129,7 +129,7 @@ describe('ClickableStatusBadge', () => {
     expect(screen.queryByText('In Progress')).not.toBeInTheDocument();
   });
 
-  it('uses TRANSITION_LABELS for display names', () => {
+  it('uses translated status labels for display names', () => {
     render(
       <ClickableStatusBadge
         status="ARRIVED"
@@ -140,7 +140,7 @@ describe('ClickableStatusBadge', () => {
 
     fireEvent.click(screen.getByRole('button'));
 
-    expect(screen.getByText('Weigh In')).toBeInTheDocument();
-    expect(screen.getByText('Weigh Out')).toBeInTheDocument();
+    expect(screen.getByText('Weighed In')).toBeInTheDocument();
+    expect(screen.getByText('Weighed Out')).toBeInTheDocument();
   });
 });

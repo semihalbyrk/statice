@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { ExternalLink, Loader2, MoreVertical, Pencil, Upload, Download, Trash2, FileText } from 'lucide-react';
+import { ExternalLink, Loader2, MoreVertical, Pencil, Upload, Download, Trash2, FileText, Truck } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useTranslation } from 'react-i18next';
 import useOrdersStore from '../../store/ordersStore';
@@ -191,26 +191,37 @@ export default function OrderDetailPage() {
             </span>
           )}
         </div>
-        {canEdit && order.status === 'PLANNED' && (
-          <div className="relative">
+        <div className="flex items-center gap-2">
+          {['PLANNED', 'ARRIVED', 'IN_PROGRESS'].includes(order.status) && (
             <button
-              onClick={() => setShowActions((v) => !v)}
-              className="h-9 px-3 bg-white text-grey-700 border border-grey-300 rounded-md text-sm font-semibold hover:bg-grey-50 transition-colors inline-flex items-center gap-1.5"
+              onClick={() => navigate('/arrival')}
+              className="h-9 px-4 bg-green-500 text-white rounded-md text-sm font-semibold hover:bg-green-700 transition-colors inline-flex items-center gap-2"
             >
-              {t('orders:detail.actions')} <MoreVertical size={14} />
+              <Truck size={15} />
+              {t('orders:createInbound', 'Create Inbound')}
             </button>
-            {showActions && (
-              <div className="absolute right-0 top-full mt-1 z-10 bg-white border border-grey-200 rounded-md shadow-md py-1 min-w-[140px]">
-                <button
-                  onClick={() => { setShowActions(false); setShowEdit(true); }}
-                  className="w-full text-left px-3 py-2 text-sm text-grey-700 hover:bg-grey-50 flex items-center gap-2"
-                >
-                  <Pencil size={14} /> {t('orders:detail.editOrder')}
-                </button>
-              </div>
-            )}
-          </div>
-        )}
+          )}
+          {canEdit && order.status === 'PLANNED' && (
+            <div className="relative">
+              <button
+                onClick={() => setShowActions((v) => !v)}
+                className="h-9 px-3 bg-white text-grey-700 border border-grey-300 rounded-md text-sm font-semibold hover:bg-grey-50 transition-colors inline-flex items-center gap-1.5"
+              >
+                {t('orders:detail.actions')} <MoreVertical size={14} />
+              </button>
+              {showActions && (
+                <div className="absolute right-0 top-full mt-1 z-10 bg-white border border-grey-200 rounded-md shadow-md py-1 min-w-[140px]">
+                  <button
+                    onClick={() => { setShowActions(false); setShowEdit(true); }}
+                    className="w-full text-left px-3 py-2 text-sm text-grey-700 hover:bg-grey-50 flex items-center gap-2"
+                  >
+                    <Pencil size={14} /> {t('orders:detail.editOrder')}
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
       </div>
 
       <div className="bg-white rounded-lg border border-grey-200 shadow-sm p-4 mb-6">
@@ -236,6 +247,11 @@ export default function OrderDetailPage() {
                     {ows.afvalstroomnummer && (
                       <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-25 text-green-700 border border-green-300">
                         ASN: {ows.afvalstroomnummer}
+                      </span>
+                    )}
+                    {ows.planned_amount_kg != null && (
+                      <span className="text-xs text-grey-500">
+                        {Number(ows.planned_amount_kg).toLocaleString()} kg planned
                       </span>
                     )}
                   </div>

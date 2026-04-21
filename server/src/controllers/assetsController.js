@@ -4,9 +4,20 @@ const { previewNextLabel, previewNextContainerLabel } = require('../utils/assetL
 async function list(req, res, next) {
   try {
     const inboundId = req.query.inbound_id || req.query.weighing_event_id;
-    if (!inboundId) return res.status(400).json({ error: 'inbound_id query parameter is required' });
-    const assets = await assetService.listAssets(inboundId);
-    res.json({ data: assets });
+    if (inboundId) {
+      const assets = await assetService.listAssets(inboundId);
+      return res.json({ data: assets });
+    }
+
+    const { search, status, page, limit } = req.query;
+    const hasGlobalListParams = [search, status, page, limit].some((value) => value !== undefined);
+
+    if (!hasGlobalListParams) {
+      return res.status(400).json({ error: 'inbound_id query parameter is required' });
+    }
+
+    const result = await assetService.listAllAssets({ search, status, page, limit });
+    return res.json(result);
   } catch (err) { next(err); }
 }
 

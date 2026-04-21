@@ -1,6 +1,7 @@
 const jwt = require('jsonwebtoken');
+const prisma = require('../utils/prismaClient');
 
-function authenticateToken(req, res, next) {
+async function authenticateToken(req, res, next) {
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.split(' ')[1];
 
@@ -8,13 +9,29 @@ function authenticateToken(req, res, next) {
     return res.status(401).json({ error: 'Access token required' });
   }
 
+  let decoded;
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    req.user = decoded;
-    next();
+    decoded = jwt.verify(token, process.env.JWT_SECRET);
   } catch {
     return res.status(401).json({ error: 'Invalid or expired token' });
   }
+
+  // Reject tokens belonging to deactivated users — otherwise they stay valid
+  // for up to the access-token TTL after an admin disables the account.
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: decoded.userId },
+      select: { is_active: true },
+    });
+    if (!user || !user.is_active) {
+      return res.status(401).json({ error: 'Account disabled' });
+    }
+  } catch (err) {
+    return next(err);
+  }
+
+  req.user = decoded;
+  next();
 }
 
 function requireRole(roles) {

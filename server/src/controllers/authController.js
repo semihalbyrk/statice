@@ -5,7 +5,7 @@ const prisma = require('../utils/prismaClient');
 
 const COOKIE_OPTIONS = {
   httpOnly: true,
-  sameSite: 'strict',
+  sameSite: 'lax',
   secure: process.env.NODE_ENV === 'production',
   maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
 };
@@ -79,6 +79,7 @@ async function refresh(req, res, next) {
   try {
     const token = req.cookies.refreshToken;
     if (!token) {
+      res.clearCookie('refreshToken');
       return res.status(401).json({ error: 'Refresh token required' });
     }
 
@@ -86,16 +87,26 @@ async function refresh(req, res, next) {
     try {
       decoded = jwt.verify(token, process.env.JWT_REFRESH_SECRET);
     } catch {
+      res.clearCookie('refreshToken');
       return res.status(401).json({ error: 'Invalid or expired refresh token' });
     }
 
     const user = await prisma.user.findUnique({ where: { id: decoded.userId } });
     if (!user || !user.is_active) {
+      res.clearCookie('refreshToken');
       return res.status(401).json({ error: 'User not found or disabled' });
     }
 
     const accessToken = generateAccessToken(user);
-    return res.json({ accessToken });
+    return res.json({
+      accessToken,
+      user: {
+        id: user.id,
+        email: user.email,
+        full_name: user.full_name,
+        role: user.role,
+      },
+    });
   } catch (err) {
     next(err);
   }

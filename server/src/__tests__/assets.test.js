@@ -43,6 +43,21 @@ describe('GET /api/assets', () => {
     expect(Array.isArray(res.body.data)).toBe(true);
     expect(res.body.data).toHaveLength(0);
   });
+
+  it('returns paginated global asset list when list query params are provided', async () => {
+    const token = await getToken('admin@statice.nl', 'Admin1234!');
+
+    const res = await request(app)
+      .get('/api/assets?search=&page=1&limit=25')
+      .set('Authorization', `Bearer ${token}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveProperty('data');
+    expect(res.body).toHaveProperty('total');
+    expect(res.body.page).toBe(1);
+    expect(res.body.limit).toBe(25);
+    expect(Array.isArray(res.body.data)).toBe(true);
+  });
 });
 
 describe('GET /api/assets/:id', () => {

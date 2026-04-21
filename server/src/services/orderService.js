@@ -16,6 +16,7 @@ const ORDER_INCLUDE = {
       id: true,
       waste_stream_id: true,
       afvalstroomnummer: true,
+      planned_amount_kg: true,
       waste_stream: { select: { id: true, name: true, code: true } },
     },
   },
@@ -83,7 +84,7 @@ function serializeMatchCandidate(order, matchStrategy, options = {}) {
   };
 }
 
-async function syncOrderWasteStreams(tx, orderId, wasteStreamIds, asnMap = {}) {
+async function syncOrderWasteStreams(tx, orderId, wasteStreamIds, asnMap = {}, plannedAmountMap = {}) {
   await tx.orderWasteStream.deleteMany({ where: { order_id: orderId } });
   if (wasteStreamIds && wasteStreamIds.length > 0) {
     await tx.orderWasteStream.createMany({
@@ -92,6 +93,7 @@ async function syncOrderWasteStreams(tx, orderId, wasteStreamIds, asnMap = {}) {
         order_id: orderId,
         waste_stream_id: wsId,
         afvalstroomnummer: asnMap[wsId] || null,
+        planned_amount_kg: plannedAmountMap[wsId] != null ? parseFloat(plannedAmountMap[wsId]) : null,
       })),
     });
   }
@@ -169,6 +171,58 @@ async function createOrder(data, userId) {
   return prisma.$transaction(async (tx) => {
     const orderNumber = await generateOrderNumber(tx);
 
+    // Resolve Entity IDs → legacy IDs (entity refactor compatibility)
+    // Frontend may send Entity IDs in supplier_id / transporter_id; InboundOrder FKs are legacy
+    let legacySupplierId = data.supplier_id;
+    let entitySupplierId = data.entity_supplier_id || null;
+    const supplierMatchesLegacy = legacySupplierId
+      ? await tx.supplier.findUnique({ where: { id: legacySupplierId }, select: { id: true } })
+      : null;
+    if (!supplierMatchesLegacy && legacySupplierId) {
+      // supplier_id is an Entity ID → find legacy Supplier via migrated_to_entity_id
+      const legacy = await tx.supplier.findFirst({
+        where: { migrated_to_entity_id: legacySupplierId },
+        select: { id: true },
+      });
+      if (!legacy) {
+        const err = new Error('Supplier not found (no legacy mapping)');
+        err.statusCode = 400;
+        throw err;
+      }
+      entitySupplierId = entitySupplierId || legacySupplierId;
+      legacySupplierId = legacy.id;
+    }
+
+    let legacyCarrierId = data.carrier_id || null;
+    let entityTransporterId = data.transporter_id || null;
+    const carrierMatchesLegacy = legacyCarrierId
+      ? await tx.carrier.findUnique({ where: { id: legacyCarrierId }, select: { id: true } })
+      : null;
+    if (!carrierMatchesLegacy && legacyCarrierId) {
+      const legacyCarrier = await tx.carrier.findFirst({
+        where: { migrated_to_entity_id: legacyCarrierId },
+        select: { id: true },
+      });
+      if (!legacyCarrier) {
+        const err = new Error('Carrier not found (no legacy mapping)');
+        err.statusCode = 400;
+        throw err;
+      }
+      entityTransporterId = entityTransporterId || legacyCarrierId;
+      legacyCarrierId = legacyCarrier.id;
+    } else if (!legacyCarrierId && entityTransporterId) {
+      const legacyCarrier = await tx.carrier.findFirst({
+        where: { migrated_to_entity_id: entityTransporterId },
+        select: { id: true },
+      });
+      if (!legacyCarrier) {
+        const err = new Error('Carrier not found (no legacy mapping)');
+        err.statusCode = 400;
+        throw err;
+      }
+      legacyCarrierId = legacyCarrier.id;
+    }
+
     // waste_stream_ids: array of waste stream IDs. First one becomes primary waste_stream_id.
     const wasteStreamIds = data.waste_stream_ids && data.waste_stream_ids.length > 0
       ? data.waste_stream_ids
@@ -194,11 +248,11 @@ async function createOrder(data, userId) {
       }
     } else if (data.afvalstroomnummer) {
       // Legacy: PRO afvalstroomnummer validation (SUP-D02)
-      const supplier = await tx.supplier.findUnique({ where: { id: data.supplier_id }, select: { supplier_type: true } });
+      const supplier = await tx.supplier.findUnique({ where: { id: legacySupplierId }, select: { supplier_type: true } });
       if (supplier && supplier.supplier_type === 'PRO') {
         const validAfs = await tx.supplierAfvalstroomnummer.findFirst({
           where: {
-            supplier_id: data.supplier_id,
+            supplier_id: legacySupplierId,
             afvalstroomnummer: data.afvalstroomnummer,
             is_active: true,
           },
@@ -212,7 +266,7 @@ async function createOrder(data, userId) {
     }
 
     // Auto-fill transporter from contract if not explicitly provided
-    let transporterId = data.transporter_id || null;
+    let transporterId = entityTransporterId || null;
     if (!transporterId && data.contract_id) {
       const contract = await tx.supplierContract.findUnique({
         where: { id: data.contract_id },
@@ -226,8 +280,8 @@ async function createOrder(data, userId) {
     const order = await tx.inboundOrder.create({
       data: {
         order_number: orderNumber,
-        carrier_id: data.carrier_id,
-        supplier_id: data.supplier_id,
+        carrier_id: legacyCarrierId,
+        supplier_id: legacySupplierId,
         waste_stream_id: primaryWsId,
         planned_date: new Date(data.planned_date),
         planned_time_window_start: data.planned_time_window_start ? new Date(data.planned_time_window_start) : null,
@@ -239,14 +293,20 @@ async function createOrder(data, userId) {
         is_lzv: data.is_lzv || false,
         client_reference: data.client_reference || null,
         transporter_id: transporterId,
-        entity_supplier_id: data.entity_supplier_id || null,
+        entity_supplier_id: entitySupplierId,
         status: 'PLANNED',
         is_adhoc: false,
         created_by: userId,
       },
     });
 
-    await syncOrderWasteStreams(tx, order.id, wasteStreamIds, asnMap);
+    // Build planned amount map from data
+    const plannedAmountMap = {};
+    if (data.planned_amounts && typeof data.planned_amounts === 'object') {
+      Object.assign(plannedAmountMap, data.planned_amounts);
+    }
+
+    await syncOrderWasteStreams(tx, order.id, wasteStreamIds, asnMap, plannedAmountMap);
 
     const full = await tx.inboundOrder.findUnique({
       where: { id: order.id },
@@ -284,7 +344,42 @@ async function updateOrder(id, data, userId) {
     }
 
     const updateData = {};
-    if (data.carrier_id !== undefined) updateData.carrier_id = data.carrier_id;
+    if (data.carrier_id !== undefined || data.transporter_id !== undefined) {
+      let legacyCarrierId = data.carrier_id !== undefined ? data.carrier_id : existing.carrier_id;
+      let entityTransporterId = data.transporter_id !== undefined ? (data.transporter_id || null) : existing.transporter_id;
+
+      const carrierMatchesLegacy = legacyCarrierId
+        ? await tx.carrier.findUnique({ where: { id: legacyCarrierId }, select: { id: true } })
+        : null;
+
+      if (!carrierMatchesLegacy && legacyCarrierId) {
+        const legacyCarrier = await tx.carrier.findFirst({
+          where: { migrated_to_entity_id: legacyCarrierId },
+          select: { id: true },
+        });
+        if (!legacyCarrier) {
+          const err = new Error('Carrier not found (no legacy mapping)');
+          err.statusCode = 400;
+          throw err;
+        }
+        entityTransporterId = entityTransporterId || legacyCarrierId;
+        legacyCarrierId = legacyCarrier.id;
+      } else if (!legacyCarrierId && entityTransporterId) {
+        const legacyCarrier = await tx.carrier.findFirst({
+          where: { migrated_to_entity_id: entityTransporterId },
+          select: { id: true },
+        });
+        if (!legacyCarrier) {
+          const err = new Error('Carrier not found (no legacy mapping)');
+          err.statusCode = 400;
+          throw err;
+        }
+        legacyCarrierId = legacyCarrier.id;
+      }
+
+      updateData.carrier_id = legacyCarrierId;
+      updateData.transporter_id = entityTransporterId;
+    }
     if (data.supplier_id !== undefined) updateData.supplier_id = data.supplier_id;
     if (data.planned_date !== undefined) updateData.planned_date = new Date(data.planned_date);
     if (data.planned_time_window_start !== undefined) updateData.planned_time_window_start = data.planned_time_window_start ? new Date(data.planned_time_window_start) : null;
@@ -294,7 +389,6 @@ async function updateOrder(id, data, userId) {
     if (data.afvalstroomnummer !== undefined) updateData.afvalstroomnummer = data.afvalstroomnummer;
     if (data.notes !== undefined) updateData.notes = data.notes;
     if (data.status !== undefined) updateData.status = data.status;
-    if (data.transporter_id !== undefined) updateData.transporter_id = data.transporter_id || null;
     if (data.entity_supplier_id !== undefined) updateData.entity_supplier_id = data.entity_supplier_id || null;
 
     // If waste_stream_ids provided, update primary + junction table
@@ -312,7 +406,8 @@ async function updateOrder(id, data, userId) {
           asnMap[cws.waste_stream_id] = cws.afvalstroomnummer;
         }
       }
-      await syncOrderWasteStreams(tx, id, data.waste_stream_ids, asnMap);
+      const plannedAmtMap = data.planned_amounts || {};
+      await syncOrderWasteStreams(tx, id, data.waste_stream_ids, asnMap, plannedAmtMap);
     } else if (data.waste_stream_id !== undefined) {
       updateData.waste_stream_id = data.waste_stream_id;
       await syncOrderWasteStreams(tx, id, [data.waste_stream_id]);

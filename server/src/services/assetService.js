@@ -18,7 +18,23 @@ const ASSET_INCLUDE = {
     select: { id: true, sequence: true, weight_kg: true },
   },
   inbound: {
-    select: { id: true, status: true, order_id: true, waste_stream_id: true },
+    include: {
+      order: {
+        select: {
+          id: true,
+          order_number: true,
+          vehicle_plate: true,
+          supplier: { select: { id: true, name: true } },
+          carrier: { select: { id: true, name: true } },
+        },
+      },
+      vehicle: {
+        select: {
+          id: true,
+          registration_plate: true,
+        },
+      },
+    },
   },
 };
 
@@ -184,6 +200,49 @@ async function lookupByContainerLabel(label) {
   });
 }
 
+async function listAllAssets(query = {}) {
+  const { search, status, page = 1, limit = 20 } = query;
+
+  const pageNum = Math.max(1, parseInt(page, 10) || 1);
+  const limitNum = Math.min(100, Math.max(1, parseInt(limit, 10) || 20));
+  const skip = (pageNum - 1) * limitNum;
+
+  const where = {};
+  if (search) {
+    where.asset_label = { contains: search, mode: 'insensitive' };
+  }
+  if (status) {
+    where.inbound = { status };
+  }
+
+  const [data, total] = await Promise.all([
+    prisma.asset.findMany({
+      where,
+      include: {
+        ...ASSET_INCLUDE,
+        inbound: {
+          include: {
+            order: {
+              select: {
+                id: true,
+                order_number: true,
+                supplier: { select: { id: true, name: true } },
+                carrier: { select: { id: true, name: true } },
+              },
+            },
+          },
+        },
+      },
+      orderBy: { created_at: 'desc' },
+      skip,
+      take: limitNum,
+    }),
+    prisma.asset.count({ where }),
+  ]);
+
+  return { data, total, page: pageNum, limit: limitNum };
+}
+
 module.exports = {
-  getAsset, listAssets, createAsset, updateAsset, deleteAsset, lookupByLabel, lookupByContainerLabel,
+  getAsset, listAssets, listAllAssets, createAsset, updateAsset, deleteAsset, lookupByLabel, lookupByContainerLabel,
 };

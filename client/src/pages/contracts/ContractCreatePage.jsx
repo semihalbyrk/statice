@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Plus, Trash2, ChevronDown, ChevronRight } from 'lucide-react';
+import { Plus, Trash2, ChevronDown, ChevronRight, Info } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useTranslation } from 'react-i18next';
 import Breadcrumb from '../../components/ui/Breadcrumb';
@@ -287,6 +287,14 @@ export default function ContractCreatePage() {
     return options;
   })();
 
+  // Auto-select disposer site when there is exactly one option (create mode only)
+  useEffect(() => {
+    if (isEdit) return;
+    if (disposerSiteOptions.length === 1 && form.disposer_site_id !== disposerSiteOptions[0].id) {
+      setForm(f => ({ ...f, disposer_site_id: disposerSiteOptions[0].id }));
+    }
+  }, [disposerSiteOptions.length, isEdit]);
+
   // --- Waste Stream management ---
   function addWasteStreamCard() {
     setWsCards((prev) => [
@@ -470,8 +478,8 @@ export default function ContractCreatePage() {
       {loadingContract && <div className="text-center py-12 text-grey-400">{t('contracts:loading')}</div>}
 
       <form onSubmit={handleSubmit}>
-        {/* === TOP ROW: 3 columns === */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+        {/* === TOP ROW: 3 columns for INCOMING, 2 columns for OUTGOING === */}
+        <div className={`grid grid-cols-1 ${form.contract_type === 'OUTGOING' ? 'md:grid-cols-2' : 'lg:grid-cols-3'} gap-6 mb-6`}>
           {/* Contract Details */}
           <div className="bg-white rounded-lg border border-grey-200 shadow-sm p-5">
             <h2 className="text-sm font-semibold text-grey-900 mb-4">{t('contracts:create.contractDetails')}</h2>
@@ -480,7 +488,7 @@ export default function ContractCreatePage() {
                 <label className="block text-sm font-medium text-grey-700 mb-1.5">{t('contracts:contractType')} <span className="text-red-500">*</span></label>
                 <select name="contract_type" value={form.contract_type} onChange={handleChange} className={selectClass}>
                   <option value="INCOMING">{t('contracts:contractTypes.INCOMING')}</option>
-                  <option value="OUTGOING" disabled title={t('contracts:outgoingDisabled')}>{t('contracts:contractTypes.OUTGOING')}</option>
+                  <option value="OUTGOING">{t('contracts:contractTypes.OUTGOING')}</option>
                 </select>
               </div>
               <div>
@@ -508,7 +516,12 @@ export default function ContractCreatePage() {
               {form.contract_type === 'OUTGOING' && (
                 <>
                   <div>
-                    <label className="block text-sm font-medium text-grey-700 mb-1.5">{t('contracts:create.fields.buyer', 'Buyer')} <span className="text-red-500">*</span></label>
+                    <label className="block text-sm font-medium text-grey-700 mb-1.5">
+                      {t('contracts:create.fields.buyer', 'Buyer')} <span className="text-red-500">*</span>
+                      <span className="inline-flex ml-1 align-middle" title={t('contracts:create.fields.buyerTooltip', 'The Buyer is the company that will physically receive the shipment at the destination. The Disposer stays Statice; the Buyer is the logistics end-recipient.')}>
+                        <Info size={14} className="text-grey-400 hover:text-grey-600 cursor-help" />
+                      </span>
+                    </label>
                     <select name="buyer_id" value={form.buyer_id} onChange={handleChange} required disabled={isEdit} className={`${selectClass} ${isEdit ? 'opacity-60 cursor-not-allowed' : ''}`}>
                       <option value="">{t('contracts:create.fields.selectBuyer', 'Select buyer...')}</option>
                       {buyerOptions.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
@@ -528,7 +541,7 @@ export default function ContractCreatePage() {
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-grey-700 mb-1.5">{t('contracts:create.fields.disposerSite', 'Disposer Site')}</label>
-                    <select name="disposer_site_id" value={form.disposer_site_id} onChange={handleChange} className={selectClass}>
+                    <select name="disposer_site_id" value={form.disposer_site_id} onChange={handleChange} disabled={disposerSiteOptions.length === 1} className={`${selectClass} ${disposerSiteOptions.length === 1 ? 'opacity-60 cursor-not-allowed' : ''}`}>
                       <option value="">{t('contracts:create.fields.selectDisposerSite', 'Select disposer site...')}</option>
                       {disposerSiteOptions.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
                     </select>

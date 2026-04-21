@@ -17,7 +17,7 @@
   "empty": "Geen verwerkingssessies gevonden",
   "pageInfo": "{{count}} sessies totaal",
 
-  "sessionSubtitle": "Schredderen en sorteren sturen het proces; downstream verklaringen worden gegenereerd op basis van de hier vastgelegde materiaal- en fractiegegevens.",
+  "sessionSubtitle": "Sorteren en schredderen sturen het proces; downstream verklaringen worden gegenereerd op basis van de hier vastgelegde materiaal- en fractiegegevens. Schredderen is optioneel.",
   "recordContamination": "Verontreiniging Registreren",
 
   "infoFields": {
@@ -35,8 +35,8 @@
   "noParcels": "Geen colli gevonden op dit inbound",
 
   "tabs": {
-    "catalogue": "Schredderen",
     "outcomes": "Sorteren",
+    "catalogue": "Schredderen",
     "reusableItems": "Herbruikbare Items",
     "history": "Geschiedenis",
     "reports": "Rapporten"
@@ -108,7 +108,7 @@
       "hint": "Alle fracties moeten binnen ±1 kg van het totale schreddergewicht balanceren voor definitieve verwerking.",
       "finalizeHint": "Finaliseer wanneer alle fracties binnen ±1 kg van het schreddergewicht balanceren."
     },
-    "addShreddingFirst": "Voeg eerst schredderinvoer toe. Conceptsorteringen worden automatisch aangemaakt vanuit het schredderen.",
+    "addShreddingFirst": "Nog geen sorteerrecords. Voeg schredderinvoer toe om concept-sorteerrecords automatisch aan te maken, of sla het schredderen over — dit is optioneel.",
     "actions": {
       "finalizeParcel": "Collo Finaliseren",
       "confirmCompliance": "Compliance Bevestigen",

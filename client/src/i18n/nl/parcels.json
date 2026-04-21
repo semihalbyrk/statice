@@ -1,0 +1,52 @@
+{
+  "title": "Parcels",
+  "createOutgoing": "Uitgaande Parcel Aanmaken",
+  "searchPlaceholder": "Zoek op parcel label...",
+  "tabs": {
+    "all": "Alle",
+    "incoming": "Inkomend",
+    "outgoing": "Uitgaand"
+  },
+  "type": {
+    "incoming": "Inkomend",
+    "outgoing": "Uitgaand"
+  },
+  "columns": {
+    "label": "Parcel Label",
+    "type": "Type",
+    "status": "Status",
+    "containerType": "Containertype",
+    "containerLabel": "Container Label",
+    "material": "Materiaal",
+    "wasteStream": "Afvalstroom",
+    "inbound": "Inbound #",
+    "order": "Order #",
+    "supplier": "Leverancier",
+    "netWeight": "Netto Gewicht (kg)",
+    "createdAt": "Aangemaakt op",
+    "volume": "Volume (m³)",
+    "tareWeight": "Tarra Gewicht (kg)",
+    "outbound": "Outbound #",
+    "buyer": "Koper"
+  },
+  "incomingDetail": {
+    "title": "Inkomende Parcel",
+    "inboundContext": "Inbound Context",
+    "processingHistory": "Verwerkingshistorie",
+    "notProcessed": "Verwerkingshistorie wordt in een toekomstige update toegevoegd."
+  },
+  "outgoingDetail": {
+    "title": "Uitgaande Parcel",
+    "outboundContext": "Outbound Context",
+    "notAssigned": "Deze parcel is nog niet gekoppeld aan een outbound."
+  },
+  "empty": {
+    "all": "Geen parcels gevonden.",
+    "incoming": "Geen inkomende parcels gevonden.",
+    "outgoing": "Geen uitgaande parcels gevonden."
+  },
+  "toast": {
+    "loadFailed": "Parcels laden mislukt",
+    "detailFailed": "Parcel detail laden mislukt"
+  }
+}

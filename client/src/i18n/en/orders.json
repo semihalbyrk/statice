@@ -1,9 +1,17 @@
 {
   "title": "Orders",
   "newOrder": "New Order",
+  "createOrder": "Create Order",
+  "orderType": "Order Type",
+  "orderTypeIncoming": "Incoming",
+  "orderTypeOutgoing": "Outgoing",
+  "createInbound": "Create Inbound",
+  "createOutbound": "Create Outbound",
   "tabs": {
     "allOrders": "All Orders",
-    "today": "Today"
+    "today": "Today",
+    "inboundOrders": "Inbound Orders",
+    "outboundOrders": "Outbound Orders"
   },
   "searchPlaceholder": "Search by order name...",
   "allStatuses": "All statuses",

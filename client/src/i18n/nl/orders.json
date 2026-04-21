@@ -1,9 +1,17 @@
 {
   "title": "Bestellingen",
   "newOrder": "Nieuwe Bestelling",
+  "createOrder": "Order Aanmaken",
+  "orderType": "Order Type",
+  "orderTypeIncoming": "Inkomend",
+  "orderTypeOutgoing": "Uitgaand",
+  "createInbound": "Inkomend Aanmaken",
+  "createOutbound": "Uitgaand Aanmaken",
   "tabs": {
     "allOrders": "Alle Bestellingen",
-    "today": "Vandaag"
+    "today": "Vandaag",
+    "inboundOrders": "Inkomende Orders",
+    "outboundOrders": "Uitgaande Orders"
   },
   "searchPlaceholder": "Zoek op bestelnaam...",
   "allStatuses": "Alle statussen",

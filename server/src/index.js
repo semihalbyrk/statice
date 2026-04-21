@@ -26,8 +26,16 @@ const contractsRoutes = require('./routes/contracts');
 const invoicesRoutes = require('./routes/invoices');
 const contaminationRoutes = require('./routes/contamination');
 const entitiesRoutes = require('./routes/entities');
+const outboundOrderRoutes = require('./routes/outboundOrders');
+const outboundRoutes = require('./routes/outbounds');
+const outboundParcelRoutes = require('./routes/outboundParcels');
+const { ensureCompatibilityFixtures } = require('./utils/compatFixtures');
 
 const app = express();
+const compatibilityReady = ensureCompatibilityFixtures().catch((error) => {
+  console.error('Compatibility fixture bootstrap failed:', error);
+  throw error;
+});
 
 // Ensure report storage directory exists
 const storageDir = path.join(__dirname, '..', 'storage', 'reports');
@@ -44,6 +52,14 @@ app.use(cors({
 app.use(cookieParser());
 app.use(express.json());
 app.use(morgan('dev'));
+app.use(async (req, res, next) => {
+  try {
+    await compatibilityReady;
+    next();
+  } catch (error) {
+    next(error);
+  }
+});
 
 // Health check
 app.get('/api/health', (req, res) => {
@@ -70,6 +86,9 @@ app.use('/api/contracts', contractsRoutes);
 app.use('/api/invoices', invoicesRoutes);
 app.use('/api/contamination', contaminationRoutes);
 app.use('/api/entities', entitiesRoutes);
+app.use('/api/outbound-orders', outboundOrderRoutes);
+app.use('/api/outbounds', outboundRoutes);
+app.use('/api/outbound-parcels', outboundParcelRoutes);
 app.use('/api/containers', require('./routes/containerRegistry'));
 
 // Global error handler

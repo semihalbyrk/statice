@@ -64,8 +64,9 @@ describe('Sidebar', () => {
     // GATE_OPERATOR should see these
     expect(screen.getByText('Dashboard')).toBeInTheDocument();
     expect(screen.getByText('Planning Board')).toBeInTheDocument();
-    expect(screen.getByText('Arrival')).toBeInTheDocument();
+    expect(screen.getByText('Arrivals')).toBeInTheDocument();
     expect(screen.getByText('Inbounds')).toBeInTheDocument();
+    expect(screen.getByText('Outbounds')).toBeInTheDocument();
     expect(screen.getByText('Process')).toBeInTheDocument();
 
     // GATE_OPERATOR should NOT see these
@@ -80,7 +81,7 @@ describe('Sidebar', () => {
     expect(screen.getByText('Orders')).toBeInTheDocument();
     expect(screen.getByText('Planning Board')).toBeInTheDocument();
     // LOGISTICS_PLANNER should NOT see sorting or arrival
-    expect(screen.queryByText('Arrival')).not.toBeInTheDocument();
+    expect(screen.queryByText('Arrivals')).not.toBeInTheDocument();
     expect(screen.queryByText('Process')).not.toBeInTheDocument();
   });
 
@@ -89,9 +90,10 @@ describe('Sidebar', () => {
     renderSidebar();
 
     expect(screen.getByText('Users')).toBeInTheDocument();
-    expect(screen.getByText('Carriers')).toBeInTheDocument();
-    expect(screen.getByText('Suppliers')).toBeInTheDocument();
+    expect(screen.getByText('Entities')).toBeInTheDocument();
+    expect(screen.getByText('Fee Master')).toBeInTheDocument();
     expect(screen.getByText('Materials')).toBeInTheDocument();
+    expect(screen.getByText('Containers')).toBeInTheDocument();
     expect(screen.getByText('Audit Log')).toBeInTheDocument();
     expect(screen.getByText('Settings')).toBeInTheDocument();
   });
@@ -140,7 +142,7 @@ describe('Sidebar', () => {
     expect(screen.getByText('Dashboard')).toBeInTheDocument();
     expect(screen.getByText('Reports')).toBeInTheDocument();
     // Should not see operations items
-    expect(screen.queryByText('Arrival')).not.toBeInTheDocument();
+    expect(screen.queryByText('Arrivals')).not.toBeInTheDocument();
     expect(screen.queryByText('Orders')).not.toBeInTheDocument();
   });
 

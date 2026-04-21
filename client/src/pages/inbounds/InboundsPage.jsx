@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, ChevronLeft, ChevronRight, ArrowUpDown } from 'lucide-react';
+import { Search, ArrowUpDown } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useTranslation } from 'react-i18next';
 import { useInboundsListStore } from '../../store/weighingStore';
@@ -158,38 +158,45 @@ export default function InboundsPage() {
           </tbody>
         </table>
 
-        {totalPages > 1 && (
-          <div className="flex items-center justify-between px-5 py-3 border-t border-grey-200 text-sm text-grey-500">
-            <span>{t('inbounds:totalCount', { count: totalCount })}</span>
-            <div className="flex items-center gap-3">
+        {totalCount > 0 && (
+          <div className="flex items-center justify-between px-5 py-3 border-t border-grey-200">
+            <div className="flex items-center gap-2 text-sm text-grey-600">
+              <span>{t('common:table.rowsPerPage')}:</span>
               <select
                 value={filters.limit}
                 onChange={(e) => setFilters({ limit: Number(e.target.value), page: 1 })}
-                className="h-8 px-2 text-xs rounded-md border border-grey-300 text-grey-700 focus:border-green-500 outline-none"
+                className="h-8 px-2 rounded-md border border-grey-300 text-sm bg-white focus:border-green-500 outline-none"
               >
-                <option value={10}>{t('common:table.perPage', { count: 10 })}</option>
-                <option value={20}>{t('common:table.perPage', { count: 20 })}</option>
-                <option value={50}>{t('common:table.perPage', { count: 50 })}</option>
+                {[10, 20, 50].map((n) => (
+                  <option key={n} value={n}>{n}</option>
+                ))}
               </select>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => setFilters({ page: Math.max(1, filters.page - 1) })}
-                  disabled={filters.page <= 1}
-                  className="p-1.5 rounded-md hover:bg-grey-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                >
-                  <ChevronLeft size={16} />
-                </button>
-                <span>
-                  {t('common:table.pageOf', { page: filters.page, total: totalPages })}
-                </span>
-                <button
-                  onClick={() => setFilters({ page: Math.min(totalPages, filters.page + 1) })}
-                  disabled={filters.page >= totalPages}
-                  className="p-1.5 rounded-md hover:bg-grey-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                >
-                  <ChevronRight size={16} />
-                </button>
-              </div>
+              <span className="ml-2">
+                {t('common:table.showingRange', {
+                  from: (filters.page - 1) * filters.limit + 1,
+                  to: Math.min(filters.page * filters.limit, totalCount),
+                  total: totalCount,
+                })}
+              </span>
+            </div>
+            <div className="flex items-center gap-1">
+              <button
+                disabled={filters.page <= 1}
+                onClick={() => setFilters({ page: filters.page - 1 })}
+                className="h-8 px-3 rounded-md border border-grey-300 text-sm text-grey-700 hover:bg-grey-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                {t('common:table.previous')}
+              </button>
+              <span className="px-3 text-sm text-grey-600">
+                {filters.page} / {totalPages || 1}
+              </span>
+              <button
+                disabled={filters.page >= totalPages}
+                onClick={() => setFilters({ page: filters.page + 1 })}
+                className="h-8 px-3 rounded-md border border-grey-300 text-sm text-grey-700 hover:bg-grey-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                {t('common:table.next')}
+              </button>
             </div>
           </div>
         )}

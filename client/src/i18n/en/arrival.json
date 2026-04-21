@@ -29,7 +29,8 @@
   },
   "actions": {
     "registerArrival": "Register Arrival",
-    "addInbound": "+ Add Inbound",
+    "createInbound": "Create Inbound",
+    "addInbound": "Create Inbound",
     "useManualOverride": "Use Manual Override",
     "createAdHocOrder": "Create Ad-hoc Order",
     "createAdHocOrderInstead": "Create Ad-hoc Order Instead"
@@ -40,6 +41,13 @@
     "supplier": "Supplier",
     "wasteStream": "Waste Stream",
     "parcelProgress": "Parcel Progress",
+    "orderType": "Order Type",
+    "orderNumber": "Order #",
+    "vehiclePlate": "Vehicle Plate",
+    "plannedDate": "Planned Date",
+    "expectedParcels": "Expected Parcels",
+    "asn": "ASN",
+    "processingMethod": "Processing Method",
     "partialDelivery": "Partial delivery in progress",
     "inbounds": "Inbounds"
   },

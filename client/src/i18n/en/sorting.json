@@ -17,7 +17,7 @@
   "empty": "No process sessions found",
   "pageInfo": "{{count}} total sessions",
 
-  "sessionSubtitle": "Shredding and sorting drive the process; downstream statements are generated from the material and fraction records captured here.",
+  "sessionSubtitle": "Sorting and shredding drive the process; downstream statements are generated from the material and fraction records captured here. Shredding is optional.",
   "recordContamination": "Record Contamination",
 
   "infoFields": {
@@ -35,8 +35,8 @@
   "noParcels": "No parcels found on this inbound",
 
   "tabs": {
-    "catalogue": "Shredding",
     "outcomes": "Sorting",
+    "catalogue": "Shredding",
     "reusableItems": "Reusables",
     "history": "History",
     "reports": "Reports"
@@ -108,7 +108,7 @@
       "hint": "All fractions must balance within ±1 kg of the total shredding weight before finalization.",
       "finalizeHint": "Finalize when all fractions balance within ±1 kg of the shredding weight."
     },
-    "addShreddingFirst": "Add shredding entries first. Draft sorting records are created automatically from shredding.",
+    "addShreddingFirst": "No sorting records yet. Add shredding entries to auto-generate draft sorting records, or skip shredding entirely — it is optional.",
     "actions": {
       "finalizeParcel": "Finalize Parcel",
       "confirmCompliance": "Confirm Compliance",

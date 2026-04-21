@@ -90,12 +90,24 @@ async function toggleSiteStatus(req, res, next) {
   }
 }
 
+async function getProtected(req, res, next) {
+  try {
+    const { getStaticeEntity } = require('../utils/systemEntities');
+    const data = await getStaticeEntity();
+    if (!data) return res.status(404).json({ error: 'Protected entity not found' });
+    res.json({ data });
+  } catch (error) {
+    next(error);
+  }
+}
+
 module.exports = {
   list,
   getById,
   create,
   update,
   toggleStatus,
+  getProtected,
   listSites,
   createSite,
   updateSite,

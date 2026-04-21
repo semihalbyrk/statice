@@ -3,15 +3,31 @@
   "createEntity": "Create Entity",
   "editEntity": "Edit Entity",
   "entityDetail": "Entity Detail",
+  "loadFailed": "Failed to load entity",
+  "entityActivated": "Entity activated",
+  "entityDeactivated": "Entity deactivated",
+  "failedUpdateStatus": "Failed to update status",
+  "activate": "Activate",
+  "deactivate": "Deactivate",
   "sections": {
     "companyInfo": "Company Information",
     "contactInfo": "Contact Information",
     "roles": "Roles"
   },
   "detail": {
+    "companyInfo": "Company Information",
+    "supplierInfo": "Supplier Details",
+    "disposerInfo": "Disposer Sites",
+    "isAlsoSite": "This entity is also a disposal site",
     "supplierType": "Supplier Type",
     "proRegistration": "PRO Registration Number",
-    "supplierRoles": "Supplier Roles"
+    "supplierRoles": "Supplier Roles",
+    "contracts": "Contracts",
+    "noContracts": "No contracts linked to this entity yet.",
+    "contractNumber": "Contract Number",
+    "contractName": "Contract Name",
+    "effectiveDate": "Effective Date",
+    "contractRole": "Role"
   },
   "tabs": {
     "all": "All",
@@ -40,6 +56,7 @@
     "isAlsoSite": "This entity is also a disposal site"
   },
   "roles": {
+    "label": "Roles",
     "supplier": "Supplier",
     "transporter": "Transporter",
     "disposer": "Disposer",
@@ -60,6 +77,12 @@
     "title": "Disposal Sites",
     "addSite": "Add Site",
     "siteName": "Site Name",
+    "address": "Address",
+    "permitNumber": "Permit Number",
+    "empty": "No disposal sites added yet.",
+    "activated": "Site activated",
+    "deactivated": "Site deactivated",
+    "statusFailed": "Failed to update site status",
     "noSites": "No disposal sites added yet.",
     "isAlsoSiteNote": "This entity's own address is available as a disposal site."
   },

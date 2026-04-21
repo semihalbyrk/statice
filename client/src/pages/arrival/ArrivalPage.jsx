@@ -240,20 +240,40 @@ function MatchSection({ title, description, orders, submitting, onSelect, varian
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-4 gap-y-3">
               <div>
-                <span className="text-[11px] text-grey-400 uppercase tracking-wide font-medium">{t('fields.transporter')}</span>
-                <p className="text-sm font-medium text-grey-900 mt-0.5">{order.transporter?.company_name || order.carrier?.name || '—'}</p>
+                <span className="text-[11px] text-grey-400 uppercase tracking-wide font-medium">{t('fields.orderType')}</span>
+                <p className="text-sm font-medium text-grey-900 mt-0.5">Incoming</p>
               </div>
               <div className="min-w-0">
                 <span className="text-[11px] text-grey-400 uppercase tracking-wide font-medium">{t('fields.supplier')}</span>
                 <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
-                  <p className="text-sm font-medium text-grey-900">{order.supplier?.name || '—'}</p>
+                  <p className="text-sm font-medium text-grey-900">{order.entity_supplier?.company_name || order.supplier?.name || '—'}</p>
                   <SupplierTypeBadge type={order.supplier?.supplier_type} />
                 </div>
+              </div>
+              <div>
+                <span className="text-[11px] text-grey-400 uppercase tracking-wide font-medium">{t('fields.transporter')}</span>
+                <p className="text-sm font-medium text-grey-900 mt-0.5">{order.transporter?.company_name || order.carrier?.name || '—'}</p>
+              </div>
+              <div>
+                <span className="text-[11px] text-grey-400 uppercase tracking-wide font-medium">{t('fields.vehiclePlate')}</span>
+                <p className="text-sm font-mono font-medium text-grey-900 mt-0.5">{order.vehicle_plate || '—'}</p>
               </div>
               <div>
                 <span className="text-[11px] text-grey-400 uppercase tracking-wide font-medium">{t('fields.wasteStream')}</span>
                 <p className="text-sm font-medium text-grey-900 mt-0.5">{order.waste_stream?.name || '—'}</p>
               </div>
+              {order.waste_stream?.afvalstroomnummer && (
+                <div>
+                  <span className="text-[11px] text-grey-400 uppercase tracking-wide font-medium">{t('fields.asn')}</span>
+                  <p className="text-sm font-medium text-grey-900 mt-0.5">{order.waste_stream.afvalstroomnummer}</p>
+                </div>
+              )}
+              {order.waste_stream?.processing_method && (
+                <div>
+                  <span className="text-[11px] text-grey-400 uppercase tracking-wide font-medium">{t('fields.processingMethod')}</span>
+                  <p className="text-sm font-medium text-grey-900 mt-0.5">{order.waste_stream.processing_method}</p>
+                </div>
+              )}
               <div>
                 <span className="text-[11px] text-grey-400 uppercase tracking-wide font-medium">{t('fields.parcelProgress')}</span>
                 <p className="text-sm font-medium text-grey-900 mt-0.5">
