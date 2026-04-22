@@ -28,7 +28,6 @@ const contaminationRoutes = require('./routes/contamination');
 const entitiesRoutes = require('./routes/entities');
 const outboundOrderRoutes = require('./routes/outboundOrders');
 const outboundRoutes = require('./routes/outbounds');
-const outboundParcelRoutes = require('./routes/outboundParcels');
 const { ensureCompatibilityFixtures } = require('./utils/compatFixtures');
 
 const app = express();
@@ -88,7 +87,6 @@ app.use('/api/contamination', contaminationRoutes);
 app.use('/api/entities', entitiesRoutes);
 app.use('/api/outbound-orders', outboundOrderRoutes);
 app.use('/api/outbounds', outboundRoutes);
-app.use('/api/outbound-parcels', outboundParcelRoutes);
 app.use('/api/containers', require('./routes/containerRegistry'));
 
 // Global error handler

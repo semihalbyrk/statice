@@ -12,9 +12,34 @@ async function getToken(email, password) {
 
 // Track IDs for cleanup
 const createdOutboundOrderIds = [];
+const createdOutboundLineIds = [];
 
 let adminToken;
 let outgoingContract;
+let sharedMaterialId;
+
+/**
+ * Creates a minimal OutboundLine so the ≥1-line guard passes on WEIGHED transition.
+ * The line's material_id doesn't need to match any waste_stream — the guard only
+ * checks count, and the BGL mapper tolerates lines whose material isn't in waste_streams.
+ */
+async function addLineFixture(outboundId) {
+  if (!sharedMaterialId) {
+    const mat = await prisma.materialMaster.findFirst({ where: { is_active: true } });
+    sharedMaterialId = mat.id;
+  }
+  const line = await prisma.outboundLine.create({
+    data: {
+      outbound_id: outboundId,
+      material_id: sharedMaterialId,
+      container_type: 'OPEN_TOP',
+      volume: 40,
+      volume_uom: 'M3',
+    },
+  });
+  createdOutboundLineIds.push(line.id);
+  return line;
+}
 
 beforeAll(async () => {
   adminToken = await getToken('admin@statice.nl', 'Admin1234!');
@@ -35,6 +60,7 @@ afterAll(async () => {
     if (ids.length > 0) {
       await prisma.outboundDocument.deleteMany({ where: { outbound_id: { in: ids } } });
       await prisma.outboundWeighingRecord.deleteMany({ where: { outbound_id: { in: ids } } });
+      await prisma.outboundLine.deleteMany({ where: { outbound_id: { in: ids } } });
       await prisma.outbound.deleteMany({ where: { id: { in: ids } } });
     }
     await prisma.outboundOrderWasteStream.deleteMany({ where: { outbound_order_id: orderId } });
@@ -140,6 +166,9 @@ describe('POST /api/outbounds/:id/weighings', () => {
       .set('Authorization', `Bearer ${adminToken}`)
       .send({ vehicle_plate: 'NL-WEIGH-01' });
     outboundId = outRes.body.data.id;
+
+    // Add a line so the ≥1-line guard passes on WEIGHED transition
+    await addLineFixture(outboundId);
   });
 
   it('records tare weighing (manual) — transitions CREATED → LOADING', async () => {
@@ -205,6 +234,9 @@ describe('Weighing — gross first then tare (reverse order)', () => {
       .set('Authorization', `Bearer ${adminToken}`)
       .send({});
     const outboundId = outRes.body.data.id;
+
+    // Add a line so the ≥1-line guard passes on WEIGHED transition
+    await addLineFixture(outboundId);
 
     // Gross first
     const grossRes = await request(app)
@@ -277,6 +309,9 @@ describe('POST /api/outbounds/:id/generate-bgl', () => {
       .send({ vehicle_plate: 'NL-BGL-01' });
     weighedOutboundId = outRes.body.data.id;
 
+    // Add a line so the ≥1-line guard passes on WEIGHED transition
+    await addLineFixture(weighedOutboundId);
+
     // Tare + Gross
     await request(app)
       .post(`/api/outbounds/${weighedOutboundId}/weighings`)
@@ -344,6 +379,9 @@ describe('PATCH /api/outbounds/:id/depart', () => {
       .send({});
     const obId = outRes.body.data.id;
 
+    // Add a line so the ≥1-line guard passes on WEIGHED transition
+    await addLineFixture(obId);
+
     await request(app)
       .post(`/api/outbounds/${obId}/weighings`)
       .set('Authorization', `Bearer ${adminToken}`)
@@ -377,6 +415,9 @@ describe('Full outbound lifecycle — end to end', () => {
     expect(outRes.status).toBe(201);
     const outboundId = outRes.body.data.id;
     expect(outRes.body.data.status).toBe('CREATED');
+
+    // Add a line so the ≥1-line guard passes on WEIGHED transition
+    await addLineFixture(outboundId);
 
     // 3. Record tare → LOADING
     const tareRes = await request(app)

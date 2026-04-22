@@ -41,7 +41,7 @@ const OUTBOUND_DETAIL_INCLUDE = {
   documents: {
     orderBy: { generated_at: 'desc' },
   },
-  parcels: {
+  lines: {
     include: { material: true },
   },
 };
