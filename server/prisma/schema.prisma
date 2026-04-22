@@ -139,6 +139,11 @@ enum SkipType {
   OTHER
 }
 
+enum VolumeUom {
+  M3
+  L
+}
+
 enum ParcelType {
   CONTAINER
   MATERIAL
@@ -330,7 +335,6 @@ model Entity {
   supplier_roles          SupplierRole[]
   pro_registration_number String?
 
-  is_also_site  Boolean @default(false)
   is_protected  Boolean @default(false)
 
   created_at DateTime @default(now())
@@ -789,6 +793,7 @@ model MaterialMaster {
   contract_rate_lines ContractRateLine[]
   invoice_lines       InvoiceLine[]
   outbound_parcels    OutboundParcel[]
+  outbound_lines      OutboundLine[]
 
   @@map("ProductTypeMaster")
 }
@@ -1256,6 +1261,7 @@ model Outbound {
   weighing_records OutboundWeighingRecord[]
   documents        OutboundDocument[]
   parcels          OutboundParcel[]
+  lines            OutboundLine[]
 
   @@map("outbounds")
   @@index([outbound_order_id])
@@ -1319,4 +1325,22 @@ model OutboundParcel {
   @@index([outbound_id])
   @@index([material_id])
   @@index([status])
+}
+
+model OutboundLine {
+  id             String    @id @default(uuid())
+  outbound_id    String    @map("outbound_id")
+  material_id    String    @map("material_id")
+  container_type SkipType  @map("container_type")
+  volume         Decimal   @db.Decimal(10, 2)
+  volume_uom     VolumeUom @map("volume_uom")
+  created_at     DateTime  @default(now()) @map("created_at")
+  updated_at     DateTime  @updatedAt @map("updated_at")
+
+  outbound Outbound       @relation(fields: [outbound_id], references: [id], onDelete: Cascade)
+  material MaterialMaster @relation(fields: [material_id], references: [id])
+
+  @@map("outbound_lines")
+  @@index([outbound_id])
+  @@index([material_id])
 }
