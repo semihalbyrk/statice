@@ -506,12 +506,6 @@ async function confirmDeparture(outboundId, userId) {
       include: OUTBOUND_DETAIL_INCLUDE,
     });
 
-    // Bulk-transition attached parcels to SHIPPED
-    const parcelUpdate = await tx.outboundParcel.updateMany({
-      where: { outbound_id: outboundId, status: 'ASSIGNED' },
-      data: { status: 'SHIPPED' },
-    });
-
     await writeAuditLog(
       {
         userId,
@@ -519,23 +513,10 @@ async function confirmDeparture(outboundId, userId) {
         entityType: 'Outbound',
         entityId: outboundId,
         before: { status: outbound.status },
-        after: { status: 'DEPARTED', parcels_shipped: parcelUpdate.count },
+        after: { status: 'DEPARTED' },
       },
       tx
     );
-
-    if (parcelUpdate.count > 0) {
-      await writeAuditLog(
-        {
-          userId,
-          action: 'BULK_SHIP_PARCELS',
-          entityType: 'Outbound',
-          entityId: outboundId,
-          after: { parcels_transitioned: parcelUpdate.count, from: 'ASSIGNED', to: 'SHIPPED' },
-        },
-        tx
-      );
-    }
 
     return updated;
   });
