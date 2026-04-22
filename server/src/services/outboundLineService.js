@@ -89,12 +89,60 @@ async function createLine(outboundId, data, userId) {
   });
 }
 
-async function updateLine(/* outboundId, lineId, data, userId */) {
-  throw new Error('not implemented');
+async function updateLine(outboundId, lineId, data, userId) {
+  validatePayload(data);
+  return prisma.$transaction(async (tx) => {
+    await assertMaterialPlanned(tx, outboundId, data.material_id);
+    const existing = await tx.outboundLine.findUnique({ where: { id: lineId } });
+    if (!existing || existing.outbound_id !== outboundId) notFound('line not found');
+    const updated = await tx.outboundLine.update({
+      where: { id: lineId },
+      data: {
+        material_id: data.material_id,
+        container_type: data.container_type,
+        volume: data.volume,
+        volume_uom: data.volume_uom,
+      },
+      include: LINE_INCLUDE,
+    });
+    await writeAuditLog(
+      {
+        userId,
+        action: 'UPDATE_OUTBOUND_LINE',
+        entityType: 'OutboundLine',
+        entityId: lineId,
+        before: existing,
+        after: data,
+      },
+      tx,
+    );
+    return updated;
+  });
 }
 
-async function deleteLine(/* outboundId, lineId, userId */) {
-  throw new Error('not implemented');
+async function deleteLine(outboundId, lineId, userId) {
+  return prisma.$transaction(async (tx) => {
+    const outbound = await tx.outbound.findUnique({ where: { id: outboundId } });
+    if (!outbound) notFound('outbound not found');
+    if (!MUTABLE_OUTBOUND_STATUSES.includes(outbound.status)) {
+      badRequest(
+        `outbound is ${outbound.status}; lines can only be mutated in CREATED or LOADING`,
+      );
+    }
+    const existing = await tx.outboundLine.findUnique({ where: { id: lineId } });
+    if (!existing || existing.outbound_id !== outboundId) notFound('line not found');
+    await tx.outboundLine.delete({ where: { id: lineId } });
+    await writeAuditLog(
+      {
+        userId,
+        action: 'DELETE_OUTBOUND_LINE',
+        entityType: 'OutboundLine',
+        entityId: lineId,
+        before: existing,
+      },
+      tx,
+    );
+  });
 }
 
 module.exports = { listByOutbound, createLine, updateLine, deleteLine };

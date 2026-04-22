@@ -114,7 +114,7 @@ describe('createLine', () => {
   let outbound;
 
   beforeAll(async () => {
-    const fx = await buildFixture({ userEmail: 'linetest@statice.test' });
+    const fx = await buildFixture({ userEmail: `linetest-${Date.now()}-${Math.floor(Math.random() * 10000)}@statice.test` });
     user = fx.user;
     outbound = fx.outbound;
   });
@@ -189,5 +189,74 @@ describe('createLine', () => {
         user.id,
       ),
     ).rejects.toThrow(/cap/);
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// updateLine
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe('updateLine', () => {
+  const { updateLine } = service;
+  let user;
+  let outbound;
+  let line;
+
+  beforeAll(async () => {
+    const fx = await buildFixture({ userEmail: `updateline-${Date.now()}-${Math.floor(Math.random() * 10000)}@statice.test` });
+    user = fx.user;
+    outbound = fx.outbound;
+    const planned = outbound.outbound_order.waste_streams[0];
+    line = await prisma.outboundLine.create({
+      data: {
+        outbound_id: outbound.id,
+        material_id: planned.material_id,
+        container_type: 'OPEN_TOP',
+        volume: 40,
+        volume_uom: 'M3',
+      },
+    });
+  });
+
+  it('updates volume and container_type', async () => {
+    const updated = await updateLine(
+      outbound.id,
+      line.id,
+      {
+        volume: 60,
+        volume_uom: 'M3',
+        container_type: 'CLOSED_TOP',
+        material_id: line.material_id,
+      },
+      user.id,
+    );
+    expect(updated.volume.toString()).toBe('60');
+    expect(updated.container_type).toBe('CLOSED_TOP');
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// deleteLine
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe('deleteLine', () => {
+  const { deleteLine, createLine: create } = service;
+
+  it('removes the line', async () => {
+    const fx = await buildFixture({ userEmail: `delline-${Date.now()}-${Math.floor(Math.random() * 10000)}@statice.test` });
+    const planned = fx.outbound.outbound_order.waste_streams[0];
+    const created = await create(
+      fx.outbound.id,
+      {
+        material_id: planned.material_id,
+        container_type: 'PALLET',
+        volume: 1,
+        volume_uom: 'M3',
+      },
+      fx.user.id,
+    );
+    await deleteLine(fx.outbound.id, created.id, fx.user.id);
+    const gone = await prisma.outboundLine.findUnique({ where: { id: created.id } });
+    expect(gone).toBeNull();
   });
 });
