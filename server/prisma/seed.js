@@ -511,7 +511,6 @@ async function main() {
       is_transporter: false,
       is_disposer: true,
       is_receiver: true,
-      is_also_site: true,
       is_protected: true,
       status: 'ACTIVE',
     },
@@ -1136,6 +1135,128 @@ async function main() {
     },
   });
   console.log('ContaminationIncident seeded.');
+
+  // ─── Representative Outbounds + OutboundLines ──────────────────────
+  const seededOutgoingContract = await prisma.supplierContract.findUnique({
+    where: { contract_number: 'O-Contract #1' },
+  });
+
+  // Idempotent: remove any prior demo outbound orders by number first.
+  const demoOrderNumbers = ['OO-DEMO-001', 'OO-DEMO-002'];
+  const priorOrders = await prisma.outboundOrder.findMany({
+    where: { order_number: { in: demoOrderNumbers } },
+    include: { outbounds: true },
+  });
+  if (priorOrders.length) {
+    const outboundIds = priorOrders.flatMap((o) => o.outbounds.map((ob) => ob.id));
+    const orderIds = priorOrders.map((o) => o.id);
+    await prisma.$transaction(async (tx) => {
+      if (outboundIds.length) {
+        await tx.outboundLine.deleteMany({ where: { outbound_id: { in: outboundIds } } });
+        await tx.outboundDocument.deleteMany({ where: { outbound_id: { in: outboundIds } } });
+        await tx.outboundWeighingRecord.deleteMany({ where: { outbound_id: { in: outboundIds } } });
+        await tx.outbound.deleteMany({ where: { id: { in: outboundIds } } });
+      }
+      await tx.outboundOrderWasteStream.deleteMany({ where: { outbound_order_id: { in: orderIds } } });
+      await tx.outboundOrder.deleteMany({ where: { id: { in: orderIds } } });
+    });
+  }
+
+  // Demo outbound #1 — LOADING. Same material, two volumes:
+  //   (mat-hdd, 40, M3) x2  +  (mat-hdd, 60, M3) x1
+  //   → BGL grouping renders "2 x 40 m3 HDD" + "1 x 60 m3 HDD".
+  // (OutboundOrderWasteStream has unique([order_id, waste_stream_id]); all
+  //  demo materials live under the single weeeStream, so the planned-material
+  //  validator only accepts ONE material per demo order.)
+  const demoOrderA = await prisma.outboundOrder.create({
+    data: {
+      order_number: 'OO-DEMO-001',
+      contract_id: seededOutgoingContract.id,
+      buyer_id: 'entity-renewi',
+      sender_id: staticeEntity.id,
+      disposer_id: 'entity-renewi',
+      transporter_id: 'entity-renewi',
+      vehicle_plate: 'NL-12-AB-34',
+      planned_date: new Date('2026-04-22'),
+      shipment_type: 'DOMESTIC_NL',
+      expected_outbounds: 1,
+      status: 'IN_PROGRESS',
+      created_by: adminUser.id,
+      waste_streams: {
+        create: [
+          { waste_stream_id: weeeStream.id, receiver_id: 'entity-renewi', material_id: 'mat-hdd', planned_amount_kg: 3200 },
+        ],
+      },
+    },
+  });
+
+  const demoOutboundA = await prisma.outbound.create({
+    data: {
+      outbound_number: 'OUT-DEMO-001',
+      outbound_order_id: demoOrderA.id,
+      vehicle_plate: 'NL-12-AB-34',
+      status: 'LOADING',
+      loading_started_at: new Date('2026-04-22T08:00:00Z'),
+      created_by: adminUser.id,
+    },
+  });
+
+  await prisma.outboundLine.createMany({
+    data: [
+      { outbound_id: demoOutboundA.id, material_id: 'mat-hdd', container_type: 'OPEN_TOP',   volume: 40, volume_uom: 'M3' },
+      { outbound_id: demoOutboundA.id, material_id: 'mat-hdd', container_type: 'OPEN_TOP',   volume: 40, volume_uom: 'M3' },
+      { outbound_id: demoOutboundA.id, material_id: 'mat-hdd', container_type: 'CLOSED_TOP', volume: 60, volume_uom: 'M3' },
+    ],
+  });
+
+  // Demo outbound #2 — WEIGHED. Three identical drums:
+  //   (mat-sha, 200, L) x3  → BGL renders "3 x 200 L SHA".
+  const demoOrderB = await prisma.outboundOrder.create({
+    data: {
+      order_number: 'OO-DEMO-002',
+      contract_id: seededOutgoingContract.id,
+      buyer_id: 'entity-renewi',
+      sender_id: staticeEntity.id,
+      disposer_id: 'entity-renewi',
+      transporter_id: 'entity-renewi',
+      vehicle_plate: 'NL-56-CD-78',
+      planned_date: new Date('2026-04-21'),
+      shipment_type: 'DOMESTIC_NL',
+      expected_outbounds: 1,
+      status: 'IN_PROGRESS',
+      created_by: adminUser.id,
+      waste_streams: {
+        create: [
+          { waste_stream_id: weeeStream.id, receiver_id: 'entity-renewi', material_id: 'mat-sha', planned_amount_kg: 1500 },
+        ],
+      },
+    },
+  });
+
+  const demoOutboundB = await prisma.outbound.create({
+    data: {
+      outbound_number: 'OUT-DEMO-002',
+      outbound_order_id: demoOrderB.id,
+      vehicle_plate: 'NL-56-CD-78',
+      status: 'WEIGHED',
+      gross_weight_kg: 8400,
+      tare_weight_kg: 6900,
+      net_weight_kg: 1500,
+      loading_started_at: new Date('2026-04-21T09:00:00Z'),
+      weighing_completed_at: new Date('2026-04-21T11:30:00Z'),
+      created_by: adminUser.id,
+    },
+  });
+
+  await prisma.outboundLine.createMany({
+    data: [
+      { outbound_id: demoOutboundB.id, material_id: 'mat-sha', container_type: 'PALLET', volume: 200, volume_uom: 'L' },
+      { outbound_id: demoOutboundB.id, material_id: 'mat-sha', container_type: 'PALLET', volume: 200, volume_uom: 'L' },
+      { outbound_id: demoOutboundB.id, material_id: 'mat-sha', container_type: 'PALLET', volume: 200, volume_uom: 'L' },
+    ],
+  });
+
+  console.log('Demo outbounds seeded: OUT-DEMO-001 (LOADING, 3 lines), OUT-DEMO-002 (WEIGHED, 3 lines).');
 
   console.log('Database seeding complete.');
 }
