@@ -1,0 +1,38 @@
+{
+  "title": "Regels",
+  "empty": "Nog geen regels. Voeg ten minste één regel toe vóór het wegen.",
+  "addLine": "Regel toevoegen",
+  "save": "Opslaan",
+  "cancel": "Annuleren",
+  "fields": {
+    "material": "Materiaal",
+    "containerType": "Containertype",
+    "volume": "Volume",
+    "uom": "Eenheid"
+  },
+  "actions": {
+    "edit": "Bewerken",
+    "delete": "Verwijderen"
+  },
+  "toast": {
+    "created": "Regel toegevoegd",
+    "updated": "Regel bijgewerkt",
+    "deleted": "Regel verwijderd",
+    "loadFailed": "Regels laden mislukt",
+    "saveFailed": "Regel opslaan mislukt",
+    "deleteFailed": "Regel verwijderen mislukt"
+  },
+  "confirmDelete": "Deze regel verwijderen?",
+  "totals": "{{count}} regels",
+  "containerTypes": {
+    "OPEN_TOP": "Open top",
+    "CLOSED_TOP": "Gesloten top",
+    "GITTERBOX": "Gitterbox",
+    "PALLET": "Pallet",
+    "OTHER": "Overig"
+  },
+  "uoms": {
+    "M3": "m³",
+    "L": "L"
+  }
+}

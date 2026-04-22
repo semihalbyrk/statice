@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback, Fragment } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { Loader2, Scale, Download, Check, ExternalLink, FileText, Truck, Package } from 'lucide-react';
+import { Loader2, Scale, Download, Check, ExternalLink, FileText, Truck, Package, Pencil, Trash2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useTranslation } from 'react-i18next';
 import {
@@ -12,15 +12,16 @@ import {
   downloadDocument,
 } from '../../api/outbounds';
 import {
-  attachParcelsToOutbound,
-  detachParcelFromOutbound,
-  listOutgoingParcels,
-  createOutgoingParcel,
-} from '../../api/parcels';
+  listOutboundLines,
+  createOutboundLine,
+  updateOutboundLine,
+  deleteOutboundLine,
+} from '../../api/outboundLines';
 import useMasterDataStore from '../../store/masterDataStore';
 import ClickableStatusBadge from '../../components/ui/ClickableStatusBadge';
 import StatusBadge from '../../components/ui/StatusBadge';
 import Breadcrumb from '../../components/ui/Breadcrumb';
+import RowActionMenu from '../../components/ui/RowActionMenu';
 import { format } from 'date-fns';
 
 const inputClass = 'w-full h-10 px-3.5 rounded-md border border-grey-300 text-sm text-grey-900 focus:border-green-500 focus:ring-[3px] focus:ring-green-500/15 outline-none transition-colors';
@@ -37,7 +38,7 @@ function formatDateTime(value, pattern = 'dd MMM yyyy HH:mm') {
 
 export default function OutboundDetailPage() {
   const { outboundId } = useParams();
-  const { t } = useTranslation(['outbounds', 'common', 'outboundParcels', 'nav']);
+  const { t } = useTranslation(['outbounds', 'common', 'outboundLines', 'nav']);
 
   const [outbound, setOutbound] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -52,15 +53,14 @@ export default function OutboundDetailPage() {
 
   // BGL generation
   const [isGeneratingBgl, setIsGeneratingBgl] = useState(false);
-  const [showAttachPanel, setShowAttachPanel] = useState(false);
-  const [availableParcels, setAvailableParcels] = useState([]);
-  const [parcelSearch, setParcelSearch] = useState('');
-  const [selectedParcelIds, setSelectedParcelIds] = useState([]);
-  const [isLoadingAvailableParcels, setIsLoadingAvailableParcels] = useState(false);
-  const [isMutatingParcels, setIsMutatingParcels] = useState(false);
-  const [showInlineCreate, setShowInlineCreate] = useState(false);
-  const [newParcel, setNewParcel] = useState({ material_id: '', container_type: 'OPEN_TOP', volume_m3: '', tare_weight_kg: '' });
-  const materials = useMasterDataStore((state) => state.materials);
+
+  // Outbound lines
+  const [lines, setLines] = useState([]);
+  const [editingLineId, setEditingLineId] = useState(null);
+  const [isAddingLine, setIsAddingLine] = useState(false);
+  const [isMutatingLine, setIsMutatingLine] = useState(false);
+  const materialsRaw = useMasterDataStore((state) => state.materials);
+  const materials = Array.isArray(materialsRaw) ? materialsRaw : [];
 
   // Confirmation dialogs
   const [confirmDialog, setConfirmDialog] = useState(null); // null | 'DEPARTURE' | 'DELIVERY'
@@ -91,28 +91,18 @@ export default function OutboundDetailPage() {
     fetchOutbound(outboundId);
   }, [outboundId, fetchOutbound]);
 
+  const fetchLines = useCallback(async (id) => {
+    try {
+      const { data } = await listOutboundLines(id);
+      setLines(data.data || []);
+    } catch (err) {
+      toast.error(err.response?.data?.error || t('outboundLines:toast.loadFailed'));
+    }
+  }, [t]);
+
   useEffect(() => {
-    if (!showAttachPanel) return undefined;
-
-    const handle = setTimeout(async () => {
-      setIsLoadingAvailableParcels(true);
-      try {
-        const { data } = await listOutgoingParcels({
-          status: 'AVAILABLE',
-          search: parcelSearch || undefined,
-          page: 1,
-          limit: 100,
-        });
-        setAvailableParcels(data.data || []);
-      } catch (err) {
-        toast.error(err.response?.data?.error || t('outboundParcels:toast.loadFailed'));
-      } finally {
-        setIsLoadingAvailableParcels(false);
-      }
-    }, 250);
-
-    return () => clearTimeout(handle);
-  }, [showAttachPanel, parcelSearch, t]);
+    if (outboundId) fetchLines(outboundId);
+  }, [outboundId, fetchLines]);
 
   const handleStatusChange = useCallback(async (newStatus) => {
     if (newStatus === 'DEPARTED') {
@@ -204,61 +194,60 @@ export default function OutboundDetailPage() {
     setWeighNotes('');
   }
 
-  const handleCreateAndAttach = async () => {
-    if (!newParcel.material_id || !newParcel.container_type) {
-      toast.error(t('outboundParcels:toast.createInvalid', { defaultValue: 'Material and container type required' }));
-      return;
-    }
-    setIsMutatingParcels(true);
+  const handleStartAdd = () => {
+    setEditingLineId(null);
+    setIsAddingLine(true);
+  };
+
+  const handleStartEdit = (line) => {
+    setIsAddingLine(false);
+    setEditingLineId(line.id);
+  };
+
+  const handleCancelEdit = () => {
+    setEditingLineId(null);
+    setIsAddingLine(false);
+  };
+
+  const handleCreateLine = async (payload) => {
+    setIsMutatingLine(true);
     try {
-      const payload = {
-        material_id: newParcel.material_id,
-        container_type: newParcel.container_type,
-        volume_m3: newParcel.volume_m3 ? Number(newParcel.volume_m3) : null,
-        tare_weight_kg: newParcel.tare_weight_kg ? Number(newParcel.tare_weight_kg) : null,
-      };
-      const { data: created } = await createOutgoingParcel(payload);
-      await attachParcelsToOutbound(outboundId, [created.id]);
-      toast.success(t('outboundParcels:toast.createSuccess', { defaultValue: 'Parcel created and attached' }));
-      setShowInlineCreate(false);
-      setNewParcel({ material_id: '', container_type: 'OPEN_TOP', volume_m3: '', tare_weight_kg: '' });
-      await fetchOutbound(outboundId);
+      await createOutboundLine(outboundId, payload);
+      toast.success(t('outboundLines:toast.created'));
+      setIsAddingLine(false);
+      await fetchLines(outboundId);
     } catch (err) {
-      toast.error(err.response?.data?.error || t('outboundParcels:toast.attachFailed'));
+      toast.error(err.response?.data?.error || t('outboundLines:toast.saveFailed'));
     } finally {
-      setIsMutatingParcels(false);
+      setIsMutatingLine(false);
     }
   };
 
-  const handleAttachSelected = async () => {
-    if (selectedParcelIds.length === 0) return;
-
-    setIsMutatingParcels(true);
+  const handleSaveEditLine = async (lineId, payload) => {
+    setIsMutatingLine(true);
     try {
-      await attachParcelsToOutbound(outboundId, selectedParcelIds);
-      toast.success(t('outboundParcels:toast.attachSuccess'));
-      setSelectedParcelIds([]);
-      setShowAttachPanel(false);
-      await fetchOutbound(outboundId);
+      await updateOutboundLine(outboundId, lineId, payload);
+      toast.success(t('outboundLines:toast.updated'));
+      setEditingLineId(null);
+      await fetchLines(outboundId);
     } catch (err) {
-      toast.error(err.response?.data?.error || t('outboundParcels:toast.attachFailed'));
+      toast.error(err.response?.data?.error || t('outboundLines:toast.saveFailed'));
     } finally {
-      setIsMutatingParcels(false);
+      setIsMutatingLine(false);
     }
   };
 
-  const handleDetachParcel = async (parcelId) => {
-    if (!window.confirm(t('outboundParcels:confirmDetach'))) return;
-
-    setIsMutatingParcels(true);
+  const handleDeleteLine = async (lineId) => {
+    if (!window.confirm(t('outboundLines:confirmDelete'))) return;
+    setIsMutatingLine(true);
     try {
-      await detachParcelFromOutbound(outboundId, parcelId);
-      toast.success(t('outboundParcels:toast.detachSuccess'));
-      await fetchOutbound(outboundId);
+      await deleteOutboundLine(outboundId, lineId);
+      toast.success(t('outboundLines:toast.deleted'));
+      await fetchLines(outboundId);
     } catch (err) {
-      toast.error(err.response?.data?.error || t('outboundParcels:toast.detachFailed'));
+      toast.error(err.response?.data?.error || t('outboundLines:toast.deleteFailed'));
     } finally {
-      setIsMutatingParcels(false);
+      setIsMutatingLine(false);
     }
   };
 
@@ -283,14 +272,7 @@ export default function OutboundDetailPage() {
     ? Number(netWeightValue)
     : (hasTare && hasGross ? Number(grossWeight) - Number(tareWeight) : null);
   const bglDoc = documents.find((d) => (d.document_type || d.type) === 'BEGELEIDINGSBRIEF');
-  const parcels = outbound.parcels || [];
-  const canMutateParcels = ['CREATED', 'LOADING'].includes(outbound.status);
-  const parcelTotals = parcels.reduce((acc, parcel) => {
-    acc.count += 1;
-    acc.volume += parcel.volume_m3 ? Number(parcel.volume_m3) : 0;
-    acc.weight += parcel.tare_weight_kg ? Number(parcel.tare_weight_kg) : 0;
-    return acc;
-  }, { count: 0, volume: 0, weight: 0 });
+  const canMutateLines = ['CREATED', 'LOADING'].includes(outbound.status);
 
   return (
     <div>
@@ -355,220 +337,81 @@ export default function OutboundDetailPage() {
         </div>
       </div>
 
+      {/* Lines Section */}
       <div className="bg-white rounded-lg border border-grey-200 shadow-sm p-4 mb-4">
         <div className="flex items-center justify-between gap-3 mb-3">
-          <h2 className="text-sm font-semibold text-grey-900">Parcels</h2>
-          {canMutateParcels && (
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => {
-                  setShowInlineCreate((current) => !current);
-                  setShowAttachPanel(false);
-                }}
-                className="h-9 px-4 border border-green-500 text-green-700 rounded-md text-sm font-semibold hover:bg-green-50 transition-colors"
-              >
-                {t('outboundParcels:createNew', { defaultValue: 'Create new' })}
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setShowAttachPanel((current) => !current);
-                  setShowInlineCreate(false);
-                  setSelectedParcelIds([]);
-                }}
-                className="h-9 px-4 bg-green-500 text-white rounded-md text-sm font-semibold hover:bg-green-700 transition-colors"
-              >
-                {t('outboundParcels:attach')}
-              </button>
-            </div>
+          <h2 className="text-sm font-semibold text-grey-900">{t('outboundLines:title')}</h2>
+          {canMutateLines && !isAddingLine && editingLineId === null && (
+            <button
+              type="button"
+              onClick={handleStartAdd}
+              className="h-9 px-4 bg-green-500 text-white rounded-md text-sm font-semibold hover:bg-green-700 transition-colors"
+            >
+              + {t('outboundLines:addLine')}
+            </button>
           )}
         </div>
 
-        {showInlineCreate && canMutateParcels && (
-          <div className="border border-grey-200 rounded-lg p-3 mb-4 bg-grey-25">
-            <div className="grid grid-cols-2 gap-3 mb-3">
-              <div>
-                <label className="block text-xs font-medium text-grey-700 mb-1">{t('outboundParcels:fields.material')}</label>
-                <select
-                  value={newParcel.material_id}
-                  onChange={(e) => setNewParcel({ ...newParcel, material_id: e.target.value })}
-                  className={selectClass}
-                >
-                  <option value="">—</option>
-                  {materials.map((m) => (
-                    <option key={m.id} value={m.id}>{m.name}</option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-grey-700 mb-1">{t('outboundParcels:fields.containerType')}</label>
-                <select
-                  value={newParcel.container_type}
-                  onChange={(e) => setNewParcel({ ...newParcel, container_type: e.target.value })}
-                  className={selectClass}
-                >
-                  <option value="OPEN_TOP">{t('common:containerTypes.OPEN_TOP', { defaultValue: 'Open top' })}</option>
-                  <option value="CLOSED_TOP">{t('common:containerTypes.CLOSED_TOP', { defaultValue: 'Closed top' })}</option>
-                  <option value="GITTERBOX">{t('common:containerTypes.GITTERBOX', { defaultValue: 'Gitterbox' })}</option>
-                  <option value="PALLET">{t('common:containerTypes.PALLET', { defaultValue: 'Pallet' })}</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-grey-700 mb-1">{t('outboundParcels:fields.volumeM3')}</label>
-                <input
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={newParcel.volume_m3}
-                  onChange={(e) => setNewParcel({ ...newParcel, volume_m3: e.target.value })}
-                  className={inputClass}
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-grey-700 mb-1">{t('outboundParcels:fields.tareWeightKg', { defaultValue: 'Tare weight (kg)' })}</label>
-                <input
-                  type="number"
-                  min="0"
-                  step="1"
-                  value={newParcel.tare_weight_kg}
-                  onChange={(e) => setNewParcel({ ...newParcel, tare_weight_kg: e.target.value })}
-                  className={inputClass}
-                />
-              </div>
-            </div>
-            <div className="flex justify-end">
-              <button
-                type="button"
-                onClick={handleCreateAndAttach}
-                disabled={isMutatingParcels || !newParcel.material_id}
-                className="h-9 px-4 bg-green-500 text-white rounded-md text-sm font-semibold hover:bg-green-700 disabled:opacity-50 transition-colors"
-              >
-                {isMutatingParcels ? <Loader2 className="animate-spin" size={14} /> : t('outboundParcels:createAndAttach', { defaultValue: 'Create & Attach' })}
-              </button>
-            </div>
-          </div>
-        )}
-
-        {showAttachPanel && canMutateParcels && (
-          <div className="border border-grey-200 rounded-lg p-3 mb-4 bg-grey-25">
-            <input
-              type="text"
-              value={parcelSearch}
-              onChange={(event) => setParcelSearch(event.target.value)}
-              placeholder={t('outboundParcels:attachSearch')}
-              className="w-full h-10 px-3.5 rounded-md border border-grey-300 text-sm text-grey-900 focus:border-green-500 focus:ring-[3px] focus:ring-green-500/15 outline-none transition-colors mb-3"
-            />
-
-            {isLoadingAvailableParcels ? (
-              <div className="flex items-center justify-center py-8 text-grey-500">
-                <Loader2 className="animate-spin" size={18} />
-              </div>
-            ) : availableParcels.length === 0 ? (
-              <p className="text-sm text-grey-500">{t('outboundParcels:noAvailableParcels')}</p>
-            ) : (
-              <div className="space-y-2 max-h-72 overflow-y-auto mb-3">
-                {availableParcels.map((parcel) => {
-                  const checked = selectedParcelIds.includes(parcel.id);
-                  return (
-                    <label key={parcel.id} className="flex items-start gap-3 rounded-md border border-grey-200 bg-white px-3 py-2 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={checked}
-                        onChange={() => {
-                          setSelectedParcelIds((current) => (
-                            checked
-                              ? current.filter((id) => id !== parcel.id)
-                              : [...current, parcel.id]
-                          ));
-                        }}
-                        className="mt-1"
-                      />
-                      <div className="min-w-0 flex-1">
-                        <div className="text-sm font-semibold text-grey-900">{parcel.parcel_label}</div>
-                        <div className="text-xs text-grey-500">
-                          {(parcel.material?.name || '—')} · {t(`common:containerTypes.${parcel.container_type}`, { defaultValue: parcel.container_type })}
-                          {parcel.tare_weight_kg != null ? ` · ${Number(parcel.tare_weight_kg).toLocaleString()} kg` : ''}
-                        </div>
-                      </div>
-                    </label>
-                  );
-                })}
-              </div>
-            )}
-
-            <div className="flex justify-end">
-              <button
-                type="button"
-                onClick={handleAttachSelected}
-                disabled={selectedParcelIds.length === 0 || isMutatingParcels}
-                className="h-9 px-4 bg-green-500 text-white rounded-md text-sm font-semibold hover:bg-green-700 disabled:opacity-50 transition-colors"
-              >
-                {t('outboundParcels:attachSelected')}
-              </button>
-            </div>
-          </div>
-        )}
-
-        {parcels.length === 0 ? (
-          <p className="text-sm text-grey-500">{t('outboundParcels:noParcelsAttached')}</p>
+        {lines.length === 0 && !isAddingLine ? (
+          <p className="text-sm text-grey-500">{t('outboundLines:empty')}</p>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+            <table className="w-full text-sm min-w-[640px]">
               <thead>
                 <tr className="border-b border-grey-200">
-                  <th className="text-left py-3 text-xs font-medium text-grey-500 uppercase tracking-wide">{t('outboundParcels:fields.parcelLabel')}</th>
-                  <th className="text-left py-3 text-xs font-medium text-grey-500 uppercase tracking-wide">{t('outboundParcels:fields.status')}</th>
-                  <th className="text-left py-3 text-xs font-medium text-grey-500 uppercase tracking-wide">{t('outboundParcels:fields.containerType')}</th>
-                  <th className="text-left py-3 text-xs font-medium text-grey-500 uppercase tracking-wide">{t('outboundParcels:fields.material')}</th>
-                  <th className="text-right py-3 text-xs font-medium text-grey-500 uppercase tracking-wide">{t('outboundParcels:fields.volumeM3')}</th>
-                  <th className="text-right py-3 text-xs font-medium text-grey-500 uppercase tracking-wide">{t('outboundParcels:fields.tareWeightKg')}</th>
-                  {canMutateParcels && <th className="text-right py-3 text-xs font-medium text-grey-500 uppercase tracking-wide">{t('documents.actions')}</th>}
+                  <th className="text-left py-3 text-xs font-medium text-grey-500 uppercase tracking-wide">{t('outboundLines:fields.material')}</th>
+                  <th className="text-left py-3 text-xs font-medium text-grey-500 uppercase tracking-wide">{t('outboundLines:fields.containerType')}</th>
+                  <th className="text-right py-3 text-xs font-medium text-grey-500 uppercase tracking-wide">{t('outboundLines:fields.volume')}</th>
+                  <th className="text-left py-3 text-xs font-medium text-grey-500 uppercase tracking-wide">{t('outboundLines:fields.uom')}</th>
+                  <th className="py-3 w-12"></th>
                 </tr>
               </thead>
               <tbody>
-                {parcels.map((parcel) => (
-                  <tr key={parcel.id} className="border-b border-grey-100">
-                    <td className="py-3 text-green-700 font-medium">
-                      <Link to={`/parcels/outgoing/${parcel.id}`} className="hover:underline">
-                        {parcel.parcel_label}
-                      </Link>
-                    </td>
-                    <td className="py-3"><StatusBadge status={parcel.status} /></td>
-                    <td className="py-3 text-grey-700">{t(`common:containerTypes.${parcel.container_type}`, { defaultValue: parcel.container_type })}</td>
-                    <td className="py-3 text-grey-700">{parcel.material?.name || '—'}</td>
-                    <td className="py-3 text-right text-grey-700">{parcel.volume_m3 != null ? Number(parcel.volume_m3).toLocaleString() : '—'}</td>
-                    <td className="py-3 text-right text-grey-700">{parcel.tare_weight_kg != null ? Number(parcel.tare_weight_kg).toLocaleString() : '—'}</td>
-                    {canMutateParcels && (
-                      <td className="py-3 text-right">
-                        <button
-                          type="button"
-                          onClick={() => handleDetachParcel(parcel.id)}
-                          disabled={isMutatingParcels}
-                          className="text-sm font-medium text-red-600 hover:text-red-700 disabled:opacity-50"
-                        >
-                          {t('outboundParcels:detach')}
-                        </button>
-                      </td>
-                    )}
-                  </tr>
+                {lines.map((line) => (
+                  editingLineId === line.id ? (
+                    <LineEditRow
+                      key={line.id}
+                      initial={line}
+                      materials={materials}
+                      isBusy={isMutatingLine}
+                      onCancel={handleCancelEdit}
+                      onSave={(payload) => handleSaveEditLine(line.id, payload)}
+                      t={t}
+                    />
+                  ) : (
+                    <LineViewRow
+                      key={line.id}
+                      line={line}
+                      canMutate={canMutateLines && editingLineId === null && !isAddingLine}
+                      onEdit={() => handleStartEdit(line)}
+                      onDelete={() => handleDeleteLine(line.id)}
+                      t={t}
+                    />
+                  )
                 ))}
+                {isAddingLine && (
+                  <LineEditRow
+                    initial={null}
+                    materials={materials}
+                    isBusy={isMutatingLine}
+                    onCancel={handleCancelEdit}
+                    onSave={handleCreateLine}
+                    t={t}
+                  />
+                )}
               </tbody>
             </table>
 
-            <div className="flex items-center justify-between mt-3 pt-3 border-t border-grey-200 text-sm text-grey-700">
-              <span>{t('common:total')}</span>
-              <span>
-                {t('outboundParcels:totalSummary', {
-                  count: parcelTotals.count,
-                  volume: parcelTotals.volume.toLocaleString(),
-                  weight: parcelTotals.weight.toLocaleString(),
-                })}
-              </span>
-            </div>
+            {lines.length > 0 && (
+              <div className="flex items-center justify-between mt-3 pt-3 border-t border-grey-200 text-sm text-grey-700">
+                <span>{t('common:total')}</span>
+                <span>{t('outboundLines:totals', { count: lines.length })}</span>
+              </div>
+            )}
           </div>
         )}
       </div>
+
 
       {/* Weighing + Waste Streams grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-4">
@@ -983,5 +826,138 @@ function ConfirmDialog({ type, isConfirming, onConfirm, onClose, t }) {
         </div>
       </div>
     </div>
+  );
+}
+
+/* ---- Line View Row ---- */
+function LineViewRow({ line, canMutate, onEdit, onDelete, t }) {
+  const actions = [];
+  if (canMutate) {
+    actions.push({ label: t('outboundLines:actions.edit'), icon: Pencil, onClick: onEdit });
+    actions.push({ label: t('outboundLines:actions.delete'), icon: Trash2, onClick: onDelete, variant: 'danger' });
+  }
+  return (
+    <tr className="border-b border-grey-100">
+      <td className="py-3 text-grey-900 font-medium">{line.material?.name || '—'}</td>
+      <td className="py-3 text-grey-700">
+        {line.container_type
+          ? t(`outboundLines:containerTypes.${line.container_type}`, { defaultValue: line.container_type })
+          : '—'}
+      </td>
+      <td className="py-3 text-right text-grey-700">
+        {line.volume != null ? Number(line.volume).toLocaleString() : '—'}
+      </td>
+      <td className="py-3 text-grey-700">
+        {line.volume_uom
+          ? t(`outboundLines:uoms.${line.volume_uom}`, { defaultValue: line.volume_uom })
+          : '—'}
+      </td>
+      <td className="py-3 text-right">
+        {canMutate ? <RowActionMenu actions={actions} /> : null}
+      </td>
+    </tr>
+  );
+}
+
+/* ---- Line Edit Row (also used for Add) ---- */
+function LineEditRow({ initial, materials, isBusy, onCancel, onSave, t }) {
+  const [draft, setDraft] = useState({
+    material_id: initial?.material_id || '',
+    container_type: initial?.container_type || 'OPEN_TOP',
+    volume: initial?.volume != null ? String(initial.volume) : '',
+    volume_uom: initial?.volume_uom || 'M3',
+  });
+
+  const activeMaterials = (materials || []).filter((m) => m?.is_active !== false);
+
+  const canSubmit =
+    !!draft.material_id &&
+    !!draft.container_type &&
+    !!draft.volume_uom &&
+    Number(draft.volume) > 0;
+
+  const handleSubmit = () => {
+    if (!canSubmit) return;
+    onSave({
+      material_id: draft.material_id,
+      container_type: draft.container_type,
+      volume: Number(draft.volume),
+      volume_uom: draft.volume_uom,
+    });
+  };
+
+  return (
+    <tr className="border-b border-grey-100 bg-grey-25">
+      <td className="py-3 pr-3 align-top">
+        <select
+          value={draft.material_id}
+          onChange={(e) => setDraft({ ...draft, material_id: e.target.value })}
+          className={selectClass}
+          aria-label={t('outboundLines:fields.material')}
+        >
+          <option value="">—</option>
+          {activeMaterials.map((m) => (
+            <option key={m.id} value={m.id}>{m.name}</option>
+          ))}
+        </select>
+      </td>
+      <td className="py-3 pr-3 align-top">
+        <select
+          value={draft.container_type}
+          onChange={(e) => setDraft({ ...draft, container_type: e.target.value })}
+          className={selectClass}
+          aria-label={t('outboundLines:fields.containerType')}
+        >
+          <option value="OPEN_TOP">{t('outboundLines:containerTypes.OPEN_TOP')}</option>
+          <option value="CLOSED_TOP">{t('outboundLines:containerTypes.CLOSED_TOP')}</option>
+          <option value="GITTERBOX">{t('outboundLines:containerTypes.GITTERBOX')}</option>
+          <option value="PALLET">{t('outboundLines:containerTypes.PALLET')}</option>
+          <option value="OTHER">{t('outboundLines:containerTypes.OTHER')}</option>
+        </select>
+      </td>
+      <td className="py-3 pr-3 align-top">
+        <input
+          type="number"
+          min="0.01"
+          step="0.01"
+          value={draft.volume}
+          onChange={(e) => setDraft({ ...draft, volume: e.target.value })}
+          className={inputClass}
+          aria-label={t('outboundLines:fields.volume')}
+        />
+      </td>
+      <td className="py-3 pr-3 align-top">
+        <select
+          value={draft.volume_uom}
+          onChange={(e) => setDraft({ ...draft, volume_uom: e.target.value })}
+          className={selectClass}
+          aria-label={t('outboundLines:fields.uom')}
+        >
+          <option value="M3">{t('outboundLines:uoms.M3')}</option>
+          <option value="L">{t('outboundLines:uoms.L')}</option>
+        </select>
+      </td>
+      <td className="py-3 align-top">
+        <div className="flex justify-end gap-3">
+          <button
+            type="button"
+            onClick={onCancel}
+            disabled={isBusy}
+            className="h-9 px-3 border border-grey-300 text-grey-700 rounded-md text-sm font-medium hover:bg-grey-50 disabled:opacity-50 transition-colors"
+          >
+            {t('outboundLines:cancel')}
+          </button>
+          <button
+            type="button"
+            onClick={handleSubmit}
+            disabled={!canSubmit || isBusy}
+            className="h-9 px-4 bg-green-500 text-white rounded-md text-sm font-semibold hover:bg-green-700 disabled:opacity-50 transition-colors flex items-center gap-2"
+          >
+            {isBusy && <Loader2 className="animate-spin" size={14} />}
+            {t('outboundLines:save')}
+          </button>
+        </div>
+      </td>
+    </tr>
   );
 }

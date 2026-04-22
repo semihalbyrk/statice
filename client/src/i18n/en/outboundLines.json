@@ -1,0 +1,38 @@
+{
+  "title": "Lines",
+  "empty": "No lines yet. Add at least one line before weighing.",
+  "addLine": "Add Line",
+  "save": "Save",
+  "cancel": "Cancel",
+  "fields": {
+    "material": "Material",
+    "containerType": "Container Type",
+    "volume": "Volume",
+    "uom": "Unit"
+  },
+  "actions": {
+    "edit": "Edit",
+    "delete": "Delete"
+  },
+  "toast": {
+    "created": "Line added",
+    "updated": "Line updated",
+    "deleted": "Line removed",
+    "loadFailed": "Failed to load lines",
+    "saveFailed": "Failed to save line",
+    "deleteFailed": "Failed to remove line"
+  },
+  "confirmDelete": "Remove this line?",
+  "totals": "{{count}} lines",
+  "containerTypes": {
+    "OPEN_TOP": "Open Top",
+    "CLOSED_TOP": "Closed Top",
+    "GITTERBOX": "Gitterbox",
+    "PALLET": "Pallet",
+    "OTHER": "Other"
+  },
+  "uoms": {
+    "M3": "m³",
+    "L": "L"
+  }
+}
