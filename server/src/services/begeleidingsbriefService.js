@@ -55,7 +55,7 @@ async function mapBegeleidingsbrief(outboundId) {
           },
         },
       },
-      parcels: { include: { material: true } },
+      lines: { include: { material: true } },
     },
   });
 
@@ -149,14 +149,14 @@ async function mapBegeleidingsbrief(outboundId) {
 
   const wasteLines = streams.map((ws) => {
     const material = materialsMap[ws.material_id];
-    // Parcels belonging to this material only
-    const materialParcels = outbound.parcels.filter(
-      (p) => p.material_id === ws.material_id,
+    // OutboundLines belonging to this material only
+    const materialLines = (outbound.lines || []).filter(
+      (l) => l.material_id === ws.material_id,
     );
     return {
       asn: ws.asn || '',
       materialName: material?.name || ws.waste_stream?.name || '',
-      packaging: formatPackaging(materialParcels),
+      packaging: formatPackaging(materialLines),
       euralCode: material?.eural_code || '',
       processingMethod: ws.processing_method || '',
       estimatedWeight:
