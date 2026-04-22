@@ -239,12 +239,6 @@ enum OrderDocumentType {
   OTHER
 }
 
-enum OutboundParcelStatus {
-  AVAILABLE
-  ASSIGNED
-  SHIPPED
-}
-
 model User {
   id            String    @id @default(uuid())
   email         String    @unique
@@ -792,7 +786,6 @@ model MaterialMaster {
   reusable_items      ReusableItem[]
   contract_rate_lines ContractRateLine[]
   invoice_lines       InvoiceLine[]
-  outbound_parcels    OutboundParcel[]
   outbound_lines      OutboundLine[]
 
   @@map("ProductTypeMaster")
@@ -1260,7 +1253,6 @@ model Outbound {
   outbound_order   OutboundOrder           @relation(fields: [outbound_order_id], references: [id])
   weighing_records OutboundWeighingRecord[]
   documents        OutboundDocument[]
-  parcels          OutboundParcel[]
   lines            OutboundLine[]
 
   @@map("outbounds")
@@ -1301,30 +1293,6 @@ model OutboundDocument {
 
   @@map("outbound_documents")
   @@index([outbound_id])
-}
-
-model OutboundParcel {
-  id                  String               @id @default(uuid())
-  parcel_label        String               @unique @map("parcel_label")
-  outbound_id         String?              @map("outbound_id")
-  material_id         String               @map("material_id")
-  container_type      SkipType             @map("container_type")
-  volume_m3           Decimal?             @map("volume_m3") @db.Decimal(8, 2)
-  tare_weight_kg      Decimal?             @map("tare_weight_kg") @db.Decimal(12, 2)
-  description         String?
-  notes               String?
-  status              OutboundParcelStatus @default(AVAILABLE)
-  created_by          String               @map("created_by")
-  created_at          DateTime             @default(now()) @map("created_at")
-  updated_at          DateTime             @updatedAt @map("updated_at")
-
-  outbound Outbound?      @relation(fields: [outbound_id], references: [id])
-  material MaterialMaster @relation(fields: [material_id], references: [id])
-
-  @@map("outbound_parcels")
-  @@index([outbound_id])
-  @@index([material_id])
-  @@index([status])
 }
 
 model OutboundLine {

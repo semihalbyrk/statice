@@ -46,7 +46,6 @@ const DETAIL_INCLUDE = {
       _count: {
         select: {
           documents: true,
-          parcels: true,
         },
       },
     },
