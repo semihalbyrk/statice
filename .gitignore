@@ -32,6 +32,11 @@ server/storage/
 # Uploaded files
 server/uploads/
 
+# Test outputs
+test-results/
+server/test-results/
+playwright-report/
+
 # Claude Code
 .claude/
 .claude-memory
