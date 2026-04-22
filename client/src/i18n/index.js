@@ -19,7 +19,6 @@ import errorsEN from './en/errors.json';
 import entitiesEN from './en/entities.json';
 import outboundOrdersEN from './en/outboundOrders.json';
 import outboundsEN from './en/outbounds.json';
-import outboundParcelsEN from './en/outboundParcels.json';
 import outboundLinesEN from './en/outboundLines.json';
 import parcelsEN from './en/parcels.json';
 
@@ -40,7 +39,6 @@ import errorsNL from './nl/errors.json';
 import entitiesNL from './nl/entities.json';
 import outboundOrdersNL from './nl/outboundOrders.json';
 import outboundsNL from './nl/outbounds.json';
-import outboundParcelsNL from './nl/outboundParcels.json';
 import outboundLinesNL from './nl/outboundLines.json';
 import parcelsNL from './nl/parcels.json';
 
@@ -53,13 +51,13 @@ i18n
         common: commonEN, nav: navEN, auth: authEN, dashboard: dashboardEN,
         orders: ordersEN, inbounds: inboundsEN, weighing: weighingEN,
         sorting: sortingEN, contracts: contractsEN, invoices: invoicesEN,
-        admin: adminEN, reports: reportsEN, arrival: arrivalEN, errors: errorsEN, entities: entitiesEN, outboundOrders: outboundOrdersEN, outbounds: outboundsEN, outboundParcels: outboundParcelsEN, outboundLines: outboundLinesEN, parcels: parcelsEN,
+        admin: adminEN, reports: reportsEN, arrival: arrivalEN, errors: errorsEN, entities: entitiesEN, outboundOrders: outboundOrdersEN, outbounds: outboundsEN, outboundLines: outboundLinesEN, parcels: parcelsEN,
       },
       nl: {
         common: commonNL, nav: navNL, auth: authNL, dashboard: dashboardNL,
         orders: ordersNL, inbounds: inboundsNL, weighing: weighingNL,
         sorting: sortingNL, contracts: contractsNL, invoices: invoicesNL,
-        admin: adminNL, reports: reportsNL, arrival: arrivalNL, errors: errorsNL, entities: entitiesNL, outboundOrders: outboundOrdersNL, outbounds: outboundsNL, outboundParcels: outboundParcelsNL, outboundLines: outboundLinesNL, parcels: parcelsNL,
+        admin: adminNL, reports: reportsNL, arrival: arrivalNL, errors: errorsNL, entities: entitiesNL, outboundOrders: outboundOrdersNL, outbounds: outboundsNL, outboundLines: outboundLinesNL, parcels: parcelsNL,
       },
     },
     fallbackLng: 'en',

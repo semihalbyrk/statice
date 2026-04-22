@@ -39,8 +39,6 @@ import OutboundsPage from './pages/outbounds/OutboundsPage';
 import OutboundDetailPage from './pages/outbounds/OutboundDetailPage';
 import ParcelsPage from './pages/parcels/ParcelsPage';
 import IncomingParcelDetailPage from './pages/parcels/IncomingParcelDetailPage';
-import OutgoingParcelDetailPage from './pages/parcels/OutgoingParcelDetailPage';
-import OutgoingParcelCreatePage from './pages/parcels/OutgoingParcelCreatePage';
 import NotFoundPage from './pages/errors/NotFoundPage';
 import UnauthorisedPage from './pages/errors/UnauthorisedPage';
 
@@ -111,14 +109,12 @@ export default function App() {
           <Route path="/orders/new" element={<ProtectedRoute allowedRoles={['ADMIN', 'LOGISTICS_PLANNER']}><OrderCreatePage /></ProtectedRoute>} />
           <Route path="/orders/:id" element={<ProtectedRoute allowedRoles={['ADMIN', 'LOGISTICS_PLANNER']}><OrderDetailPage /></ProtectedRoute>} />
           <Route path="/outbound-orders" element={<Navigate to="/orders?tab=outbound" replace />} />
-          <Route path="/outbound-orders/new" element={<Navigate to="/orders/new?type=OUTGOING" replace />} />
+          <Route path="/outbound-orders/new" element={<ProtectedRoute allowedRoles={['ADMIN', 'LOGISTICS_PLANNER']}><OutboundOrderCreatePage /></ProtectedRoute>} />
           <Route path="/outbound-orders/:id" element={<ProtectedRoute allowedRoles={['ADMIN', 'LOGISTICS_PLANNER']}><OutboundOrderDetailPage /></ProtectedRoute>} />
           <Route path="/outbounds" element={<ProtectedRoute allowedRoles={['GATE_OPERATOR', 'ADMIN', 'LOGISTICS_PLANNER']}><OutboundsPage /></ProtectedRoute>} />
           <Route path="/outbounds/:outboundId" element={<ProtectedRoute allowedRoles={['GATE_OPERATOR', 'ADMIN', 'LOGISTICS_PLANNER']}><OutboundDetailPage /></ProtectedRoute>} />
           <Route path="/parcels" element={<ProtectedRoute allowedRoles={['GATE_OPERATOR', 'ADMIN', 'LOGISTICS_PLANNER']}><ParcelsPage /></ProtectedRoute>} />
           <Route path="/parcels/incoming/:id" element={<ProtectedRoute allowedRoles={['GATE_OPERATOR', 'ADMIN', 'LOGISTICS_PLANNER']}><IncomingParcelDetailPage /></ProtectedRoute>} />
-          <Route path="/parcels/outgoing/new" element={<ProtectedRoute allowedRoles={['ADMIN', 'LOGISTICS_PLANNER']}><OutgoingParcelCreatePage /></ProtectedRoute>} />
-          <Route path="/parcels/outgoing/:id" element={<ProtectedRoute allowedRoles={['GATE_OPERATOR', 'ADMIN', 'LOGISTICS_PLANNER']}><OutgoingParcelDetailPage /></ProtectedRoute>} />
           <Route path="/arrival" element={<ProtectedRoute allowedRoles={['GATE_OPERATOR', 'ADMIN']}><ArrivalPage /></ProtectedRoute>} />
           <Route path="/inbounds" element={<ProtectedRoute allowedRoles={['GATE_OPERATOR', 'ADMIN']}><InboundsPage /></ProtectedRoute>} />
           <Route path="/inbounds/:inboundId" element={<ProtectedRoute allowedRoles={['GATE_OPERATOR', 'ADMIN']}><WeighingEventPage /></ProtectedRoute>} />

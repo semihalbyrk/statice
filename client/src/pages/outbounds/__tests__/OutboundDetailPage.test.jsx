@@ -1,6 +1,6 @@
 /**
  * OutboundDetailPage Interaction Tests
- * Tests parcel management (create, attach, detach)
+ * Tests lines section (empty state, add-line affordance, listing)
  * Tests weighing dialog (MANUAL and SCALE source)
  * Tests status transitions via ClickableStatusBadge
  * Tests BGL generation and departure/delivery confirmation
@@ -12,10 +12,10 @@ import userEvent from '@testing-library/user-event';
 import { BrowserRouter } from 'react-router-dom';
 import OutboundDetailPage from '../OutboundDetailPage';
 import * as outboundsApi from '../../../api/outbounds';
-import * as parcelsApi from '../../../api/parcels';
+import * as outboundLinesApi from '../../../api/outboundLines';
 
 vi.mock('../../../api/outbounds');
-vi.mock('../../../api/parcels');
+vi.mock('../../../api/outboundLines');
 
 const mockNavigate = vi.fn();
 
@@ -59,7 +59,6 @@ const mockOutbound = {
   tare_weight: null,
   gross_weight: null,
   net_weight: null,
-  parcels: [],
   documents: [],
   created_at: '2026-04-13T10:00:00Z',
 };
@@ -74,10 +73,10 @@ describe('OutboundDetailPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     outboundsApi.getOutbound.mockResolvedValue(wrapOutbound(mockOutbound));
-    parcelsApi.listOutgoingParcels.mockResolvedValue({ data: { data: [] } });
-    parcelsApi.createOutgoingParcel.mockResolvedValue({ data: { data: {} } });
-    parcelsApi.attachParcelsToOutbound.mockResolvedValue(wrapOutbound(mockOutbound));
-    parcelsApi.detachParcelFromOutbound.mockResolvedValue({ data: { success: true } });
+    outboundLinesApi.listOutboundLines.mockResolvedValue({ data: { data: [] } });
+    outboundLinesApi.createOutboundLine.mockResolvedValue({ data: { data: {} } });
+    outboundLinesApi.updateOutboundLine.mockResolvedValue({ data: { data: {} } });
+    outboundLinesApi.deleteOutboundLine.mockResolvedValue({ data: { success: true } });
     outboundsApi.recordWeighing.mockResolvedValue(wrapOutbound(mockOutbound));
     // generateBgl returns updated outbound (component calls setOutbound(data.data))
     outboundsApi.generateBgl.mockResolvedValue(wrapOutbound({
@@ -140,72 +139,50 @@ describe('OutboundDetailPage', () => {
     expect(document.body.textContent).toMatch(/ORD-OUT-001/);
   });
 
-  // ─── Parcel Management ────────────────────────────────────────────────────
+  // ─── Lines Section ────────────────────────────────────────────────────────
 
-  it('should show "Create new" parcel button for CREATED status', async () => {
-    renderWithRouter(<OutboundDetailPage />);
-
-    await screen.findAllByText('OUT-001');
-
-    // CREATED status allows mutations — button should be present
-    const createBtn = screen.queryByRole('button', { name: /create.*new|new.*parcel|nieuw/i });
-    expect(createBtn).toBeInTheDocument();
-  });
-
-  it('should show "Attach Parcels" button for CREATED status', async () => {
-    renderWithRouter(<OutboundDetailPage />);
-
-    await screen.findAllByText('OUT-001');
-
-    // i18n key outboundParcels:attach → "Attach Parcels"
-    const attachBtn = screen.queryByRole('button', { name: /attach.*parcels|attach/i });
-    expect(attachBtn).toBeInTheDocument();
-  });
-
-  it('should toggle inline create form on "Create new" click', async () => {
-    const user = userEvent.setup();
-    renderWithRouter(<OutboundDetailPage />);
-
-    await screen.findAllByText('OUT-001');
-
-    const createBtn = screen.getByRole('button', { name: /create.*new|new.*parcel|nieuw/i });
-    // Verify button exists — clicking opens a form section
-    expect(createBtn).toBeInTheDocument();
-    // Note: form opening test skipped due to Zustand store materials initialization in jsdom
-  });
-
-  it('should show "no parcels" message when parcels array is empty', async () => {
+  it('should render Lines section with empty state when no lines exist', async () => {
     renderWithRouter(<OutboundDetailPage />);
 
     await screen.findAllByText('OUT-001');
 
     await waitFor(() => {
-      expect(document.body.textContent).toMatch(/no parcels|geen|empty/i);
+      // i18n key outboundLines:empty → "No lines yet. Add at least one line before weighing."
+      expect(document.body.textContent).toMatch(/no lines yet|empty|geen/i);
     });
   });
 
-  it('should display attached parcels in table', async () => {
-    const parcelWithData = {
-      id: 'parcel-1',
-      parcel_label: 'OUT-P001',
-      status: 'ATTACHED',
-      container_type: 'GITTERBOX',
+  it('should show "Add Line" button for CREATED status', async () => {
+    renderWithRouter(<OutboundDetailPage />);
+
+    await screen.findAllByText('OUT-001');
+
+    // i18n key outboundLines:addLine → "Add Line"
+    const addBtn = screen.queryByRole('button', { name: /add.*line|nieuw.*regel/i });
+    expect(addBtn).toBeInTheDocument();
+  });
+
+  it('should display existing lines in the table', async () => {
+    const sampleLine = {
+      id: 'line-1',
+      material_id: 'mat-1',
       material: { name: 'Electronics' },
-      volume_m3: 1.5,
-      tare_weight_kg: 25,
+      container_type: 'GITTERBOX',
+      volume: 1.5,
+      volume_uom: 'M3',
     };
-    outboundsApi.getOutbound.mockResolvedValue(wrapOutbound({
-      ...mockOutbound,
-      parcels: [parcelWithData],
-    }));
+    outboundLinesApi.listOutboundLines.mockResolvedValue({ data: { data: [sampleLine] } });
 
     renderWithRouter(<OutboundDetailPage />);
 
-    await screen.findByText('OUT-P001');
-    expect(document.body.textContent).toMatch(/Electronics/);
+    await screen.findAllByText('OUT-001');
+
+    await waitFor(() => {
+      expect(document.body.textContent).toMatch(/Electronics/);
+    });
   });
 
-  it('should hide Create/Attach buttons for DEPARTED status', async () => {
+  it('should hide "Add Line" button for DEPARTED status', async () => {
     outboundsApi.getOutbound.mockResolvedValue(wrapOutbound({
       ...mockOutbound,
       status: 'DEPARTED',
@@ -215,18 +192,18 @@ describe('OutboundDetailPage', () => {
 
     await screen.findAllByText('OUT-001');
 
-    const createBtn = screen.queryByRole('button', { name: /create.*new|new.*parcel|nieuw/i });
-    expect(createBtn).not.toBeInTheDocument();
+    const addBtn = screen.queryByRole('button', { name: /add.*line|nieuw.*regel/i });
+    expect(addBtn).not.toBeInTheDocument();
   });
 
-  it('should have createOutgoingParcel API available for form submission', async () => {
+  it('should expose outboundLines API for line mutations', async () => {
     renderWithRouter(<OutboundDetailPage />);
 
     await screen.findAllByText('OUT-001');
 
-    // Verify the API mock is set up — actual form submission tested via E2E
-    expect(parcelsApi.createOutgoingParcel).toBeDefined();
-    expect(parcelsApi.attachParcelsToOutbound).toBeDefined();
+    expect(outboundLinesApi.createOutboundLine).toBeDefined();
+    expect(outboundLinesApi.updateOutboundLine).toBeDefined();
+    expect(outboundLinesApi.deleteOutboundLine).toBeDefined();
   });
 
   // ─── Weighing Section ──────────────────────────────────────────────────────
