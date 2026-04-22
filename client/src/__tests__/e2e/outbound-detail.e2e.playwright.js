@@ -99,41 +99,82 @@ test('outbound detail has weighing section', async ({ page }) => {
   }
 
   await page.waitForLoadState('networkidle');
-  const bodyText = (await page.locator('body').innerText()).toLowerCase();
 
-  // Accept any weight-related keyword in EN or NL
-  const hasWeighKeyword =
-    /weigh|tare|gross|bruto|netto|net weight|tarra|gewicht/.test(bodyText);
+  // Wait for the "Weighing" heading to appear (h2 — "Weighing"/"Weging")
+  const weighingHeading = page
+    .locator('h2')
+    .filter({ hasText: /^(weighing|weging)$/i })
+    .first();
 
-  if (!hasWeighKeyword) {
-    console.log('[INFO] Weighing section keywords not found — page body:', bodyText.slice(0, 300));
-  }
-
-  expect(hasWeighKeyword).toBe(true);
+  await expect(weighingHeading).toBeVisible({ timeout: 10_000 });
 });
 
 // ---------------------------------------------------------------------------
-// Test 4 — Outbound detail has a parcels section
+// Test 4 — Outbound detail has a lines section
 // ---------------------------------------------------------------------------
-test('outbound detail has parcels section', async ({ page }) => {
+test('outbound detail has lines section', async ({ page }) => {
   await loginAs(page, 'LOGISTICS_PLANNER');
 
   const found = await navigateToFirstOutbound(page);
 
   if (!found) {
-    console.log('[SKIP] No outbound shipments found — skipping parcels section test.');
+    console.log('[SKIP] No outbound shipments found — skipping lines section test.');
     return;
   }
 
   await page.waitForLoadState('networkidle');
-  const bodyText = (await page.locator('body').innerText()).toLowerCase();
 
-  // Accept any parcel-related keyword in EN or NL
-  const hasParcelKeyword = /parcel|pakket|collo|pallet|shipment item/.test(bodyText);
+  // Wait for the "Lines" heading to appear (h2 from outboundLines:title — "Lines"/"Regels")
+  const linesHeading = page
+    .locator('h2')
+    .filter({ hasText: /^(lines|regels)$/i })
+    .first();
 
-  if (!hasParcelKeyword) {
-    console.log('[INFO] Parcels section keywords not found — page body:', bodyText.slice(0, 300));
+  await expect(linesHeading).toBeVisible({ timeout: 10_000 });
+});
+
+// ---------------------------------------------------------------------------
+// Test 5 — Outbound detail: Add Line flow (when outbound is editable)
+// ---------------------------------------------------------------------------
+test('outbound detail: add line form is reachable when editable', async ({ page }) => {
+  await loginAs(page, 'LOGISTICS_PLANNER');
+
+  const found = await navigateToFirstOutbound(page);
+
+  if (!found) {
+    console.log('[SKIP] No outbound shipments found — skipping add-line test.');
+    return;
   }
 
-  expect(hasParcelKeyword).toBe(true);
+  await page.waitForLoadState('networkidle');
+
+  // "Add Line" button is only visible when outbound.status is CREATED or LOADING
+  const addLineBtn = page.getByRole('button', { name: /\+\s*add line|nieuwe regel/i });
+  const btnVisible = (await addLineBtn.count()) > 0 && (await addLineBtn.first().isVisible().catch(() => false));
+
+  if (!btnVisible) {
+    console.log('[SKIP] Outbound not in editable state (CREATED/LOADING) — Add Line button not visible.');
+    return;
+  }
+
+  await addLineBtn.first().click();
+
+  // Inline form row should reveal Material / Container Type / Volume / Unit fields
+  const materialField = page.getByLabel(/material|materiaal/i).first();
+  await expect(materialField).toBeVisible({ timeout: 5000 });
+
+  const containerField = page.getByLabel(/container type|containertype/i).first();
+  await expect(containerField).toBeVisible({ timeout: 5000 });
+
+  const volumeField = page.getByLabel(/^volume$/i).first();
+  await expect(volumeField).toBeVisible({ timeout: 5000 });
+
+  const unitField = page.getByLabel(/^unit$|^eenheid$/i).first();
+  await expect(unitField).toBeVisible({ timeout: 5000 });
+
+  // Cancel should dismiss the form without persisting
+  const cancelBtn = page.getByRole('button', { name: /^cancel$|^annuleren$/i }).first();
+  if (await cancelBtn.isVisible().catch(() => false)) {
+    await cancelBtn.click();
+  }
 });
