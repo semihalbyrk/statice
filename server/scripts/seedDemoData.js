@@ -454,7 +454,6 @@ async function ensurePartiesAndFleet() {
       is_transporter: false,
       is_disposer: true,
       is_receiver: true,
-      is_also_site: true,
       is_protected: true,
     },
     create: {
@@ -477,7 +476,6 @@ async function ensurePartiesAndFleet() {
       is_transporter: false,
       is_disposer: true,
       is_receiver: true,
-      is_also_site: true,
       is_protected: true,
     },
   });

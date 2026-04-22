@@ -162,11 +162,6 @@ export default function EntityDetailPage() {
         <div className="bg-white rounded-lg border border-grey-200 shadow-sm p-5 mb-6">
           <div className="flex items-center gap-3 mb-4">
             <h2 className="text-sm font-semibold text-grey-900">{t('entities:detail.disposerInfo')}</h2>
-            {entity.is_also_site && (
-              <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                {t('entities:detail.isAlsoSite')}
-              </span>
-            )}
           </div>
           <DisposerSiteList
             entityId={entity.id}

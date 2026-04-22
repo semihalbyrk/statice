@@ -36,7 +36,6 @@ async function ensureEntityAlias(tx, aliasId, sourceId, overrides = {}) {
       'is_disposer',
       'is_receiver',
       'supplier_type',
-      'is_also_site',
       'is_protected',
     ]),
     ...overrides,

@@ -18,7 +18,6 @@
     "companyInfo": "Company Information",
     "supplierInfo": "Supplier Details",
     "disposerInfo": "Disposer Sites",
-    "isAlsoSite": "This entity is also a disposal site",
     "supplierType": "Supplier Type",
     "proRegistration": "PRO Registration Number",
     "supplierRoles": "Supplier Roles",
@@ -52,8 +51,7 @@
     "contactPhone": "Contact Phone",
     "supplierType": "Supplier Type",
     "supplierRole": "Supplier Role",
-    "proRegistrationNumber": "PRO Registration Number",
-    "isAlsoSite": "This entity is also a disposal site"
+    "proRegistrationNumber": "PRO Registration Number"
   },
   "roles": {
     "label": "Roles",
@@ -84,7 +82,7 @@
     "deactivated": "Site deactivated",
     "statusFailed": "Failed to update site status",
     "noSites": "No disposal sites added yet.",
-    "isAlsoSiteNote": "This entity's own address is available as a disposal site."
+    "addAfterSaveNote": "Add disposal sites to this entity after saving."
   },
   "validation": {
     "atLeastOneRole": "At least one role must be selected.",

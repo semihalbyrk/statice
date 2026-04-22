@@ -79,9 +79,9 @@ export default function Sidebar({ open, onClose }) {
   }));
   const role = user?.role;
   const [openGroups, setOpenGroups] = useState({
-    engagement: true,
-    mrf: true,
-    admin: true,
+    engagement: false,
+    mrf: false,
+    admin: false,
   });
   const toggleGroup = (key) => setOpenGroups((prev) => ({ ...prev, [key]: !prev[key] }));
   const initials = useMemo(() => {
@@ -110,8 +110,7 @@ export default function Sidebar({ open, onClose }) {
   const mrfItems = [
     { to: '/arrival', label: t('nav:arrivals'), roles: ['GATE_OPERATOR', 'ADMIN'] },
     { to: '/inbounds', label: t('nav:inbounds'), roles: ['GATE_OPERATOR', 'ADMIN'] },
-    { to: '/outbound-arrival', label: t('nav:outboundArrival'), roles: ['GATE_OPERATOR', 'ADMIN', 'LOGISTICS_PLANNER'] },
-    { to: '/outbounds', label: t('nav:outbounds'), roles: ['GATE_OPERATOR', 'ADMIN', 'LOGISTICS_PLANNER'] },
+{ to: '/outbounds', label: t('nav:outbounds'), roles: ['GATE_OPERATOR', 'ADMIN', 'LOGISTICS_PLANNER'] },
     { to: '/parcels', label: t('nav:parcels'), roles: ['GATE_OPERATOR', 'ADMIN', 'LOGISTICS_PLANNER'] },
     { to: '/sorting', label: t('nav:process'), roles: ['SORTING_EMPLOYEE', 'GATE_OPERATOR', 'ADMIN'] },
     { to: '/admin/materials', label: t('nav:materials'), roles: ['ADMIN'] },

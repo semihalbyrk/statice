@@ -18,7 +18,6 @@
     "companyInfo": "Bedrijfsinformatie",
     "supplierInfo": "Leveranciersgegevens",
     "disposerInfo": "Verwerkingslocaties",
-    "isAlsoSite": "Deze entiteit is ook een verwerkingslocatie",
     "supplierType": "Leveranciertype",
     "proRegistration": "PRO Registratienummer",
     "supplierRoles": "Leveranciersrollen",
@@ -52,8 +51,7 @@
     "contactPhone": "Contact telefoon",
     "supplierType": "Leveranciertype",
     "supplierRole": "Leverancierrol",
-    "proRegistrationNumber": "PRO-registratienummer",
-    "isAlsoSite": "Deze entiteit is ook een verwerkingslocatie"
+    "proRegistrationNumber": "PRO-registratienummer"
   },
   "roles": {
     "label": "Rollen",
@@ -84,7 +82,7 @@
     "deactivated": "Locatie gedeactiveerd",
     "statusFailed": "Kan locatiestatus niet bijwerken",
     "noSites": "Nog geen verwerkingslocaties toegevoegd.",
-    "isAlsoSiteNote": "Het adres van deze entiteit is beschikbaar als verwerkingslocatie."
+    "addAfterSaveNote": "Voeg verwerkingslocaties toe na het opslaan van deze entiteit."
   },
   "validation": {
     "atLeastOneRole": "Er moet minstens één rol worden geselecteerd.",

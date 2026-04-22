@@ -27,7 +27,6 @@ const INITIAL_FORM = {
   supplier_type: '',
   supplier_roles: [],
   pro_registration_number: '',
-  is_also_site: false,
 };
 
 export default function EntityCreatePage() {

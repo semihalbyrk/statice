@@ -219,7 +219,6 @@ describe('Entity Protection (Statice)', () => {
     expect(staticeEntity.is_protected).toBe(true);
     expect(staticeEntity.is_disposer).toBe(true);
     expect(staticeEntity.is_receiver).toBe(true);
-    expect(staticeEntity.is_also_site).toBe(true);
     expect(staticeEntity.status).toBe('ACTIVE');
   });
 

@@ -119,9 +119,6 @@ function applyRoleCleanup(data) {
     data.supplier_roles = [];
     data.pro_registration_number = null;
   }
-  if (data.is_disposer === false) {
-    data.is_also_site = false;
-  }
   return data;
 }
 
@@ -202,7 +199,6 @@ async function createEntity(data, userId) {
         supplier_type: data.supplier_type || null,
         supplier_roles: data.supplier_roles || [],
         pro_registration_number: data.pro_registration_number || null,
-        is_also_site: data.is_also_site || false,
       },
     });
 
@@ -249,10 +245,6 @@ async function updateEntity(id, data, userId) {
       updateData.supplier_roles = [];
       updateData.pro_registration_number = null;
     }
-    if (merged.is_disposer === false || data.is_disposer === false) {
-      updateData.is_also_site = false;
-    }
-
     const updated = await tx.entity.update({
       where: { id },
       data: updateData,

@@ -275,15 +275,9 @@ export default function ContractCreatePage() {
   // Helper: buyer entity options (all active entities)
   const buyerOptions = getAllActiveEntities().map(e => ({ id: e.id, name: e.company_name || e.name }));
 
-  // Helper: disposer site options (from fetched sites + disposer entity itself if is_also_site)
+  // Helper: disposer site options (from fetched sites for the selected disposer)
   const disposerSiteOptions = (() => {
     const options = disposerSites.map(s => ({ id: s.id, name: s.site_name || s.name }));
-    if (form.disposer_id) {
-      const disposerEntity = getAllActiveEntities().find(e => e.id === form.disposer_id);
-      if (disposerEntity?.is_also_site) {
-        options.unshift({ id: disposerEntity.id, name: `${disposerEntity.company_name || disposerEntity.name} (main site)` });
-      }
-    }
     return options;
   })();
 

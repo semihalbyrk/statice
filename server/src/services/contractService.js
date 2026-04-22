@@ -19,7 +19,7 @@ const MATERIAL_SELECT = {
   eural_code: true,
 };
 
-const ENTITY_BRIEF_SELECT = { id: true, company_name: true, street_and_number: true, postal_code: true, city: true, country: true, kvk_number: true, vihb_number: true, environmental_permit_number: true, status: true, is_also_site: true };
+const ENTITY_BRIEF_SELECT = { id: true, company_name: true, street_and_number: true, postal_code: true, city: true, country: true, kvk_number: true, vihb_number: true, environmental_permit_number: true, status: true };
 
 const CONTRACT_INCLUDE = {
   supplier: { select: { id: true, name: true, supplier_type: true } },

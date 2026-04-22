@@ -38,9 +38,6 @@ export default function EntityForm({ form, setForm, onSubmit, isEdit = false, lo
           updates.supplier_roles = [];
           updates.pro_registration_number = '';
         }
-        if (role === 'is_disposer') {
-          updates.is_also_site = false;
-        }
       }
 
       return updates;

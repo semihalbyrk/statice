@@ -8,6 +8,7 @@
     "dev": "nodemon src/index.js",
     "sync:default-users": "node scripts/syncDefaultUsers.js",
     "seed:demo": "node scripts/seedDemoData.js",
+    "db:reset": "node prisma/reset.js",
     "test": "vitest run",
     "test:watch": "vitest"
   },

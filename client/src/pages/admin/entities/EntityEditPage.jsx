@@ -33,7 +33,6 @@ export default function EntityEditPage() {
     supplier_type: '',
     supplier_roles: [],
     pro_registration_number: '',
-    is_also_site: false,
   });
 
   useEffect(() => {
@@ -62,7 +61,6 @@ export default function EntityEditPage() {
           supplier_type: e.supplier_type || '',
           supplier_roles: e.supplier_roles || [],
           pro_registration_number: e.pro_registration_number || '',
-          is_also_site: e.is_also_site || false,
         });
       })
       .catch(() => {

@@ -84,18 +84,12 @@ export default function EntityRoleFields({ form, setForm }) {
 
       {/* Disposer Details */}
       {form.is_disposer && (
-        <div className="bg-grey-50 rounded-lg p-4 space-y-4">
-          <h4 className="text-sm font-medium text-grey-700">{t('entities:roles.disposer')} Details</h4>
-          <label className="flex items-center gap-2 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={form.is_also_site}
-              onChange={(e) => setForm((prev) => ({ ...prev, is_also_site: e.target.checked }))}
-              className="rounded border-grey-300 text-green-500 focus:ring-green-500"
-            />
-            <span className="text-sm">{t('entities:fields.isAlsoSite')}</span>
-          </label>
-          <p className="text-xs text-grey-500">{t('entities:disposerSites.isAlsoSiteNote')}</p>
+        <div className="bg-grey-50 rounded-lg p-4">
+          <h4 className="text-sm font-medium text-grey-700 mb-2">{t('entities:roles.disposer')} Details</h4>
+          <div className="flex items-start gap-2 text-xs text-grey-500">
+            <Info size={14} className="mt-0.5 flex-shrink-0" />
+            <span>{t('entities:disposerSites.addAfterSaveNote')}</span>
+          </div>
         </div>
       )}
 
