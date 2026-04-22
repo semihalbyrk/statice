@@ -450,3 +450,54 @@ describe('GET /api/outbounds', () => {
     }
   });
 });
+
+// ─────────────────────────────────────────────────────────────────────────────
+// LINE COUNT GUARD — WEIGHED transition requires ≥1 line
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe('POST /api/outbounds/:id/weighings — line count guard', () => {
+  let outboundId;
+  const cleanup = { outbound_ids: [] };
+
+  beforeAll(async () => {
+    // Build a fresh outbound with ZERO lines, already in LOADING after a TARE.
+    const orderRes = await createTestOrder();
+    const outRes = await request(app)
+      .post(`/api/outbounds/order/${orderRes.body.id}`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ vehicle_plate: 'NL-GUARD-01' });
+    outboundId = outRes.body.data.id;
+    cleanup.outbound_ids.push(outboundId);
+
+    // Record TARE first — transitions CREATED → LOADING, no guard yet
+    const tareRes = await request(app)
+      .post(`/api/outbounds/${outboundId}/weighings`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ weighingType: 'TARE', source: 'MANUAL', weightKg: 15000 });
+    expect(tareRes.status).toBe(200);
+    expect(tareRes.body.data.status).toBe('LOADING');
+  });
+
+  afterAll(async () => {
+    if (cleanup.outbound_ids.length) {
+      await prisma.outboundLine.deleteMany({
+        where: { outbound_id: { in: cleanup.outbound_ids } },
+      });
+      await prisma.outboundWeighingRecord.deleteMany({
+        where: { outbound_id: { in: cleanup.outbound_ids } },
+      });
+      await prisma.outbound.deleteMany({
+        where: { id: { in: cleanup.outbound_ids } },
+      });
+    }
+  });
+
+  it('blocks the GROSS weighing when no lines exist', async () => {
+    const res = await request(app)
+      .post(`/api/outbounds/${outboundId}/weighings`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ weighingType: 'GROSS', source: 'MANUAL', weightKg: 20000 });
+    expect(res.status).toBe(400);
+    expect(res.body.error || res.body.message).toMatch(/at least one line/i);
+  });
+});

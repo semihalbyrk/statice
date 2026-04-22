@@ -299,6 +299,14 @@ async function recordWeighing(outboundId, data, userId) {
       const tareKg = Number(tareRecord.weight_kg);
       const netKg = Math.abs(grossKg - tareKg);
 
+      // Guard: outbound must have at least one line before it can be WEIGHED
+      const lineCount = await tx.outboundLine.count({
+        where: { outbound_id: outboundId },
+      });
+      if (lineCount === 0) {
+        badRequest('Outbound must have at least one line before weighing');
+      }
+
       // Current status might be CREATED (just transitioned to LOADING above) or LOADING
       // We need to transition to WEIGHED from LOADING
       validateTransition('LOADING', 'WEIGHED');
