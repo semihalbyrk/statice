@@ -3,18 +3,27 @@ const prisma = require('../utils/prismaClient');
 // ── helpers ──────────────────────────────────────────────────────────
 
 /**
- * Groups parcels (filtered to one material) by volume or container_type.
- * Returns e.g. "2 x 40m³" or "1 x OPEN_TOP, 2 x CLOSED_TOP"
+ * Groups OutboundLines (filtered to one material) by (volume_uom, volume).
+ * Sorts M3 before L, then by ascending volume.
+ * Returns e.g. "2 x 40m³, 3 x 200L"
  */
-function formatPackaging(parcels) {
-  if (!parcels || parcels.length === 0) return '';
-  const groups = {};
-  for (const p of parcels) {
-    const key = p.volume_m3 ? `${Number(p.volume_m3)}m³` : p.container_type;
-    groups[key] = (groups[key] || 0) + 1;
+const UOM_SYMBOL = { M3: 'm³', L: 'L' };
+const UOM_ORDER = { M3: 0, L: 1 };
+
+function formatPackaging(lines) {
+  if (!lines || lines.length === 0) return '';
+  const groups = new Map();
+  for (const l of lines) {
+    const key = `${l.volume_uom}|${Number(l.volume)}`;
+    groups.set(key, (groups.get(key) || 0) + 1);
   }
-  return Object.entries(groups)
-    .map(([key, count]) => `${count} x ${key}`)
+  const entries = Array.from(groups.entries()).map(([key, count]) => {
+    const [uom, volume] = key.split('|');
+    return { uom, volume: Number(volume), count };
+  });
+  entries.sort((a, b) => (UOM_ORDER[a.uom] - UOM_ORDER[b.uom]) || (a.volume - b.volume));
+  return entries
+    .map((e) => `${e.count} x ${e.volume}${UOM_SYMBOL[e.uom]}`)
     .join(', ');
 }
 
